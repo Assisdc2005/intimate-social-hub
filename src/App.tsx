@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import { CompleteProfile } from "./pages/CompleteProfile";
 import { Profile } from "./pages/Profile";
+import { Landing } from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
 import { useProfile } from "./hooks/useProfile";
@@ -38,25 +39,39 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Landing />
+          )
+        } 
+      />
+      <Route 
+        path="/home" 
+        element={
+          user ? (
+            profile?.profile_completed ? (
+              <Index />
+            ) : (
+              <Navigate to="/complete-profile" replace />
+            )
+          ) : (
+            <Navigate to="/" replace />
           )
         } 
       />
       <Route 
         path="/auth" 
-        element={user ? <Navigate to="/" replace /> : <Auth />} 
+        element={user ? <Navigate to="/home" replace /> : <Auth />} 
       />
       <Route 
         path="/complete-profile" 
         element={
           user ? (
             profile?.profile_completed ? (
-              <Navigate to="/" replace />
+              <Navigate to="/home" replace />
             ) : (
               <CompleteProfile />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/" replace />
           )
         } 
       />
@@ -70,7 +85,7 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/" replace />
           )
         } 
       />

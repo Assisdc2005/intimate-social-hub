@@ -79,7 +79,7 @@ export const CompleteProfile = () => {
           title: "Perfil completado!",
           description: "Bem-vindo(a) ao Sensual Nexus Connect",
         });
-        navigate('/');
+        navigate('/home');
       }
     } catch (error) {
       console.error('Profile update error:', error);

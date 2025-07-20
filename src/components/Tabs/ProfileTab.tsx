@@ -1,95 +1,245 @@
-import { User, Settings, LogOut, Edit, Crown, MapPin, Calendar, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useNavigate } from "react-router-dom";
+import { 
+  User, 
+  MapPin, 
+  Calendar, 
+  Briefcase, 
+  Heart, 
+  Settings, 
+  LogOut,
+  Crown,
+  Edit,
+  MessageCircle,
+  Users,
+  Target
+} from "lucide-react";
 
 export const ProfileTab = () => {
-  const isPremium = false;
-  
+  const { user, signOut } = useAuth();
+  const { profile, isPremium } = useProfile();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+  };
+
+  const calculateAge = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Header do Perfil */}
-      <div className="card-premium text-center">
-        <div className="relative inline-block mb-4">
-          <div className="w-24 h-24 rounded-full bg-gradient-secondary flex items-center justify-center text-white font-bold text-3xl shadow-glow">
-            U
-          </div>
-          {isPremium && (
-            <div className="absolute -top-2 -right-2 w-8 h-8 bg-accent rounded-full flex items-center justify-center shadow-glow">
-              <Crown className="w-4 h-4 text-white" />
+    <div className="space-y-6 pb-6">
+      {/* Profile Header */}
+      <Card className="bg-glass backdrop-blur-md border-primary/20">
+        <CardContent className="p-6">
+          <div className="text-center">
+            {/* Avatar */}
+            <div className="relative mx-auto w-24 h-24 mb-4">
+              {profile.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt={profile.display_name}
+                  className="w-full h-full rounded-full object-cover border-2 border-primary"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-gradient-primary flex items-center justify-center">
+                  <User className="h-12 w-12 text-white" />
+                </div>
+              )}
+              {isPremium && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-primary rounded-full flex items-center justify-center">
+                  <Crown className="h-3 w-3 text-white" />
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        
-        <h2 className="text-2xl font-bold mb-1">Usuário Demo</h2>
-        <p className="text-muted-foreground mb-4 flex items-center justify-center gap-1">
-          <MapPin className="w-4 h-4" />
-          São Paulo, SP
-        </p>
-        
-        <div className="flex justify-center gap-4 text-sm">
-          <div className="text-center">
-            <div className="font-bold text-lg text-primary">12</div>
-            <div className="text-muted-foreground">Curtidas</div>
-          </div>
-          <div className="text-center">
-            <div className="font-bold text-lg text-accent">8</div>
-            <div className="text-muted-foreground">Matches</div>
-          </div>
-          <div className="text-center">
-            <div className="font-bold text-lg text-secondary">24</div>
-            <div className="text-muted-foreground">Visitas</div>
-          </div>
-        </div>
-      </div>
 
-      {/* Ações do Perfil */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" className="border-white/20 bg-white/10 hover:bg-white/20">
-          <Edit className="w-4 h-4 mr-2" />
-          Editar Perfil
-        </Button>
-        <Button variant="outline" className="border-white/20 bg-white/10 hover:bg-white/20">
-          <Settings className="w-4 h-4 mr-2" />
-          Configurações
-        </Button>
-      </div>
-
-      {/* Status Premium */}
-      {!isPremium && (
-        <div className="glass rounded-2xl p-4 border border-accent/20">
-          <div className="flex items-center gap-3">
-            <Crown className="w-8 h-8 text-accent" />
-            <div className="flex-1">
-              <h3 className="font-semibold">Torne-se Premium</h3>
-              <p className="text-sm text-muted-foreground">Desbloqueie recursos exclusivos</p>
+            {/* Name and Premium Badge */}
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <h1 className="text-2xl font-bold text-white">{profile.display_name}</h1>
+              {isPremium && (
+                <span className="bg-gradient-primary text-white text-xs px-2 py-1 rounded-full font-medium">
+                  Premium
+                </span>
+              )}
             </div>
-            <Button size="sm" className="btn-premium">
-              Upgrade
-            </Button>
+
+            {/* Age and Location */}
+            <div className="flex items-center justify-center gap-4 text-gray-300 mb-4">
+              {profile.birth_date && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>{calculateAge(profile.birth_date)} anos</span>
+                </div>
+              )}
+              {(profile.city || profile.state) && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  <span>{profile.city}{profile.city && profile.state && ', '}{profile.state}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Bio */}
+            {profile.bio && (
+              <p className="text-gray-300 text-center max-w-md mx-auto mb-4">
+                {profile.bio}
+              </p>
+            )}
+
+            {/* Quick Actions */}
+            <div className="flex justify-center gap-3">
+              <Button 
+                onClick={() => navigate('/profile/edit')}
+                variant="outline" 
+                size="sm"
+                className="border-primary/30 text-primary hover:bg-primary/20"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
+
+      {/* Profile Details */}
+      <Card className="bg-glass backdrop-blur-md border-primary/20">
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Informações Pessoais</h2>
+          <div className="space-y-4">
+            {profile.profession && (
+              <div className="flex items-center gap-3">
+                <Briefcase className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-gray-400">Profissão</p>
+                  <p className="text-white">{profile.profession}</p>
+                </div>
+              </div>
+            )}
+            
+            {profile.gender && (
+              <div className="flex items-center gap-3">
+                <User className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-gray-400">Gênero</p>
+                  <p className="text-white capitalize">{profile.gender}</p>
+                </div>
+              </div>
+            )}
+            
+            {profile.sexual_orientation && (
+              <div className="flex items-center gap-3">
+                <Heart className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-gray-400">Orientação Sexual</p>
+                  <p className="text-white capitalize">{profile.sexual_orientation}</p>
+                </div>
+              </div>
+            )}
+            
+            {profile.looking_for && (
+              <div className="flex items-center gap-3">
+                <Target className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-gray-400">Procurando por</p>
+                  <p className="text-white">{profile.looking_for}</p>
+                </div>
+              </div>
+            )}
+            
+            {profile.relationship_status && (
+              <div className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-gray-400">Status de Relacionamento</p>
+                  <p className="text-white capitalize">{profile.relationship_status}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Interests */}
+      {profile.interests && profile.interests.length > 0 && (
+        <Card className="bg-glass backdrop-blur-md border-primary/20">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Interesses</h2>
+            <div className="flex flex-wrap gap-2">
+              {profile.interests.map((interest, index) => (
+                <span 
+                  key={index}
+                  className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm border border-primary/30"
+                >
+                  {interest}
+                </span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Menu de Opções */}
-      <div className="space-y-2">
-        <Button variant="ghost" className="w-full justify-start text-left hover:bg-white/10">
-          <Heart className="w-5 h-5 mr-3" />
-          Quem curtiu meu perfil
-        </Button>
-        <Button variant="ghost" className="w-full justify-start text-left hover:bg-white/10">
-          <User className="w-5 h-5 mr-3" />
-          Quem visitou meu perfil
-        </Button>
-        <Button variant="ghost" className="w-full justify-start text-left hover:bg-white/10">
-          <Settings className="w-5 h-5 mr-3" />
-          Configurações da conta
-        </Button>
-      </div>
+      {/* Premium Status */}
+      {!isPremium && (
+        <Card className="bg-gradient-primary/20 border-primary/30">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <Crown className="h-12 w-12 text-primary mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-white mb-2">Desbloqueie Recursos Premium</h3>
+              <p className="text-gray-300 mb-4">
+                Acesse chat ilimitado, filtros avançados e muito mais!
+              </p>
+              <Button className="bg-gradient-primary hover:opacity-90 text-white">
+                Assinar Premium
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Logout */}
-      <Button variant="outline" className="w-full border-red-500/20 text-red-400 hover:bg-red-500/10">
-        <LogOut className="w-4 h-4 mr-2" />
-        Sair da conta
-      </Button>
+      {/* Account Options */}
+      <Card className="bg-glass backdrop-blur-md border-primary/20">
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Conta</h2>
+          <div className="space-y-3">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-gray-300 hover:text-white hover:bg-primary/20"
+            >
+              <Settings className="h-5 w-5 mr-3" />
+              Configurações
+            </Button>
+            
+            <Button 
+              onClick={handleLogout}
+              variant="ghost" 
+              className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-500/20"
+            >
+              <LogOut className="h-5 w-5 mr-3" />
+              Sair da Conta
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

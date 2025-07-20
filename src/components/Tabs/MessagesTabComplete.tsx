@@ -129,10 +129,11 @@ export const MessagesTabComplete = () => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !profile?.user_id) return;
 
-    if (!isPremium) {
+    // Check if user is premium - fixed logic
+    if (profile.subscription_type !== 'premium' || !isPremium) {
       toast({
-        title: "Premium Necessário",
-        description: "Upgrade para Premium para enviar mensagens",
+        title: "Recurso Premium",
+        description: "Assine o plano premium para enviar mensagens",
         variant: "destructive",
       });
       return;
@@ -245,8 +246,8 @@ export const MessagesTabComplete = () => {
           </CardContent>
         </Card>
 
-        {/* Aviso Premium */}
-        {!isPremium && (
+        {/* Aviso Premium - only show for non-premium users */}
+        {profile && profile.subscription_type !== 'premium' && (
           <Card className="glass backdrop-blur-xl border-accent/20">
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -451,7 +452,7 @@ export const MessagesTabComplete = () => {
       {/* Input de mensagem */}
       <Card className="glass backdrop-blur-xl border-primary/20 flex-shrink-0">
         <CardContent className="p-4">
-          {!isPremium ? (
+          {profile?.subscription_type !== 'premium' ? (
             <div className="flex items-center justify-center p-4 text-center">
               <div className="flex items-center gap-3">
                 <Lock className="w-5 h-5 text-muted-foreground" />

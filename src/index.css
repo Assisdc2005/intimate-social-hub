@@ -46,6 +46,7 @@ All colors MUST be HSL.
     
     /* Sophisticated shadows */
     --shadow-glow: 0 0 40px hsla(280, 100%, 70%, 0.25);
+    --shadow-glow-hover: 0 0 60px hsla(280, 100%, 70%, 0.4);
     --shadow-premium: 0 20px 60px hsla(280, 100%, 70%, 0.15);
     --shadow-glass: 0 8px 32px hsla(270, 25%, 4%, 0.4);
     --shadow-soft: 0 4px 20px hsla(270, 20%, 8%, 0.3);
