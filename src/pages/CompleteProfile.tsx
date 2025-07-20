@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -9,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { Heart } from 'lucide-react';
+import { Heart, ArrowLeft } from 'lucide-react';
 
 export const CompleteProfile = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { updateProfile } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -42,6 +41,12 @@ export const CompleteProfile = () => {
 
   // Campos obrigatórios
   const requiredFields = ['birth_date', 'gender', 'sexual_orientation', 'state', 'city', 'profession', 'relationship_status', 'bio'];
+
+  // Função para retornar à página de autenticação
+  const handleBackToAuth = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   // Validar se todos os campos obrigatórios estão preenchidos
   const validateForm = () => {
@@ -171,6 +176,18 @@ export const CompleteProfile = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero p-4">
+      {/* Botão de retorno no topo */}
+      <div className="max-w-2xl mx-auto mb-4">
+        <Button
+          onClick={handleBackToAuth}
+          variant="ghost"
+          className="text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar ao Login
+        </Button>
+      </div>
+
       <div className="max-w-2xl mx-auto">
         <Card className="bg-glass backdrop-blur-md border-primary/20">
           <CardHeader className="text-center">

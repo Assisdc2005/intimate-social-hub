@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,23 +36,13 @@ function AuthenticatedApp() {
 
   return (
     <Routes>
-      {/* Rota raiz - sempre redireciona para /auth se não autenticado */}
+      {/* Rota raiz - SEMPRE redireciona para /auth se não autenticado */}
       <Route 
         path="/" 
-        element={
-          user ? (
-            profile?.profile_completed ? (
-              <Navigate to="/home" replace />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
-          ) : (
-            <Navigate to="/auth" replace />
-          )
-        } 
+        element={<Navigate to="/auth" replace />}
       />
       
-      {/* Página de autenticação */}
+      {/* Página de autenticação - sempre acessível */}
       <Route 
         path="/auth" 
         element={
@@ -189,7 +180,7 @@ function AuthenticatedApp() {
         } 
       />
 
-      {/* Novas rotas institucionais - acessíveis para todos */}
+      {/* Rotas institucionais - acessíveis para todos */}
       <Route path="/sobre" element={<About />} />
       <Route path="/termos" element={<Terms />} />
       <Route path="/privacidade" element={<Privacy />} />
