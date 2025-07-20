@@ -1,17 +1,17 @@
-
 import { Crown, Check, Star, Zap, Eye, MessageCircle, Heart, Filter, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 export const PremiumTab = () => {
   const { profile } = useProfile();
   const { isPremium, subscription, loading, checkSubscription, createCheckout } = useSubscription();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check for success/cancel parameters
@@ -20,11 +20,12 @@ export const PremiumTab = () => {
         title: "Pagamento realizado!",
         description: "Sua assinatura Premium foi ativada com sucesso.",
       });
-      // Remove the parameter from URL
+      // Remove the parameter from URL and redirect to home
       window.history.replaceState({}, '', '/premium');
-      // Refresh subscription status
-      setTimeout(() => {
-        checkSubscription();
+      // Refresh subscription status and redirect to home after verification
+      setTimeout(async () => {
+        await checkSubscription();
+        navigate('/home');
       }, 2000);
     } else if (searchParams.get('canceled') === 'true') {
       toast({
@@ -35,7 +36,7 @@ export const PremiumTab = () => {
       // Remove the parameter from URL
       window.history.replaceState({}, '', '/premium');
     }
-  }, [searchParams, toast, checkSubscription]);
+  }, [searchParams, toast, checkSubscription, navigate]);
 
   const premiumFeatures = [
     {

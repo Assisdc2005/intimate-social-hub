@@ -76,12 +76,13 @@ serve(async (req) => {
       },
     });
 
+    console.log('Checkout session created:', session.id);
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error creating checkout:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

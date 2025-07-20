@@ -30,11 +30,13 @@ export const useSubscription = () => {
     }
 
     try {
+      console.log('Checking subscription for user:', user.id);
       const { data, error } = await supabase.functions.invoke('check-subscription');
       
       if (error) {
         console.error('Error checking subscription:', error);
       } else {
+        console.log('Subscription check result:', data);
         setIsPremium(data.isPremium);
         setSubscription(data.subscription);
       }
@@ -47,14 +49,17 @@ export const useSubscription = () => {
 
   const createCheckout = async (priceId: string) => {
     try {
+      console.log('Creating checkout for price:', priceId);
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { priceId }
       });
 
       if (error) {
+        console.error('Checkout error:', error);
         throw error;
       }
 
+      console.log('Checkout session created, opening URL:', data.url);
       // Open checkout in new tab
       window.open(data.url, '_blank');
     } catch (error) {
