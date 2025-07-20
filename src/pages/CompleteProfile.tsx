@@ -44,18 +44,34 @@ export const CompleteProfile = () => {
 
     try {
       const profileData = {
-        ...formData,
+        birth_date: formData.birth_date || null,
+        gender: formData.gender || null,
+        sexual_orientation: formData.sexual_orientation || null,
+        state: formData.state || null,
+        city: formData.city || null,
+        profession: formData.profession || null,
+        looking_for: formData.looking_for || null,
+        objectives: formData.objectives || null,
+        body_type: formData.body_type || null,
         height: formData.height ? parseInt(formData.height) : null,
         weight: formData.weight ? parseInt(formData.weight) : null,
+        ethnicity: formData.ethnicity || null,
+        smokes: formData.smokes,
+        drinks: formData.drinks,
+        relationship_status: formData.relationship_status || null,
+        bio: formData.bio || null,
+        interests: formData.interests,
         profile_completed: true,
       };
 
+      console.log('Updating profile with data:', profileData);
       const { error } = await updateProfile(profileData);
       
       if (error) {
+        console.error('Profile update error:', error);
         toast({
           title: "Erro",
-          description: "Erro ao salvar perfil",
+          description: error.message || "Erro ao salvar perfil",
           variant: "destructive",
         });
       } else {
@@ -67,6 +83,11 @@ export const CompleteProfile = () => {
       }
     } catch (error) {
       console.error('Profile update error:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao salvar perfil",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

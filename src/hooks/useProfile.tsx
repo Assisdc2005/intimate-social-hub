@@ -70,6 +70,8 @@ export const useProfile = () => {
     if (!user) return { error: 'Not authenticated' };
 
     try {
+      console.log('Updating profile for user:', user.id, 'with updates:', updates);
+      
       const { data, error } = await supabase
         .from('profiles')
         .update(updates)
@@ -77,13 +79,17 @@ export const useProfile = () => {
         .select()
         .single();
 
+      console.log('Update result:', { data, error });
+
       if (error) {
+        console.error('Supabase update error:', error);
         return { error };
       }
 
       setProfile(data);
       return { data };
     } catch (error) {
+      console.error('Update profile catch error:', error);
       return { error };
     }
   };
