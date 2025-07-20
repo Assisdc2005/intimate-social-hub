@@ -1,4 +1,4 @@
-import { User, MapPin, Calendar, Heart, Edit, Settings, Camera, Star, Shield, Crown } from "lucide-react";
+import { User, MapPin, Calendar, Heart, Edit, Settings, Camera, Star, Shield, Crown, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,19 @@ export const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero p-4 pt-20">
+      {/* Back Button - Fixed Position Top Left */}
+      <div className="fixed top-4 left-4 z-50">
+        <Button 
+          onClick={() => navigate('/home')}
+          variant="ghost" 
+          size="sm"
+          className="text-white hover:text-white hover:bg-white/20 p-3 rounded-full backdrop-blur-sm bg-black/30 border border-white/20 animate-fade-in"
+        >
+          <ArrowLeft className="h-5 w-5 mr-1" />
+          <span className="hidden sm:inline">Voltar</span>
+        </Button>
+      </div>
+
       <div className="max-w-4xl mx-auto space-y-6">
         
         {/* Header do Perfil */}
