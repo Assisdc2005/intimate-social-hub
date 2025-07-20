@@ -8,35 +8,50 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Sensual Nexus Connect Color Palette */
+    --background: 300 50% 8%;              /* Dark purple background */
+    --foreground: 0 0% 95%;                /* Light text */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 300 45% 12%;                   /* Darker purple cards */
+    --card-foreground: 0 0% 90%;           /* Card text */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 300 40% 15%;                /* Popover background */
+    --popover-foreground: 0 0% 95%;        /* Popover text */
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 320 70% 60%;                /* Magenta primary */
+    --primary-foreground: 0 0% 100%;       /* White text on primary */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 280 60% 50%;              /* Purple secondary */
+    --secondary-foreground: 0 0% 100%;     /* White text on secondary */
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 300 30% 20%;                  /* Muted purple */
+    --muted-foreground: 0 0% 70%;          /* Muted text */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 340 75% 65%;                 /* Pink accent */
+    --accent-foreground: 0 0% 100%;        /* White text on accent */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84.2% 60.2%;          /* Red destructive */
+    --destructive-foreground: 0 0% 100%;   /* White text on destructive */
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 300 25% 25%;                 /* Purple border */
+    --input: 300 30% 18%;                  /* Input background */
+    --ring: 320 70% 60%;                   /* Focus ring */
 
-    --radius: 0.5rem;
+    /* Premium gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(320, 70%, 60%), hsl(340, 75%, 65%));
+    --gradient-secondary: linear-gradient(135deg, hsl(280, 60%, 50%), hsl(300, 50%, 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(300, 50%, 8%), hsl(280, 60%, 15%));
+    --gradient-glass: linear-gradient(135deg, hsla(320, 70%, 60%, 0.1), hsla(340, 75%, 65%, 0.1));
+    
+    /* Shadows */
+    --shadow-glow: 0 0 30px hsla(320, 70%, 60%, 0.3);
+    --shadow-premium: 0 10px 30px hsla(320, 70%, 60%, 0.2);
+    --shadow-glass: 0 8px 32px hsla(300, 50%, 8%, 0.3);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +115,52 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    background: var(--gradient-hero);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* Premium button variants */
+  .btn-premium {
+    @apply bg-gradient-to-r from-primary to-accent text-primary-foreground font-medium px-6 py-3 rounded-xl shadow-[var(--shadow-premium)] transition-all duration-300 hover:scale-105 hover:shadow-[var(--shadow-glow)];
+  }
+  
+  .btn-secondary {
+    @apply bg-gradient-to-r from-secondary to-purple-600 text-secondary-foreground font-medium px-6 py-3 rounded-xl shadow-lg transition-all duration-300 hover:scale-105;
+  }
+  
+  /* Glass morphism effect */
+  .glass {
+    @apply backdrop-blur-lg bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-[var(--shadow-glass)];
+  }
+  
+  /* Premium card with glow */
+  .card-premium {
+    @apply bg-card/80 backdrop-blur-md border border-primary/20 rounded-2xl p-6 shadow-[var(--shadow-premium)] transition-all duration-300 hover:border-primary/40 hover:shadow-[var(--shadow-glow)];
+  }
+  
+  /* Navigation active state */
+  .nav-active {
+    @apply text-primary bg-primary/10 border-primary/30;
+  }
+  
+  /* Smooth animations */
+  .animate-fade-in {
+    @apply animate-in fade-in duration-500;
+  }
+  
+  .animate-slide-up {
+    @apply animate-in slide-in-from-bottom-4 duration-500;
+  }
+  
+  /* Text gradients */
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+  
+  .text-gradient-secondary {
+    @apply bg-gradient-to-r from-secondary to-purple-400 bg-clip-text text-transparent;
   }
 }
