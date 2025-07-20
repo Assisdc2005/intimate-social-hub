@@ -51,7 +51,11 @@ export const useProfile = () => {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select(`
+            *,
+            tipo_assinatura,
+            assinatura_id
+          `)
           .eq('user_id', user.id)
           .single();
 
@@ -61,9 +65,9 @@ export const useProfile = () => {
           // Garantir que os campos obrigatórios tenham valores padrão
           const profileData = {
             ...data,
-            tipo_assinatura: data.tipo_assinatura || 'gratuito',
-            assinatura_id: data.assinatura_id || null
-          };
+            tipo_assinatura: (data as any).tipo_assinatura || 'gratuito',
+            assinatura_id: (data as any).assinatura_id || null
+          } as Profile;
           setProfile(profileData);
         }
       } catch (error) {
@@ -86,7 +90,11 @@ export const useProfile = () => {
         .from('profiles')
         .update(updates)
         .eq('user_id', user.id)
-        .select()
+        .select(`
+          *,
+          tipo_assinatura,
+          assinatura_id
+        `)
         .single();
 
       console.log('Update result:', { data, error });
@@ -99,9 +107,9 @@ export const useProfile = () => {
       // Garantir que os campos obrigatórios tenham valores padrão
       const profileData = {
         ...data,
-        tipo_assinatura: data.tipo_assinatura || 'gratuito',
-        assinatura_id: data.assinatura_id || null
-      };
+        tipo_assinatura: (data as any).tipo_assinatura || 'gratuito',
+        assinatura_id: (data as any).assinatura_id || null
+      } as Profile;
       setProfile(profileData);
       return { data: profileData };
     } catch (error) {
