@@ -60,7 +60,7 @@ export const useProfile = () => {
         if (error) {
           console.error('Error fetching profile:', error);
         } else if (data) {
-          // Garantir que os campos obrigatórios tenham valores padrão
+          // Map data to Profile interface with proper defaults
           const profileData: Profile = {
             id: data.id,
             user_id: data.user_id,
@@ -87,8 +87,8 @@ export const useProfile = () => {
             profile_completed: data.profile_completed || false,
             avatar_url: data.avatar_url,
             premium_status: data.premium_status || 'nao_premium',
-            tipo_assinatura: 'gratuito', // Default value since column doesn't exist
-            assinatura_id: null, // Default value since column doesn't exist
+            tipo_assinatura: data.tipo_assinatura || 'gratuito',
+            assinatura_id: data.assinatura_id || null,
             created_at: data.created_at,
             updated_at: data.updated_at
           };
@@ -125,7 +125,7 @@ export const useProfile = () => {
       }
 
       if (data) {
-        // Garantir que os campos obrigatórios tenham valores padrão
+        // Map updated data to Profile interface
         const profileData: Profile = {
           id: data.id,
           user_id: data.user_id,
@@ -152,8 +152,8 @@ export const useProfile = () => {
           profile_completed: data.profile_completed || false,
           avatar_url: data.avatar_url,
           premium_status: data.premium_status || 'nao_premium',
-          tipo_assinatura: 'gratuito', // Default value since column doesn't exist
-          assinatura_id: null, // Default value since column doesn't exist
+          tipo_assinatura: data.tipo_assinatura || 'gratuito',
+          assinatura_id: data.assinatura_id || null,
           created_at: data.created_at,
           updated_at: data.updated_at
         };

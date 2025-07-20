@@ -48,19 +48,41 @@ serve(async (req) => {
           const metadata = session.metadata;
           console.log('Session metadata:', metadata);
 
+          if (!metadata || !metadata.user_id) {
+            console.error('No user_id in metadata');
+            break;
+          }
+
           // Calculate end date based on period
           let dataFim = new Date();
+          let periodo = 'mensal'; // default
           
-          switch (metadata.periodo) {
-            case 'semanal':
+          if (metadata.periodo) {
+            periodo = metadata.periodo;
+            switch (metadata.periodo) {
+              case 'semanal':
+                dataFim.setDate(dataFim.getDate() + 7);
+                break;
+              case 'quinzenal':
+                dataFim.setDate(dataFim.getDate() + 15);
+                break;
+              case 'mensal':
+                dataFim.setMonth(dataFim.getMonth() + 1);
+                break;
+            }
+          } else {
+            // Fallback: determine period from price
+            const priceId = subscription.items.data[0].price.id;
+            if (priceId === 'price_1Rn2ekD3X7OLOCgdTVptrYmK') {
+              periodo = 'semanal';
               dataFim.setDate(dataFim.getDate() + 7);
-              break;
-            case 'quinzenal':
+            } else if (priceId === 'price_1Rn2hQD3X7OLOCgddzwdYC6X') {
+              periodo = 'quinzenal';
               dataFim.setDate(dataFim.getDate() + 15);
-              break;
-            case 'mensal':
+            } else if (priceId === 'price_1Rn2hZD3X7OLOCgd3HzBOW1i') {
+              periodo = 'mensal';
               dataFim.setMonth(dataFim.getMonth() + 1);
-              break;
+            }
           }
 
           console.log('Creating subscription for user:', metadata.user_id);
@@ -79,20 +101,25 @@ serve(async (req) => {
 
           console.log('Found profile:', profile.id);
 
+          // Get price info for value
+          const priceId = subscription.items.data[0].price.id;
+          const price = await stripe.prices.retrieve(priceId);
+          const valor = (price.unit_amount || 0) / 100; // Convert from cents to currency
+
           // Insert subscription record
           const { data: newSubscription, error: subscriptionError } = await supabaseAdmin
             .from('assinaturas')
             .insert({
               perfil_id: profile.id,
               user_id: metadata.user_id,
-              plano: metadata.periodo,
+              plano: periodo,
               stripe_customer_id: session.customer,
               stripe_subscription_id: session.subscription,
-              stripe_price_id: metadata.price_id,
+              stripe_price_id: priceId,
               status: 'active',
               data_fim: dataFim.toISOString(),
-              valor: parseFloat(metadata.valor),
-              periodo: metadata.periodo,
+              valor: valor,
+              periodo: periodo,
             })
             .select()
             .single();

@@ -20,7 +20,9 @@ export type Database = {
           data_fim: string
           data_inicio: string
           id: string
+          perfil_id: string | null
           periodo: string
+          plano: string | null
           status: string
           stripe_customer_id: string | null
           stripe_price_id: string
@@ -34,7 +36,9 @@ export type Database = {
           data_fim: string
           data_inicio?: string
           id?: string
+          perfil_id?: string | null
           periodo: string
+          plano?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_price_id: string
@@ -48,7 +52,9 @@ export type Database = {
           data_fim?: string
           data_inicio?: string
           id?: string
+          perfil_id?: string | null
           periodo?: string
+          plano?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_price_id?: string
@@ -57,7 +63,15 @@ export type Database = {
           user_id?: string
           valor?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_assinaturas_perfil"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       comentarios_publicacoes: {
         Row: {
@@ -346,6 +360,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          assinatura_id: string | null
           avatar_url: string | null
           bio: string | null
           birth_date: string | null
@@ -376,11 +391,13 @@ export type Database = {
           subscription_type:
             | Database["public"]["Enums"]["subscription_type"]
             | null
+          tipo_assinatura: string | null
           updated_at: string
           user_id: string
           weight: number | null
         }
         Insert: {
+          assinatura_id?: string | null
           avatar_url?: string | null
           bio?: string | null
           birth_date?: string | null
@@ -411,11 +428,13 @@ export type Database = {
           subscription_type?:
             | Database["public"]["Enums"]["subscription_type"]
             | null
+          tipo_assinatura?: string | null
           updated_at?: string
           user_id: string
           weight?: number | null
         }
         Update: {
+          assinatura_id?: string | null
           avatar_url?: string | null
           bio?: string | null
           birth_date?: string | null
@@ -446,6 +465,7 @@ export type Database = {
           subscription_type?:
             | Database["public"]["Enums"]["subscription_type"]
             | null
+          tipo_assinatura?: string | null
           updated_at?: string
           user_id?: string
           weight?: number | null

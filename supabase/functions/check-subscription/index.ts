@@ -49,7 +49,7 @@ serve(async (req) => {
         premium_status, 
         tipo_assinatura, 
         assinatura_id,
-        assinaturas:assinatura_id (
+        assinaturas!fk_assinaturas_perfil (
           id,
           plano,
           data_inicio,
@@ -65,7 +65,9 @@ serve(async (req) => {
     console.log('Profile data:', profile);
 
     const isPremium = profile?.premium_status === 'premium' && profile?.tipo_assinatura === 'premium';
-    const subscription = profile?.assinaturas || null;
+    const subscription = profile?.assinaturas && Array.isArray(profile.assinaturas) 
+      ? profile.assinaturas[0] 
+      : profile?.assinaturas || null;
 
     console.log('Is premium:', isPremium, 'Subscription:', subscription);
 

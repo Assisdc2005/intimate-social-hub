@@ -14,19 +14,6 @@ serve(async (req) => {
   }
 
   try {
-    const { priceId } = await req.json();
-    
-    // Validate price IDs
-    const validPrices = {
-      'price_1Rn2ekD3X7OLOCgdTVptrYmK': { valor: 15, periodo: 'semanal' },
-      'price_1Rn2hQD3X7OLOCgddzwdYC6X': { valor: 20, periodo: 'quinzenal' },
-      'price_1Rn2hZD3X7OLOCgd3HzBOW1i': { valor: 30, periodo: 'mensal' }
-    };
-
-    if (!validPrices[priceId]) {
-      throw new Error('Invalid price ID');
-    }
-
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
@@ -38,7 +25,13 @@ serve(async (req) => {
     const user = data.user;
     
     if (!user?.email) {
-      throw new Error("User not authenticated");
+      throw new Error("User not authenticated or email not available");
+    }
+
+    const { priceId } = await req.json();
+    
+    if (!priceId) {
+      throw new Error("Price ID is required");
     }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -46,14 +39,24 @@ serve(async (req) => {
     });
 
     // Check if customer exists
-    const customers = await stripe.customers.list({
-      email: user.email,
-      limit: 1,
-    });
-
+    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId;
+    
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
+    }
+
+    // Get price details to determine period and value
+    const price = await stripe.prices.retrieve(priceId);
+    const valor = (price.unit_amount || 0) / 100;
+    
+    let periodo = 'mensal';
+    if (priceId === 'price_1Rn2ekD3X7OLOCgdTVptrYmK') {
+      periodo = 'semanal';
+    } else if (priceId === 'price_1Rn2hQD3X7OLOCgddzwdYC6X') {
+      periodo = 'quinzenal';
+    } else if (priceId === 'price_1Rn2hZD3X7OLOCgd3HzBOW1i') {
+      periodo = 'mensal';
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -71,12 +74,11 @@ serve(async (req) => {
       metadata: {
         user_id: user.id,
         price_id: priceId,
-        valor: validPrices[priceId].valor.toString(),
-        periodo: validPrices[priceId].periodo,
+        periodo: periodo,
+        valor: valor.toString(),
       },
     });
 
-    console.log('Checkout session created:', session.id);
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
