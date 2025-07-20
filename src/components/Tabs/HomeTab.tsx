@@ -198,13 +198,38 @@ export const HomeTab = () => {
     }
 
     try {
+      let mediaUrl = newPost.media_url;
+
+      // Upload image to Supabase Storage if a file was selected
+      if (newPost.media_url && newPost.media_url.startsWith('blob:')) {
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        const file = fileInput?.files?.[0];
+        
+        if (file) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${profile?.user_id}/${Date.now()}.${fileExt}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('publicacoes')
+            .upload(fileName, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('publicacoes')
+            .getPublicUrl(fileName);
+
+          mediaUrl = publicUrl;
+        }
+      }
+
       const { error } = await supabase
         .from('posts')
         .insert({
           user_id: profile?.user_id,
           content: newPost.content,
-          media_type: newPost.media_url ? 'imagem' : 'texto',
-          media_url: newPost.media_url
+          media_type: mediaUrl ? 'imagem' : 'texto',
+          media_url: mediaUrl
         });
 
       if (error) throw error;
@@ -309,6 +334,9 @@ export const HomeTab = () => {
           type: 'visita',
           content: 'visitou seu perfil'
         });
+
+      // Navigate to user profile
+      navigate(`/profile/${userId}`);
     } catch (error) {
       console.error('Error recording visit:', error);
     }

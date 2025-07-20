@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export const EditProfileTab = () => {
   const { profile, updateProfile } = useProfile();
@@ -97,6 +98,61 @@ export const EditProfileTab = () => {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile?.user_id) return;
+
+    try {
+      setSaving(true);
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profile.user_id}/avatar.${fileExt}`;
+      
+      // Delete old avatar if exists
+      if (profile.avatar_url) {
+        const oldPath = profile.avatar_url.split('/').pop();
+        if (oldPath) {
+          await supabase.storage
+            .from('fotos_perfil')
+            .remove([`${profile.user_id}/${oldPath}`]);
+        }
+      }
+
+      // Upload new avatar
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('fotos_perfil')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('fotos_perfil')
+        .getPublicUrl(fileName);
+
+      // Update profile with new avatar URL
+      const result = await updateProfile({ avatar_url: publicUrl });
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      toast({
+        title: "Foto atualizada!",
+        description: "Sua foto de perfil foi atualizada com sucesso",
+      });
+
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar foto de perfil",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const addInterest = () => {
     if (interestInput.trim() && !formData.interests.includes(interestInput.trim())) {
       setFormData({
@@ -163,9 +219,17 @@ export const EditProfileTab = () => {
             <Button
               size="icon"
               className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-gradient-primary hover:opacity-90"
+              onClick={() => document.getElementById('avatar-upload')?.click()}
             >
               <Camera className="w-4 h-4" />
             </Button>
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             Clique no ícone para alterar sua foto

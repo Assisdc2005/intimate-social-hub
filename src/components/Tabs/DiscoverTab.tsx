@@ -289,6 +289,9 @@ export const DiscoverTab = () => {
           type: 'visita',
           content: 'visitou seu perfil'
         });
+
+      // Navigate to user profile
+      navigate(`/profile/${userId}`);
     } catch (error) {
       console.error('Error recording visit:', error);
     }
@@ -380,7 +383,10 @@ export const DiscoverTab = () => {
             <div key={user.id} className="bg-white/5 rounded-2xl p-6 border border-white/10">
               {/* User Header */}
               <div className="flex items-center gap-4 mb-4">
-                <div className="relative">
+                <div 
+                  className="relative cursor-pointer"
+                  onClick={() => handleViewProfile(user.user_id)}
+                >
                   <div className="w-16 h-16 rounded-full bg-gradient-secondary overflow-hidden">
                     {user.avatar_url ? (
                       <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
@@ -399,7 +405,12 @@ export const DiscoverTab = () => {
 
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-white text-lg">{user.display_name}</h3>
+                    <h3 
+                      className="font-semibold text-white text-lg cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => handleViewProfile(user.user_id)}
+                    >
+                      {user.display_name}
+                    </h3>
                     {user.subscription_type === 'premium' && (
                       <span className="text-xs bg-gradient-primary px-2 py-1 rounded-full text-white font-semibold">
                         PREMIUM

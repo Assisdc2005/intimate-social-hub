@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface Conversation {
   id: string;
@@ -47,6 +48,7 @@ export const MessagesTabComplete = () => {
   
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Scroll para a última mensagem
   const scrollToBottom = () => {
@@ -366,7 +368,15 @@ export const MessagesTabComplete = () => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             
-            <div className="w-10 h-10 rounded-full bg-gradient-secondary flex items-center justify-center text-white font-bold shadow-[var(--shadow-glow)]">
+            <div 
+              className="w-10 h-10 rounded-full bg-gradient-secondary flex items-center justify-center text-white font-bold shadow-[var(--shadow-glow)] cursor-pointer"
+              onClick={() => {
+                const otherUserId = selectedConversation.participant1_id === profile?.user_id 
+                  ? selectedConversation.participant2_id 
+                  : selectedConversation.participant1_id;
+                navigate(`/profile/${otherUserId}`);
+              }}
+            >
               {selectedConversation.other_user?.avatar_url ? (
                 <img 
                   src={selectedConversation.other_user.avatar_url} 
@@ -379,7 +389,15 @@ export const MessagesTabComplete = () => {
             </div>
             
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">
+              <h3 
+                className="font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
+                onClick={() => {
+                  const otherUserId = selectedConversation.participant1_id === profile?.user_id 
+                    ? selectedConversation.participant2_id 
+                    : selectedConversation.participant1_id;
+                  navigate(`/profile/${otherUserId}`);
+                }}
+              >
                 {selectedConversation.other_user?.display_name}
               </h3>
               <p className="text-xs text-green-400">Online</p>
