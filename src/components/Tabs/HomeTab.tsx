@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Camera, Heart, MessageCircle, MapPin, Clock, Plus, Play, User, Send, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ export const HomeTab = () => {
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,20 +129,86 @@ export const HomeTab = () => {
     }
   };
 
-  const handleTopUserInteraction = (userId: string, action: string) => {
+  const handleLikeProfile = async (userId: string) => {
     if (!isPremium) {
       toast({
         title: "Recurso Premium",
-        description: `Assine o Premium para ${action === 'like' ? 'curtir perfis' : 'enviar mensagens'}`,
+        description: "Assine o Premium para curtir perfis",
         variant: "destructive",
       });
       return;
     }
-    
-    if (action === 'message') {
+
+    if (!profile?.user_id) return;
+
+    try {
+      // Check if already liked
+      const { data: existingLike } = await supabase
+        .from('likes')
+        .select('id')
+        .eq('user_id', profile.user_id)
+        .eq('post_id', userId) // Using post_id field to store profile likes
+        .maybeSingle();
+
+      if (existingLike) {
+        // Remove like
+        await supabase
+          .from('likes')
+          .delete()
+          .eq('id', existingLike.id);
+
+        setLikedProfiles(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+
+        toast({
+          title: "Curtida removida",
+          description: "Você descurtiu este perfil",
+        });
+      } else {
+        // Add like
+        await supabase
+          .from('likes')
+          .insert({
+            user_id: profile.user_id,
+            post_id: userId // Using post_id field to store profile likes
+          });
+
+        setLikedProfiles(prev => new Set(prev).add(userId));
+
+        // Create real-time notification
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            from_user_id: profile.user_id,
+            type: 'curtida',
+            content: 'curtiu seu perfil'
+          });
+
+        toast({
+          title: "Perfil curtido!",
+          description: "Você curtiu este perfil",
+        });
+      }
+    } catch (error) {
+      console.error('Error liking profile:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao curtir perfil",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTopUserInteraction = (userId: string, action: string) => {
+    if (action === 'like') {
+      handleLikeProfile(userId);
+    } else if (action === 'message') {
       handleMessage();
     }
-    // Handle like action if needed
   };
 
   if (loading) {
@@ -225,13 +291,19 @@ export const HomeTab = () => {
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20"
+                  className={`w-8 h-8 rounded-full transition-all duration-200 ${
+                    likedProfiles.has(user.user_id) 
+                      ? 'bg-red-500/20 hover:bg-red-500/30 text-red-500' 
+                      : 'bg-white/10 hover:bg-white/20'
+                  }`}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleTopUserInteraction(user.user_id, 'like');
                   }}
                 >
-                  <Heart className="w-4 h-4" />
+                  <Heart className={`w-4 h-4 transition-all duration-200 ${
+                    likedProfiles.has(user.user_id) ? 'fill-current' : ''
+                  }`} />
                 </Button>
                 <Button 
                   size="sm" 
