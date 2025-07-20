@@ -58,7 +58,13 @@ export const useProfile = () => {
         if (error) {
           console.error('Error fetching profile:', error);
         } else {
-          setProfile(data);
+          // Garantir que os campos obrigatórios tenham valores padrão
+          const profileData = {
+            ...data,
+            tipo_assinatura: data.tipo_assinatura || 'gratuito',
+            assinatura_id: data.assinatura_id || null
+          };
+          setProfile(profileData);
         }
       } catch (error) {
         console.error('Error:', error);
@@ -90,8 +96,14 @@ export const useProfile = () => {
         return { error };
       }
 
-      setProfile(data);
-      return { data };
+      // Garantir que os campos obrigatórios tenham valores padrão
+      const profileData = {
+        ...data,
+        tipo_assinatura: data.tipo_assinatura || 'gratuito',
+        assinatura_id: data.assinatura_id || null
+      };
+      setProfile(profileData);
+      return { data: profileData };
     } catch (error) {
       console.error('Update profile catch error:', error);
       return { error };
