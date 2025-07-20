@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,12 +36,12 @@ function AuthenticatedApp() {
         element={
           user ? (
             profile?.profile_completed ? (
-              <Index />
+              <Navigate to="/home" replace />
             ) : (
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Landing />
+            <Navigate to="/auth" replace />
           )
         } 
       />
@@ -54,13 +55,19 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/" replace />
+            <Navigate to="/auth" replace />
           )
         } 
       />
       <Route 
         path="/auth" 
-        element={user ? <Navigate to="/home" replace /> : <Auth />} 
+        element={user ? (
+          profile?.profile_completed ? (
+            <Navigate to="/home" replace />
+          ) : (
+            <Navigate to="/complete-profile" replace />
+          )
+        ) : <Auth />} 
       />
       <Route 
         path="/complete-profile" 
@@ -72,7 +79,7 @@ function AuthenticatedApp() {
               <CompleteProfile />
             )
           ) : (
-            <Navigate to="/" replace />
+            <Navigate to="/auth" replace />
           )
         } 
       />
@@ -86,7 +93,7 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/" replace />
+            <Navigate to="/auth" replace />
           )
         } 
       />
@@ -100,7 +107,7 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/" replace />
+            <Navigate to="/auth" replace />
           )
         } 
       />
@@ -114,7 +121,7 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/" replace />
+            <Navigate to="/auth" replace />
           )
         } 
       />
@@ -128,7 +135,7 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/" replace />
+            <Navigate to="/auth" replace />
           )
         } 
       />
@@ -142,7 +149,7 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/" replace />
+            <Navigate to="/auth" replace />
           )
         } 
       />
@@ -156,7 +163,7 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/" replace />
+            <Navigate to="/auth" replace />
           )
         } 
       />

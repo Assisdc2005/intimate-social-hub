@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,8 +73,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    // Force page reload to clear all state
-    window.location.href = '/';
+    // Redirect to auth page instead of forcing page reload
+    window.location.href = '/auth';
   };
 
   const value = {
