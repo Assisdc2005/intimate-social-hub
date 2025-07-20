@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Camera, Heart, MessageCircle, MapPin, Clock, Plus, Play, User, Send, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,6 @@ import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { PublicFeed } from "@/components/Feed/PublicFeed";
-import { VideoFeed } from "@/components/Feed/VideoFeed";
 
 export const HomeTab = () => {
   const { profile, isPremium } = useProfile();
@@ -17,7 +17,6 @@ export const HomeTab = () => {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<any[]>([]);
   const [topUsers, setTopUsers] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
 
@@ -45,20 +44,8 @@ export const HomeTab = () => {
           .order('updated_at', { ascending: false })
           .limit(3);
 
-        // Fetch recent notifications for activity feed
-        const { data: notificationsData } = await supabase
-          .from('notifications')
-          .select(`
-            *,
-            profiles!notifications_from_user_id_fkey (display_name, avatar_url)
-          `)
-          .eq('user_id', profile?.user_id)
-          .order('created_at', { ascending: false })
-          .limit(3);
-
         setPosts(postsData || []);
         setTopUsers(usersData || []);
-        setActivities(notificationsData || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -320,49 +307,6 @@ export const HomeTab = () => {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Sessão Últimos Vídeos */}
-      <div className="card-premium">
-        <VideoFeed />
-      </div>
-
-      {/* Feed de Atividades Recentes */}
-      <div className="card-premium">
-        <h3 className="text-lg font-semibold text-gradient mb-4">Atividade Recente</h3>
-        
-        <div className="space-y-4">
-          {activities.map((activity) => (
-            <div key={activity.id} className="flex items-center gap-3 p-3 rounded-xl glass">
-              <div className="w-10 h-10 rounded-full bg-gradient-secondary overflow-hidden">
-                {activity.profiles?.avatar_url ? (
-                  <img src={activity.profiles.avatar_url} alt={activity.profiles.display_name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white font-bold">
-                    {activity.profiles?.display_name?.[0]}
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm">
-                  <span className="font-medium">{activity.profiles?.display_name}</span> {activity.content}
-                </p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {new Date(activity.created_at).toLocaleString('pt-BR')}
-                </p>
-              </div>
-              {activity.type === 'curtida' && <Heart className="w-5 h-5 text-accent" />}
-              {activity.type === 'visita' && <div className="w-5 h-5 rounded-full bg-accent" />}
-            </div>
-          ))}
-          
-          {activities.length === 0 && (
-            <div className="text-center py-4 text-gray-400">
-              <p>Nenhuma atividade recente</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

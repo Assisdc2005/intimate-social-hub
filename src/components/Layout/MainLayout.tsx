@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Header } from "./Header";
 import { BottomNavigation } from "./BottomNavigation";
+import { InstitutionalFooter } from "./InstitutionalFooter";
 import { HomeTab } from "../Tabs/HomeTab";
 import { DiscoverTab } from "../Tabs/DiscoverTab";
 import { MessagesTabComplete } from "../Tabs/MessagesTabComplete";
@@ -64,15 +66,18 @@ export const MainLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen bg-gradient-hero flex flex-col">
       <Header />
       
       {/* Content area with proper spacing for fixed header and bottom nav */}
-      <main className="pt-20 pb-20 min-h-screen">
+      <main className="pt-20 pb-20 flex-1">
         <div className="max-w-md mx-auto px-4">
           {renderActiveTab()}
         </div>
       </main>
+      
+      {/* Footer */}
+      <InstitutionalFooter />
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
