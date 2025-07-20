@@ -1,19 +1,26 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, MapPin, Heart, MessageCircle, UserPlus } from "lucide-react";
+import { Search, Filter, MapPin, Heart, MessageCircle, UserPlus, Plus, Play, Clock, User, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export const DiscoverTab = () => {
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [newPost, setNewPost] = useState({ content: '', media_type: 'texto', media_url: '' });
   const [filters, setFilters] = useState({
     gender: '',
     city: '',
@@ -23,20 +30,37 @@ export const DiscoverTab = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch users
+        const { data: usersData, error: usersError } = await supabase
           .from('profiles')
           .select('*')
           .eq('profile_completed', true)
           .neq('user_id', profile?.user_id)
           .order('updated_at', { ascending: false });
 
-        if (error) {
-          console.error('Error fetching users:', error);
+        // Fetch posts with profiles
+        const { data: postsData, error: postsError } = await supabase
+          .from('posts')
+          .select(`
+            *,
+            profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (usersError) {
+          console.error('Error fetching users:', usersError);
         } else {
-          setUsers(data || []);
-          setFilteredUsers(data || []);
+          setUsers(usersData || []);
+          setFilteredUsers(usersData || []);
+        }
+
+        if (postsError) {
+          console.error('Error fetching posts:', postsError);
+        } else {
+          setPosts(postsData || []);
         }
       } catch (error) {
         console.error('Error:', error);
@@ -46,7 +70,7 @@ export const DiscoverTab = () => {
     };
 
     if (profile?.user_id) {
-      fetchUsers();
+      fetchData();
     }
   }, [profile?.user_id]);
 
@@ -163,12 +187,86 @@ export const DiscoverTab = () => {
           });
       }
 
-      toast({
-        title: "Conversa iniciada!",
-        description: "Acesse a aba Mensagens para conversar",
-      });
+      navigate('/messages');
     } catch (error) {
       console.error('Error starting conversation:', error);
+    }
+  };
+
+  const handleCreatePost = async () => {
+    if (!newPost.content.trim() && !newPost.media_url) {
+      toast({
+        title: "Erro",
+        description: "Adicione um conteúdo ou mídia",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .insert({
+          user_id: profile?.user_id,
+          content: newPost.content,
+          media_type: newPost.media_url ? 'imagem' : 'texto',
+          media_url: newPost.media_url
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Publicação criada!",
+        description: "Sua publicação foi criada com sucesso",
+      });
+
+      setNewPost({ content: '', media_type: 'texto', media_url: '' });
+      setShowCreatePost(false);
+      
+      // Refresh posts
+      const { data: postsData } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      setPosts(postsData || []);
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar publicação",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLike = async (postId: string) => {
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: "Assine o Premium para curtir posts",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('likes')
+        .insert({ post_id: postId, user_id: profile?.user_id });
+
+      if (!error) {
+        toast({
+          title: "Post curtido!",
+          description: "Você curtiu este post",
+        });
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
     }
   };
 
@@ -205,32 +303,28 @@ export const DiscoverTab = () => {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Search Bar */}
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-display font-bold text-gradient">Descobrir</h1>
+        <p className="text-lg text-foreground/80">Encontre pessoas incríveis perto de você</p>
+      </div>
+
+      {/* Filters Bar */}
       <div className="glass rounded-2xl p-4">
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Buscar por nome, cidade..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-300"
-            />
-          </div>
+        <div className="flex gap-3 mb-4">
           <Button
-            variant="outline"
-            size="sm"
+            className="bg-gradient-primary hover:opacity-90 text-white rounded-full flex items-center gap-2"
             onClick={() => setShowFilters(!showFilters)}
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
           >
             <Filter className="h-4 w-4" />
+            Filtros
           </Button>
         </div>
 
         {/* Filters */}
         {showFilters && (
-          <div className="grid grid-cols-2 gap-3 mt-4">
+          <div className="grid grid-cols-2 gap-3">
             <Select value={filters.gender} onValueChange={(value) => setFilters({...filters, gender: value})}>
               <SelectTrigger className="bg-white/10 border-white/20 text-white">
                 <SelectValue placeholder="Gênero" />
@@ -276,87 +370,233 @@ export const DiscoverTab = () => {
         )}
       </div>
 
-      {/* Users List */}
-      <div className="space-y-3">
-        {filteredUsers.map((user) => (
-          <div key={user.id} className="glass rounded-2xl p-4">
-            <div className="flex items-start gap-4">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-secondary overflow-hidden">
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
+      {/* Create Post Button */}
+      <div className="text-center">
+        <Dialog open={showCreatePost} onOpenChange={setShowCreatePost}>
+          <DialogTrigger asChild>
+            <Button className="bg-gradient-primary hover:opacity-90 text-white rounded-full px-8 py-3 text-lg font-semibold shadow-lg">
+              <Plus className="h-5 w-5 mr-2" />
+              Criar Publicação
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-background/95 backdrop-blur border-white/20">
+            <DialogHeader>
+              <DialogTitle className="text-gradient">Criar Nova Publicação</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                placeholder="O que você está pensando?"
+                value={newPost.content}
+                onChange={(e) => setNewPost({...newPost, content: e.target.value})}
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
+                rows={4}
+              />
+              <Input
+                placeholder="URL da imagem (opcional)"
+                value={newPost.media_url}
+                onChange={(e) => setNewPost({...newPost, media_url: e.target.value})}
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
+              />
+              <Button onClick={handleCreatePost} className="w-full bg-gradient-primary hover:opacity-90">
+                Publicar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Top Sensuais Online Feed */}
+      <div className="card-premium">
+        <div className="flex items-center gap-2 mb-6">
+          <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
+            <Heart className="w-4 h-4 text-white" />
+          </div>
+          <h3 className="text-xl font-semibold text-gradient">Top Sensuais Online</h3>
+        </div>
+        
+        <div className="space-y-6">
+          {posts.map((post) => (
+            <div key={post.id} className="bg-white/5 rounded-2xl p-6 border border-white/10">
+              {/* Post Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-secondary overflow-hidden">
+                  {post.profiles?.avatar_url ? (
+                    <img src={post.profiles.avatar_url} alt={post.profiles.display_name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white font-bold text-xl">
-                      {user.display_name?.[0]}
+                    <div className="w-full h-full flex items-center justify-center text-white font-bold">
+                      {post.profiles?.display_name?.[0]}
                     </div>
                   )}
                 </div>
-                {user.subscription_type === 'premium' && (
-                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-primary rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">P</span>
-                  </div>
-                )}
+                <div className="flex-1">
+                  <p className="font-semibold text-white">{post.profiles?.display_name}</p>
+                  <p className="text-sm text-gray-400 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {new Date(post.created_at).toLocaleString('pt-BR')}
+                  </p>
+                </div>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-white truncate">{user.display_name}</h3>
-                  {user.subscription_type === 'premium' && (
-                    <span className="text-xs bg-gradient-primary px-2 py-1 rounded-full text-white font-semibold">
-                      PREMIUM
-                    </span>
+              {/* Post Content */}
+              {post.content && (
+                <p className="text-white mb-4">{post.content}</p>
+              )}
+
+              {/* Post Media */}
+              {post.media_url && (
+                <div className="relative mb-4 rounded-xl overflow-hidden">
+                  <img 
+                    src={post.media_url} 
+                    alt="Post content" 
+                    className="w-full max-h-96 object-cover"
+                  />
+                  {post.media_type === 'video' && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-black/50 rounded-full p-3">
+                        <Play className="w-8 h-8 text-white" />
+                      </div>
+                    </div>
                   )}
                 </div>
-                
-                <div className="flex items-center gap-1 text-gray-300 text-sm mt-1">
-                  <MapPin className="h-3 w-3" />
-                  <span>{user.city}, {user.state}</span>
-                </div>
-                
-                <p className="text-gray-400 text-sm mt-1">{user.profession}</p>
-                
-                {user.interests && user.interests.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {user.interests.slice(0, 3).map((interest, index) => (
-                      <span key={index} className="text-xs bg-white/10 px-2 py-1 rounded-full text-gray-300">
-                        {interest}
-                      </span>
-                    ))}
+              )}
+
+              {/* Post Actions */}
+              <div className="flex items-center gap-4 pt-4 border-t border-white/10">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleLike(post.id)}
+                  className="text-gray-400 hover:text-accent hover:bg-white/10"
+                >
+                  <Heart className="w-4 h-4 mr-2" />
+                  Curtir
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Comentar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleViewProfile(post.user_id)}
+                  className="text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Ver Perfil
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {posts.length === 0 && (
+          <div className="text-center py-8 text-gray-400">
+            <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>Nenhuma publicação encontrada</p>
+          </div>
+        )}
+      </div>
+
+      {/* Users Cards Grid */}
+      <div className="card-premium">
+        <h3 className="text-xl font-semibold text-gradient mb-6">Perfis Recomendados</h3>
+        
+        <div className="space-y-4">
+          {filteredUsers.map((user) => (
+            <div key={user.id} className="bg-white/5 rounded-2xl p-6 border border-white/10">
+              {/* User Header */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full bg-gradient-secondary overflow-hidden">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-xl">
+                        {user.display_name?.[0]}
+                      </div>
+                    )}
                   </div>
-                )}
+                  {user.subscription_type === 'premium' && (
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-accent rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">★</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-white text-lg">{user.display_name}</h3>
+                    {user.subscription_type === 'premium' && (
+                      <span className="text-xs bg-gradient-primary px-2 py-1 rounded-full text-white font-semibold">
+                        PREMIUM
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p className="text-sm text-gray-300">
+                    {user.gender}, {user.birth_date ? new Date().getFullYear() - new Date(user.birth_date).getFullYear() : ''} anos • {user.sexual_orientation}
+                  </p>
+                  
+                  <div className="flex items-center gap-1 text-gray-400 text-sm mt-1">
+                    <MapPin className="h-3 w-3" />
+                    <span>{user.city}, {user.state}</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2">
+              {/* Bio */}
+              {user.bio && (
+                <p className="text-gray-300 mb-4">{user.bio}</p>
+              )}
+
+              {/* Sample Photos/Videos */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {[1, 2, 3].map((index) => (
+                  <div key={index} className="aspect-square bg-gradient-secondary rounded-lg overflow-hidden relative">
+                    {user.avatar_url && index === 1 ? (
+                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-purple-400/20 to-pink-400/20 flex items-center justify-center">
+                        <Camera className="w-6 h-6 text-white/50" />
+                      </div>
+                    )}
+                    {index === 3 && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <Play className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleViewProfile(user.user_id)}
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  onClick={() => handleAddFriend(user.user_id)}
+                  className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20"
                 >
-                  Ver Perfil
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Adicionar
                 </Button>
                 
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => handleAddFriend(user.user_id)}
-                    className="bg-gradient-primary hover:opacity-90 text-white"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    onClick={() => handleMessage(user.user_id)}
-                    className="bg-gradient-secondary hover:opacity-90 text-white"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleMessage(user.user_id)}
+                  className="flex-1 bg-gradient-primary hover:opacity-90 text-white"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Chat
+                </Button>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {filteredUsers.length === 0 && (

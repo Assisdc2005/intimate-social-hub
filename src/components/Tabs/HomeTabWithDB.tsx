@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export const HomeTab = () => {
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<any[]>([]);
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
@@ -122,7 +124,10 @@ export const HomeTab = () => {
           {topUsers.length * 1000} mil de pessoas reais perto de você
         </p>
         
-        <Button className="btn-premium w-full text-lg py-4 mt-4">
+        <Button 
+          className="btn-premium w-full text-lg py-4 mt-4"
+          onClick={() => navigate('/discover')}
+        >
           Descobrir Perfis
         </Button>
       </div>
