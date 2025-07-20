@@ -2,6 +2,7 @@ import { Bell, Heart, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
+import { NotificationButton } from "./NotificationButton";
 
 export const Header = () => {
   const { profile } = useProfile();
@@ -39,17 +40,7 @@ export const Header = () => {
         </div>
         
         {/* Notificações à direita */}
-        <Button 
-          variant="ghost" 
-          size="icon"
-          className="w-10 h-10 rounded-full glass border border-primary/20 hover:bg-primary/10 transition-all duration-300 hover:scale-110"
-        >
-          <Bell className="w-5 h-5 text-foreground" />
-          {/* Badge de notificação */}
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent rounded-full text-xs font-bold text-white flex items-center justify-center shadow-[var(--shadow-glow)]">
-            3
-          </span>
-        </Button>
+        <NotificationButton />
       </div>
     </header>
   );

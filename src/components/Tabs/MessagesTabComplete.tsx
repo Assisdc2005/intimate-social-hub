@@ -130,7 +130,7 @@ export const MessagesTabComplete = () => {
     if (!newMessage.trim() || !selectedConversation || !profile?.user_id) return;
 
     // Check if user is premium - fixed logic
-    if (profile.subscription_type !== 'premium' || !isPremium) {
+    if (!isPremium) {
       toast({
         title: "Recurso Premium",
         description: "Assine o plano premium para enviar mensagens",
@@ -247,7 +247,7 @@ export const MessagesTabComplete = () => {
         </Card>
 
         {/* Aviso Premium - only show for non-premium users */}
-        {profile && profile.subscription_type !== 'premium' && (
+        {profile && !isPremium && (
           <Card className="glass backdrop-blur-xl border-accent/20">
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -385,14 +385,7 @@ export const MessagesTabComplete = () => {
               <p className="text-xs text-green-400">Online</p>
             </div>
             
-            <div className="flex gap-2">
-              <Button variant="ghost" size="icon" className="w-10 h-10 rounded-full hover:bg-primary/10">
-                <Phone className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="w-10 h-10 rounded-full hover:bg-primary/10">
-                <Video className="w-4 h-4" />
-              </Button>
-            </div>
+            {/* Removed call buttons as requested */}
           </div>
         </CardContent>
       </Card>
@@ -452,7 +445,7 @@ export const MessagesTabComplete = () => {
       {/* Input de mensagem */}
       <Card className="glass backdrop-blur-xl border-primary/20 flex-shrink-0">
         <CardContent className="p-4">
-          {profile?.subscription_type !== 'premium' ? (
+          {!isPremium ? (
             <div className="flex items-center justify-center p-4 text-center">
               <div className="flex items-center gap-3">
                 <Lock className="w-5 h-5 text-muted-foreground" />

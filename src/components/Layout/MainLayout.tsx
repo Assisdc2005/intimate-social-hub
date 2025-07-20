@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Header } from "./Header";
 import { BottomNavigation } from "./BottomNavigation";
 import { HomeTab } from "../Tabs/HomeTabWithDB";
@@ -6,9 +7,28 @@ import { DiscoverTab } from "../Tabs/DiscoverTabWithDB";
 import { MessagesTabComplete } from "../Tabs/MessagesTabComplete";
 import { PremiumTab } from "../Tabs/PremiumTab";
 import { ProfileTab } from "../Tabs/ProfileTab";
+import { EditProfileTab } from "../Tabs/EditProfileTab";
 
 export const MainLayout = () => {
-  const [activeTab, setActiveTab] = useState('home');
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Set active tab based on current route
+  const getActiveTabFromPath = () => {
+    const path = location.pathname;
+    if (path === '/discover') return 'discover';
+    if (path === '/messages') return 'messages';
+    if (path === '/premium') return 'premium';
+    if (path === '/profile') return 'profile';
+    if (path === '/profile/edit') return 'edit';
+    return 'home';
+  };
+  
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
+  
+  useEffect(() => {
+    setActiveTab(getActiveTabFromPath());
+  }, [location.pathname]);
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -22,9 +42,25 @@ export const MainLayout = () => {
         return <PremiumTab />;
       case 'profile':
         return <ProfileTab />;
+      case 'edit':
+        return <EditProfileTab />;
       default:
         return <HomeTab />;
     }
+  };
+
+  const handleTabChange = (tab: string) => {
+    // Map tab names to routes
+    const routes = {
+      home: '/home',
+      discover: '/discover',
+      messages: '/messages',
+      premium: '/premium',
+      profile: '/profile'
+    };
+    
+    const route = routes[tab as keyof typeof routes] || '/home';
+    navigate(route);
   };
 
   return (
@@ -38,7 +74,7 @@ export const MainLayout = () => {
         </div>
       </main>
       
-      <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 };

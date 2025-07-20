@@ -96,11 +96,20 @@ export const useProfile = () => {
 
   const isPremium = () => {
     if (!profile) return false;
-    if (profile.subscription_type !== 'premium') return false;
-    if (!profile.subscription_expires_at) return false;
     
-    const expiresAt = new Date(profile.subscription_expires_at);
-    return expiresAt > new Date();
+    // If subscription_type is premium, consider as premium
+    // If subscription_expires_at is set, check if it's not expired
+    if (profile.subscription_type === 'premium') {
+      if (!profile.subscription_expires_at) {
+        // If no expiration date is set, consider as premium
+        return true;
+      }
+      
+      const expiresAt = new Date(profile.subscription_expires_at);
+      return expiresAt > new Date();
+    }
+    
+    return false;
   };
 
   return {

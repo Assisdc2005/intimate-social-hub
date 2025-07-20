@@ -89,6 +89,62 @@ function AuthenticatedApp() {
           )
         } 
       />
+      <Route 
+        path="/discover" 
+        element={
+          user ? (
+            profile?.profile_completed ? (
+              <Index />
+            ) : (
+              <Navigate to="/complete-profile" replace />
+            )
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } 
+      />
+      <Route 
+        path="/messages" 
+        element={
+          user ? (
+            profile?.profile_completed ? (
+              <Index />
+            ) : (
+              <Navigate to="/complete-profile" replace />
+            )
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } 
+      />
+      <Route 
+        path="/premium" 
+        element={
+          user ? (
+            profile?.profile_completed ? (
+              <Index />
+            ) : (
+              <Navigate to="/complete-profile" replace />
+            )
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } 
+      />
+      <Route 
+        path="/profile/edit" 
+        element={
+          user ? (
+            profile?.profile_completed ? (
+              <Index />
+            ) : (
+              <Navigate to="/complete-profile" replace />
+            )
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } 
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

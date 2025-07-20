@@ -1,7 +1,9 @@
 import { Crown, Check, Star, Zap, Eye, MessageCircle, Heart, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useProfile } from "@/hooks/useProfile";
 
 export const PremiumTab = () => {
+  const { isPremium } = useProfile();
   const premiumFeatures = [
     {
       icon: Heart,
@@ -72,10 +74,13 @@ export const PremiumTab = () => {
             <Crown className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-display font-bold text-gradient mb-2">
-            Sensual Premium
+            {isPremium ? 'Você é Premium!' : 'Sensual Premium'}
           </h1>
           <p className="text-lg text-foreground/90 mb-4">
-            Desbloqueie todo o potencial da plataforma
+            {isPremium 
+              ? 'Aproveite todos os recursos exclusivos' 
+              : 'Desbloqueie todo o potencial da plataforma'
+            }
           </p>
           <div className="flex items-center justify-center gap-2 text-accent">
             <Star className="w-5 h-5 fill-current" />
@@ -110,59 +115,61 @@ export const PremiumTab = () => {
         </div>
       </div>
 
-      {/* Planos de Assinatura */}
-      <div className="card-premium">
-        <h2 className="text-xl font-semibold text-gradient mb-6 text-center">
-          Escolha Seu Plano
-        </h2>
-        
-        <div className="space-y-4">
-          {plans.map((plan) => (
-            <div 
-              key={plan.id} 
-              className={`
-                relative p-6 rounded-2xl border transition-all duration-300 cursor-pointer hover:scale-[1.02]
-                ${plan.highlight 
-                  ? 'border-primary/50 bg-gradient-to-br from-primary/10 to-accent/10 shadow-glow' 
-                  : 'border-white/20 glass hover:border-primary/30'
-                }
-              `}
-            >
-              {plan.highlight && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-gradient-primary px-4 py-1 rounded-full text-sm font-bold text-white shadow-glow">
-                    Mais Popular
-                  </span>
-                </div>
-              )}
-              
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-bold">{plan.name}</h3>
-                  <p className="text-sm text-muted-foreground">{plan.description}</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gradient">{plan.price}</div>
-                  <div className="text-sm text-muted-foreground">{plan.period}</div>
-                </div>
-              </div>
-              
-              <Button 
+      {/* Planos de Assinatura - Only show for non-premium users */}
+      {!isPremium && (
+        <div className="card-premium">
+          <h2 className="text-xl font-semibold text-gradient mb-6 text-center">
+            Escolha Seu Plano
+          </h2>
+          
+          <div className="space-y-4">
+            {plans.map((plan) => (
+              <div 
+                key={plan.id} 
                 className={`
-                  w-full py-3 font-semibold transition-all duration-300
+                  relative p-6 rounded-2xl border transition-all duration-300 cursor-pointer hover:scale-[1.02]
                   ${plan.highlight 
-                    ? 'btn-premium shadow-glow' 
-                    : 'btn-secondary'
+                    ? 'border-primary/50 bg-gradient-to-br from-primary/10 to-accent/10 shadow-glow' 
+                    : 'border-white/20 glass hover:border-primary/30'
                   }
                 `}
               >
-                <Crown className="w-4 h-4 mr-2" />
-                Assinar {plan.name}
-              </Button>
-            </div>
-          ))}
+                {plan.highlight && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-gradient-primary px-4 py-1 rounded-full text-sm font-bold text-white shadow-glow">
+                      Mais Popular
+                    </span>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold">{plan.name}</h3>
+                    <p className="text-sm text-muted-foreground">{plan.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-gradient">{plan.price}</div>
+                    <div className="text-sm text-muted-foreground">{plan.period}</div>
+                  </div>
+                </div>
+                
+                <Button 
+                  className={`
+                    w-full py-3 font-semibold transition-all duration-300
+                    ${plan.highlight 
+                      ? 'btn-premium shadow-glow' 
+                      : 'btn-secondary'
+                    }
+                  `}
+                >
+                  <Crown className="w-4 h-4 mr-2" />
+                  Assinar {plan.name}
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Comparação Gratuito vs Premium */}
       <div className="card-premium">
@@ -223,19 +230,21 @@ export const PremiumTab = () => {
         </div>
       </div>
 
-      {/* Call to Action Final */}
-      <div className="glass rounded-2xl p-6 text-center border border-accent/20">
-        <h3 className="text-lg font-semibold text-gradient mb-2">
-          Pronto para se destacar?
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Junte-se a milhares de usuários Premium e encontre conexões únicas
-        </p>
-        <Button className="btn-premium w-full text-lg py-4">
-          <Crown className="w-5 h-5 mr-2" />
-          Começar Agora
-        </Button>
-      </div>
+      {/* Call to Action Final - Only show for non-premium users */}
+      {!isPremium && (
+        <div className="glass rounded-2xl p-6 text-center border border-accent/20">
+          <h3 className="text-lg font-semibold text-gradient mb-2">
+            Pronto para se destacar?
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Junte-se a milhares de usuários Premium e encontre conexões únicas
+          </p>
+          <Button className="btn-premium w-full text-lg py-4">
+            <Crown className="w-5 h-5 mr-2" />
+            Começar Agora
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
