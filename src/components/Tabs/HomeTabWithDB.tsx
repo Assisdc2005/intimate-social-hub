@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
-import { Camera, Heart, MessageCircle, MapPin, Clock } from "lucide-react";
+import { Camera, Heart, MessageCircle, MapPin, Clock, Plus, Play, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +16,10 @@ export const HomeTab = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [feedPosts, setFeedPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [newPost, setNewPost] = useState({ content: '', media_url: '' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,9 +54,20 @@ export const HomeTab = () => {
           .order('created_at', { ascending: false })
           .limit(3);
 
+        // Fetch feed posts for Top Sensuais Online
+        const { data: feedPostsData } = await supabase
+          .from('posts')
+          .select(`
+            *,
+            profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
         setPosts(postsData || []);
         setTopUsers(usersData || []);
         setActivities(notificationsData || []);
+        setFeedPosts(feedPostsData || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -101,6 +118,79 @@ export const HomeTab = () => {
     // Navigate to messages
   };
 
+  const handleCreatePost = async () => {
+    if (!newPost.content.trim() && !newPost.media_url) {
+      toast({
+        title: "Erro",
+        description: "Adicione um conteúdo ou mídia",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .insert({
+          user_id: profile?.user_id,
+          content: newPost.content,
+          media_type: newPost.media_url ? 'imagem' : 'texto',
+          media_url: newPost.media_url
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Publicação criada!",
+        description: "Sua publicação foi criada com sucesso",
+      });
+
+      setNewPost({ content: '', media_url: '' });
+      setShowCreatePost(false);
+      
+      // Refresh feed posts
+      const { data: feedPostsData } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      setFeedPosts(feedPostsData || []);
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar publicação",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewProfile = async (userId: string) => {
+    try {
+      await supabase
+        .from('profile_visits')
+        .insert({
+          visited_user_id: userId,
+          visitor_user_id: profile?.user_id
+        });
+
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          from_user_id: profile?.user_id,
+          type: 'visita',
+          content: 'visitou seu perfil'
+        });
+    } catch (error) {
+      console.error('Error recording visit:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -130,6 +220,43 @@ export const HomeTab = () => {
         >
           Descobrir Perfis
         </Button>
+
+        {/* Criar Publicação Button */}
+        <Dialog open={showCreatePost} onOpenChange={setShowCreatePost}>
+          <DialogTrigger asChild>
+            <Button className="w-full bg-gradient-primary hover:opacity-90 text-white rounded-full px-8 py-3 text-lg font-semibold shadow-lg mt-4">
+              <Plus className="h-5 w-5 mr-2" />
+              Criar Publicação
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-background/95 backdrop-blur border-white/20">
+            <DialogHeader>
+              <DialogTitle className="text-gradient">Criar Nova Publicação</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                placeholder="O que você está pensando? (máx. 250 caracteres)"
+                value={newPost.content}
+                onChange={(e) => setNewPost({...newPost, content: e.target.value})}
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
+                rows={4}
+                maxLength={250}
+              />
+              <Input
+                placeholder="URL da imagem/vídeo (opcional)"
+                value={newPost.media_url}
+                onChange={(e) => setNewPost({...newPost, media_url: e.target.value})}
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
+              />
+              <div className="text-xs text-gray-400">
+                Formatos aceitos: .jpg, .png, .mp4
+              </div>
+              <Button onClick={handleCreatePost} className="w-full bg-gradient-primary hover:opacity-90">
+                Publicar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Ranking Top Sensuais Online */}
@@ -244,6 +371,102 @@ export const HomeTab = () => {
           <div className="text-center py-8 text-gray-400">
             <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
             <p>Nenhuma foto encontrada</p>
+          </div>
+        )}
+      </div>
+
+      {/* Top Sensuais Online Feed */}
+      <div className="card-premium">
+        <div className="flex items-center gap-2 mb-6">
+          <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
+            <Heart className="w-4 h-4 text-white" />
+          </div>
+          <h3 className="text-xl font-semibold text-gradient">Top Sensuais Online</h3>
+        </div>
+        
+        <div className="space-y-6">
+          {feedPosts.map((post) => (
+            <div key={post.id} className="bg-white/5 rounded-2xl p-6 border border-white/10">
+              {/* Post Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-secondary overflow-hidden">
+                  {post.profiles?.avatar_url ? (
+                    <img src={post.profiles.avatar_url} alt={post.profiles.display_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white font-bold">
+                      {post.profiles?.display_name?.[0]}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-white">{post.profiles?.display_name}</p>
+                  <p className="text-sm text-gray-400 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {new Date(post.created_at).toLocaleString('pt-BR')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Post Content */}
+              {post.content && (
+                <p className="text-white mb-4">{post.content}</p>
+              )}
+
+              {/* Post Media */}
+              {post.media_url && (
+                <div className="relative mb-4 rounded-xl overflow-hidden">
+                  <img 
+                    src={post.media_url} 
+                    alt="Post content" 
+                    className="w-full max-h-96 object-cover"
+                  />
+                  {post.media_type === 'video' && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-black/50 rounded-full p-3">
+                        <Play className="w-8 h-8 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Post Actions */}
+              <div className="flex items-center gap-4 pt-4 border-t border-white/10">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleLike(post.id)}
+                  className="text-gray-400 hover:text-accent hover:bg-white/10"
+                >
+                  <Heart className="w-4 h-4 mr-2" />
+                  Curtir
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Comentar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleViewProfile(post.user_id)}
+                  className="text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Ver Perfil
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {feedPosts.length === 0 && (
+          <div className="text-center py-8 text-gray-400">
+            <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <p>Nenhuma publicação encontrada</p>
           </div>
         )}
       </div>
