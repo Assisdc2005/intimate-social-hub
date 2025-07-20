@@ -9,6 +9,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { PublicFeed } from "@/components/Feed/PublicFeed";
+import { VideoFeed } from "@/components/Feed/VideoFeed";
 
 export const HomeTab = () => {
   const { profile, isPremium } = useProfile();
@@ -322,69 +323,9 @@ export const HomeTab = () => {
         </div>
       </div>
 
-      {/* Sessão Últimas Fotos */}
+      {/* Sessão Últimos Vídeos */}
       <div className="card-premium">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
-              <Camera className="w-4 h-4 text-white" />
-            </div>
-            <h3 className="text-lg font-semibold text-gradient">Últimas Fotos</h3>
-          </div>
-          <Button variant="ghost" className="text-accent hover:text-accent/80">
-            Mais fotos →
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-3">
-          {posts.map((post) => (
-            <div key={post.id} className="relative group cursor-pointer">
-              <div className="aspect-[3/4] rounded-2xl bg-gradient-secondary overflow-hidden">
-                <img 
-                  src={post.media_url || "/placeholder.svg"}
-                  alt={post.profiles?.display_name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                
-                {/* Overlay com informações */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <p className="font-medium text-white">{post.profiles?.display_name}</p>
-                    <p className="text-xs text-white/80 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {post.profiles?.city}, {post.profiles?.state}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Botões de ação */}
-                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <Button 
-                    size="sm" 
-                    className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 border-0"
-                    onClick={handleMessage}
-                  >
-                    <Heart className="w-4 h-4 text-white" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    className="w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 border-0"
-                    onClick={handleMessage}
-                  >
-                    <MessageCircle className="w-4 h-4 text-white" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {posts.length === 0 && (
-          <div className="text-center py-8 text-gray-400">
-            <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>Nenhuma foto encontrada</p>
-          </div>
-        )}
+        <VideoFeed />
       </div>
 
       {/* Feed de Atividades Recentes */}
