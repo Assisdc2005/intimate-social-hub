@@ -116,7 +116,7 @@ export const CompleteProfile = () => {
               <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
                 <Heart className="h-6 w-6 text-white" />
               </div>
-              <h1 className=""text-2xl font-bold text-white">
+              <h1 className="text-2xl font-bold text-white">
                 Sensual
               </h1>
             </div>
