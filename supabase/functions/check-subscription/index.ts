@@ -64,12 +64,44 @@ serve(async (req) => {
 
     console.log('Profile data:', profile);
 
+    // Verificar se há assinaturas ativas diretamente no banco
+    const { data: activeSubscriptions } = await supabaseClient
+      .from('assinaturas')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .gt('data_fim', new Date().toISOString());
+
+    console.log('Active subscriptions found:', activeSubscriptions);
+
+    // Se há assinaturas ativas mas o profile não está premium, forçar atualização
+    if (activeSubscriptions && activeSubscriptions.length > 0) {
+      if (profile?.premium_status !== 'premium' || profile?.tipo_assinatura !== 'premium') {
+        console.log('Forcing profile update to premium status');
+        
+        const { error: forceUpdateError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            premium_status: 'premium',
+            tipo_assinatura: 'premium',
+            assinatura_id: activeSubscriptions[0].id
+          })
+          .eq('user_id', user.id);
+
+        if (forceUpdateError) {
+          console.error('Error forcing profile update:', forceUpdateError);
+        } else {
+          console.log('✅ Profile forcefully updated to premium');
+        }
+      }
+    }
+
     const isPremium = profile?.premium_status === 'premium' && profile?.tipo_assinatura === 'premium';
     const subscription = profile?.assinaturas && Array.isArray(profile.assinaturas) 
       ? profile.assinaturas[0] 
       : profile?.assinaturas || null;
 
-    console.log('Is premium:', isPremium, 'Subscription:', subscription);
+    console.log('Final result - Is premium:', isPremium, 'Subscription:', subscription);
 
     return new Response(JSON.stringify({
       isPremium,

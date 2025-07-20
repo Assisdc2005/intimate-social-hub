@@ -131,20 +131,44 @@ serve(async (req) => {
 
           console.log('Subscription created:', newSubscription.id);
 
-          // Update user profile with premium status and subscription link
+          // IMPORTANTE: Atualizar profile com status premium OBRIGATORIAMENTE
           const { error: profileUpdateError } = await supabaseAdmin
             .from('profiles')
             .update({ 
               premium_status: 'premium',
-              tipo_assinatura: 'premium',
+              tipo_assinatura: 'premium', // Garantir que seja 'premium' e não 'gratuito'
               assinatura_id: newSubscription.id
             })
             .eq('id', profile.id);
 
           if (profileUpdateError) {
-            console.error('Error updating profile:', profileUpdateError);
+            console.error('ERRO CRÍTICO - Falha ao atualizar profile para premium:', profileUpdateError);
+            // Tentar novamente uma vez
+            const { error: retryError } = await supabaseAdmin
+              .from('profiles')
+              .update({ 
+                premium_status: 'premium',
+                tipo_assinatura: 'premium',
+                assinatura_id: newSubscription.id
+              })
+              .eq('user_id', metadata.user_id); // Usar user_id como fallback
+            
+            if (retryError) {
+              console.error('ERRO CRÍTICO - Segunda tentativa falhou:', retryError);
+            } else {
+              console.log('Profile atualizado para premium na segunda tentativa');
+            }
           } else {
-            console.log('Profile updated to premium for user:', metadata.user_id);
+            console.log('✅ Profile atualizado para premium com sucesso:', metadata.user_id);
+            
+            // Verificar se realmente foi atualizado
+            const { data: verifyProfile } = await supabaseAdmin
+              .from('profiles')
+              .select('premium_status, tipo_assinatura')
+              .eq('id', profile.id)
+              .single();
+              
+            console.log('Verificação do profile após update:', verifyProfile);
           }
         }
         break;
