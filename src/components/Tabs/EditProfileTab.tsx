@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ArrowLeft, Camera, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -249,7 +250,7 @@ export const EditProfileTab = () => {
               id="name"
               value={formData.display_name}
               onChange={(e) => setFormData({...formData, display_name: e.target.value})}
-              className="glass border-primary/30 h-12 rounded-xl"
+              className="bg-white/10 border-primary/30 h-12 rounded-xl text-white placeholder:text-gray-400"
               placeholder="Seu nome completo"
             />
           </div>
@@ -260,7 +261,7 @@ export const EditProfileTab = () => {
               id="bio"
               value={formData.bio}
               onChange={(e) => setFormData({...formData, bio: e.target.value})}
-              className="glass border-primary/30 rounded-xl min-h-[100px]"
+              className="bg-white/10 border-primary/30 rounded-xl min-h-[100px] text-white placeholder:text-gray-400"
               placeholder="Conte um pouco sobre você..."
             />
           </div>
@@ -279,7 +280,7 @@ export const EditProfileTab = () => {
               type="date"
               value={formData.birth_date}
               onChange={(e) => setFormData({...formData, birth_date: e.target.value})}
-              className="glass border-primary/30 h-12 rounded-xl"
+              className="bg-white/10 border-primary/30 h-12 rounded-xl text-white [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert"
             />
           </div>
 
@@ -287,14 +288,14 @@ export const EditProfileTab = () => {
             <div>
               <Label className="text-foreground">Gênero</Label>
               <Select value={formData.gender} onValueChange={(value) => setFormData({...formData, gender: value})}>
-                <SelectTrigger className="glass border-primary/30 h-12 rounded-xl">
+                <SelectTrigger className="bg-white/10 border-primary/30 h-12 rounded-xl text-white">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="masculino">Masculino</SelectItem>
-                  <SelectItem value="feminino">Feminino</SelectItem>
-                  <SelectItem value="nao_binario">Não-binário</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="masculino" className="text-white hover:bg-gray-700">Masculino</SelectItem>
+                  <SelectItem value="feminino" className="text-white hover:bg-gray-700">Feminino</SelectItem>
+                  <SelectItem value="nao_binario" className="text-white hover:bg-gray-700">Não-binário</SelectItem>
+                  <SelectItem value="outro" className="text-white hover:bg-gray-700">Outro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -302,15 +303,15 @@ export const EditProfileTab = () => {
             <div>
               <Label className="text-foreground">Orientação</Label>
               <Select value={formData.sexual_orientation} onValueChange={(value) => setFormData({...formData, sexual_orientation: value})}>
-                <SelectTrigger className="glass border-primary/30 h-12 rounded-xl">
+                <SelectTrigger className="bg-white/10 border-primary/30 h-12 rounded-xl text-white">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="heterossexual">Heterossexual</SelectItem>
-                  <SelectItem value="homossexual">Homossexual</SelectItem>
-                  <SelectItem value="bissexual">Bissexual</SelectItem>
-                  <SelectItem value="pansexual">Pansexual</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="heterossexual" className="text-white hover:bg-gray-700">Heterossexual</SelectItem>
+                  <SelectItem value="homossexual" className="text-white hover:bg-gray-700">Homossexual</SelectItem>
+                  <SelectItem value="bissexual" className="text-white hover:bg-gray-700">Bissexual</SelectItem>
+                  <SelectItem value="pansexual" className="text-white hover:bg-gray-700">Pansexual</SelectItem>
+                  <SelectItem value="outro" className="text-white hover:bg-gray-700">Outro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -331,7 +332,7 @@ export const EditProfileTab = () => {
                 id="state"
                 value={formData.state}
                 onChange={(e) => setFormData({...formData, state: e.target.value})}
-                className="glass border-primary/30 h-12 rounded-xl"
+                className="bg-white/10 border-primary/30 h-12 rounded-xl text-white placeholder:text-gray-400"
                 placeholder="Ex: SP"
               />
             </div>
@@ -341,7 +342,7 @@ export const EditProfileTab = () => {
                 id="city"
                 value={formData.city}
                 onChange={(e) => setFormData({...formData, city: e.target.value})}
-                className="glass border-primary/30 h-12 rounded-xl"
+                className="bg-white/10 border-primary/30 h-12 rounded-xl text-white placeholder:text-gray-400"
                 placeholder="Ex: São Paulo"
               />
             </div>
@@ -353,7 +354,7 @@ export const EditProfileTab = () => {
               id="profession"
               value={formData.profession}
               onChange={(e) => setFormData({...formData, profession: e.target.value})}
-              className="glass border-primary/30 h-12 rounded-xl"
+              className="bg-white/10 border-primary/30 h-12 rounded-xl text-white placeholder:text-gray-400"
               placeholder="Sua profissão"
             />
           </div>
@@ -374,7 +375,7 @@ export const EditProfileTab = () => {
                 type="number"
                 value={formData.height}
                 onChange={(e) => setFormData({...formData, height: e.target.value})}
-                className="glass border-primary/30 h-12 rounded-xl"
+                className="bg-white/10 border-primary/30 h-12 rounded-xl text-white placeholder:text-gray-400"
                 placeholder="Ex: 175"
               />
             </div>
@@ -385,7 +386,7 @@ export const EditProfileTab = () => {
                 type="number"
                 value={formData.weight}
                 onChange={(e) => setFormData({...formData, weight: e.target.value})}
-                className="glass border-primary/30 h-12 rounded-xl"
+                className="bg-white/10 border-primary/30 h-12 rounded-xl text-white placeholder:text-gray-400"
                 placeholder="Ex: 70"
               />
             </div>
@@ -394,15 +395,15 @@ export const EditProfileTab = () => {
           <div>
             <Label className="text-foreground">Status de Relacionamento</Label>
             <Select value={formData.relationship_status} onValueChange={(value) => setFormData({...formData, relationship_status: value})}>
-              <SelectTrigger className="glass border-primary/30 h-12 rounded-xl">
+              <SelectTrigger className="bg-white/10 border-primary/30 h-12 rounded-xl text-white">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="solteiro">Solteiro(a)</SelectItem>
-                <SelectItem value="casado">Casado(a)</SelectItem>
-                <SelectItem value="relacionamento">Em relacionamento</SelectItem>
-                <SelectItem value="divorciado">Divorciado(a)</SelectItem>
-                <SelectItem value="viuvo">Viúvo(a)</SelectItem>
+              <SelectContent className="bg-gray-800 border-gray-600">
+                <SelectItem value="solteiro" className="text-white hover:bg-gray-700">Solteiro(a)</SelectItem>
+                <SelectItem value="casado" className="text-white hover:bg-gray-700">Casado(a)</SelectItem>
+                <SelectItem value="relacionamento" className="text-white hover:bg-gray-700">Em relacionamento</SelectItem>
+                <SelectItem value="divorciado" className="text-white hover:bg-gray-700">Divorciado(a)</SelectItem>
+                <SelectItem value="viuvo" className="text-white hover:bg-gray-700">Viúvo(a)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -420,7 +421,7 @@ export const EditProfileTab = () => {
               value={interestInput}
               onChange={(e) => setInterestInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && addInterest()}
-              className="glass border-primary/30 h-12 rounded-xl"
+              className="bg-white/10 border-primary/30 h-12 rounded-xl text-white placeholder:text-gray-400"
               placeholder="Adicionar interesse..."
             />
             <Button
