@@ -29,8 +29,8 @@ export interface Profile {
   profile_completed: boolean;
   avatar_url?: string;
   premium_status: string;
-  tipo_assinatura: string;
-  assinatura_id?: string;
+  tipo_assinatura: string; // Adicionado campo tipo_assinatura
+  assinatura_id?: string; // Adicionado campo assinatura_id
   created_at: string;
   updated_at: string;
 }

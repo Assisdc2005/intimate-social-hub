@@ -13,6 +13,7 @@ interface Subscription {
   data_fim: string;
   valor: number;
   periodo: string;
+  plano?: string; // Adicionado campo plano
 }
 
 export const useSubscription = () => {
