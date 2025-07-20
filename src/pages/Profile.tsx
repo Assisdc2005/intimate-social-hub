@@ -45,14 +45,6 @@ export const Profile = () => {
   const [showComments, setShowComments] = useState<{ [key: string]: boolean }>({});
   const [postComments, setPostComments] = useState<{ [key: string]: Comment[] }>({});
 
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
-        <div className="text-foreground text-lg">Carregando perfil...</div>
-      </div>
-    );
-  }
-
   const calculateAge = (birthDate: string) => {
     const today = new Date();
     const birth = new Date(birthDate);
@@ -250,6 +242,14 @@ export const Profile = () => {
     await signOut();
     navigate('/auth');
   };
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
+        <div className="text-foreground text-lg">Carregando perfil...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-hero p-4 pt-20">
