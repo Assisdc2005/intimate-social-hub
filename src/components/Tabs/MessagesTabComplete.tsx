@@ -1,13 +1,15 @@
+
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, Search, Send, Phone, Video, ArrowLeft, Crown, Lock } from "lucide-react";
+import { MessageCircle, Search, Send, ArrowLeft, Crown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useConversations } from "@/hooks/useConversations";
+import { useMessages } from "@/hooks/useMessages";
 
 interface Conversation {
   id: string;
@@ -38,17 +40,17 @@ interface Message {
 
 export const MessagesTabComplete = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Usar os hooks customizados
+  const { conversations, loading: conversationsLoading } = useConversations();
+  const { messages, sending, sendMessage } = useMessages(selectedConversation?.id || null);
 
   // Scroll para a última mensagem
   const scrollToBottom = () => {
@@ -59,79 +61,11 @@ export const MessagesTabComplete = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Carregar conversas
-  const loadConversations = async () => {
-    if (!profile?.user_id) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          *,
-          messages:messages(
-            id,
-            content,
-            sender_id,
-            created_at
-          )
-        `)
-        .or(`participant1_id.eq.${profile.user_id},participant2_id.eq.${profile.user_id}`)
-        .order('last_message_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Buscar informações dos outros usuários
-      const conversationsWithUsers = await Promise.all(
-        (data || []).map(async (conv) => {
-          const otherUserId = conv.participant1_id === profile.user_id 
-            ? conv.participant2_id 
-            : conv.participant1_id;
-
-          const { data: otherUser } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url, city, state')
-            .eq('user_id', otherUserId)
-            .single();
-
-          // Última mensagem
-          const lastMessage = conv.messages?.[0];
-
-          return {
-            ...conv,
-            other_user: otherUser,
-            last_message: lastMessage,
-            unread_count: 0 // Implementar contagem de não lidas
-          };
-        })
-      );
-
-      setConversations(conversationsWithUsers);
-    } catch (error) {
-      console.error('Erro ao carregar conversas:', error);
-    }
-  };
-
-  // Carregar mensagens da conversa
-  const loadMessages = async (conversationId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar mensagens:', error);
-    }
-  };
-
-  // Enviar mensagem
-  const sendMessage = async () => {
+  // Enviar mensagem usando o hook
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !profile?.user_id) return;
 
-    // Check if user is premium - fixed logic
+    // Check if user is premium
     if (!isPremium) {
       toast({
         title: "Recurso Premium",
@@ -141,43 +75,15 @@ export const MessagesTabComplete = () => {
       return;
     }
 
-    setSending(true);
-    try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: selectedConversation.id,
-          sender_id: profile.user_id,
-          content: newMessage.trim()
-        });
-
-      if (error) throw error;
-
-      // Atualizar última mensagem da conversa
-      await supabase
-        .from('conversations')
-        .update({ last_message_at: new Date().toISOString() })
-        .eq('id', selectedConversation.id);
-
+    const success = await sendMessage(newMessage);
+    if (success) {
       setNewMessage("");
-      await loadMessages(selectedConversation.id);
-      await loadConversations();
-    } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao enviar mensagem",
-        variant: "destructive",
-      });
-    } finally {
-      setSending(false);
     }
   };
 
   // Selecionar conversa
-  const selectConversation = async (conversation: Conversation) => {
+  const selectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
-    await loadMessages(conversation.id);
   };
 
   // Formatar data
@@ -210,12 +116,6 @@ export const MessagesTabComplete = () => {
     
     return groups;
   };
-
-  useEffect(() => {
-    if (profile?.user_id) {
-      loadConversations();
-    }
-  }, [profile]);
 
   // Vista mobile - lista de conversas
   if (!selectedConversation) {
@@ -271,7 +171,13 @@ export const MessagesTabComplete = () => {
 
         {/* Lista de Conversas */}
         <div className="space-y-2">
-          {conversations.length === 0 ? (
+          {conversationsLoading ? (
+            <Card className="glass backdrop-blur-xl border-primary/20">
+              <CardContent className="p-8 text-center">
+                <div className="text-white">Carregando conversas...</div>
+              </CardContent>
+            </Card>
+          ) : conversations.length === 0 ? (
             <Card className="glass backdrop-blur-xl border-primary/20">
               <CardContent className="p-8 text-center">
                 <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -402,8 +308,6 @@ export const MessagesTabComplete = () => {
               </h3>
               <p className="text-xs text-green-400">Online</p>
             </div>
-            
-            {/* Removed call buttons as requested */}
           </div>
         </CardContent>
       </Card>
@@ -482,12 +386,12 @@ export const MessagesTabComplete = () => {
                 placeholder="Digite uma mensagem..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 className="flex-1 glass border-primary/30 h-12 rounded-xl"
                 disabled={sending}
               />
               <Button
-                onClick={sendMessage}
+                onClick={handleSendMessage}
                 disabled={!newMessage.trim() || sending}
                 className="w-12 h-12 rounded-xl bg-gradient-primary hover:opacity-90 text-white p-0"
               >
