@@ -49,16 +49,16 @@ export const ProfileTab = () => {
 
   return (
     <div className="space-y-6 pb-6">
-      {/* Back Button */}
-      <div className="flex items-center gap-3 mb-4">
+      {/* Back Button - Top Left Position */}
+      <div className="flex items-center justify-start mb-2">
         <Button 
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/home')}
           variant="ghost" 
           size="sm"
-          className="text-gray-300 hover:text-white hover:bg-white/10"
+          className="text-gray-300 hover:text-white hover:bg-white/10 p-2 rounded-full"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
+          <ArrowLeft className="h-5 w-5 mr-1" />
+          <span className="hidden sm:inline">Voltar</span>
         </Button>
       </div>
       {/* Profile Header */}
