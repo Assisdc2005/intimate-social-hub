@@ -22,10 +22,10 @@ export const DiscoverTab = () => {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPost, setNewPost] = useState({ content: '', media_type: 'texto', media_url: '' });
   const [filters, setFilters] = useState({
-    gender: '',
+    gender: 'all',
     city: '',
-    relationship_status: '',
-    subscription_type: '',
+    relationship_status: 'all',
+    subscription_type: 'all',
   });
   const [loading, setLoading] = useState(true);
 
@@ -87,16 +87,16 @@ export const DiscoverTab = () => {
     }
 
     // Apply other filters
-    if (filters.gender) {
+    if (filters.gender && filters.gender !== 'all') {
       filtered = filtered.filter(user => user.gender === filters.gender);
     }
     if (filters.city) {
       filtered = filtered.filter(user => user.city?.toLowerCase().includes(filters.city.toLowerCase()));
     }
-    if (filters.relationship_status) {
+    if (filters.relationship_status && filters.relationship_status !== 'all') {
       filtered = filtered.filter(user => user.relationship_status === filters.relationship_status);
     }
-    if (filters.subscription_type) {
+    if (filters.subscription_type && filters.subscription_type !== 'all') {
       filtered = filtered.filter(user => user.subscription_type === filters.subscription_type);
     }
 
@@ -328,12 +328,12 @@ export const DiscoverTab = () => {
         {/* Filters */}
         {showFilters && (
           <div className="grid grid-cols-2 gap-3">
-            <Select value={filters.gender} onValueChange={(value) => setFilters({...filters, gender: value})}>
+            <Select value={filters.gender} onValueChange={(value) => setFilters({...filters, gender: value === 'all' ? '' : value})}>
               <SelectTrigger className="bg-white/10 border-white/20 text-white">
                 <SelectValue placeholder="Gênero" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="masculino">Masculino</SelectItem>
                 <SelectItem value="feminino">Feminino</SelectItem>
                 <SelectItem value="nao_binario">Não-binário</SelectItem>
@@ -347,24 +347,24 @@ export const DiscoverTab = () => {
               className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
             />
 
-            <Select value={filters.relationship_status} onValueChange={(value) => setFilters({...filters, relationship_status: value})}>
+            <Select value={filters.relationship_status} onValueChange={(value) => setFilters({...filters, relationship_status: value === 'all' ? '' : value})}>
               <SelectTrigger className="bg-white/10 border-white/20 text-white">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="solteiro">Solteiro(a)</SelectItem>
                 <SelectItem value="casado">Casado(a)</SelectItem>
                 <SelectItem value="relacionamento">Em relacionamento</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={filters.subscription_type} onValueChange={(value) => setFilters({...filters, subscription_type: value})}>
+            <Select value={filters.subscription_type} onValueChange={(value) => setFilters({...filters, subscription_type: value === 'all' ? '' : value})}>
               <SelectTrigger className="bg-white/10 border-white/20 text-white">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="premium">Premium</SelectItem>
                 <SelectItem value="gratuito">Gratuito</SelectItem>
               </SelectContent>
