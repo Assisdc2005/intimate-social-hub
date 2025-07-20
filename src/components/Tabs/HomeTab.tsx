@@ -82,27 +82,67 @@ export const HomeTab = () => {
 
   const handleViewProfile = async (userId: string) => {
     try {
-      await supabase
-        .from('profile_visits')
-        .insert({
-          visited_user_id: userId,
-          visitor_user_id: profile?.user_id
-        });
+      // Check if profile exists and is accessible
+      const { data: targetProfile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          from_user_id: profile?.user_id,
-          type: 'visita',
-          content: 'visitou seu perfil'
+      if (error || !targetProfile) {
+        toast({
+          title: "Perfil indisponível",
+          description: "Este perfil não está disponível no momento",
+          variant: "destructive",
         });
+        return;
+      }
+
+      // Record profile visit if not viewing own profile
+      if (profile?.user_id && profile.user_id !== userId) {
+        await supabase
+          .from('profile_visits')
+          .insert({
+            visited_user_id: userId,
+            visitor_user_id: profile.user_id
+          });
+
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            from_user_id: profile.user_id,
+            type: 'visita',
+            content: 'visitou seu perfil'
+          });
+      }
 
       // Navigate to user profile
       navigate(`/profile/${userId}`);
     } catch (error) {
-      console.error('Error recording visit:', error);
+      console.error('Error accessing profile:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao acessar perfil",
+        variant: "destructive",
+      });
     }
+  };
+
+  const handleTopUserInteraction = (userId: string, action: string) => {
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: `Assine o Premium para ${action === 'like' ? 'curtir perfis' : 'enviar mensagens'}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (action === 'message') {
+      handleMessage();
+    }
+    // Handle like action if needed
   };
 
   if (loading) {
@@ -152,8 +192,12 @@ export const HomeTab = () => {
         
         <div className="space-y-3">
           {topUsers.map((user, index) => (
-            <div key={user.id} className="flex items-center justify-between p-3 rounded-xl glass hover:bg-white/10 transition-all duration-300">
-              <div className="flex items-center gap-3">
+            <div 
+              key={user.id} 
+              className="flex items-center justify-between p-3 rounded-xl glass hover:bg-white/10 transition-all duration-300 cursor-pointer group"
+              onClick={() => handleViewProfile(user.user_id)}
+            >
+              <div className="flex items-center gap-3 flex-1">
                 <div className="relative">
                   <div className="w-12 h-12 rounded-full bg-gradient-secondary overflow-hidden">
                     {user.avatar_url ? (
@@ -166,8 +210,8 @@ export const HomeTab = () => {
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
                 </div>
-                <div>
-                  <p className="font-medium">{user.display_name}</p>
+                <div className="flex-1">
+                  <p className="font-medium group-hover:text-primary transition-colors">{user.display_name}</p>
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
                     <MapPin className="w-3 h-3" />
                     {user.city}, {user.state}
@@ -182,9 +226,23 @@ export const HomeTab = () => {
                   size="sm" 
                   variant="ghost" 
                   className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20"
-                  onClick={() => handleMessage()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTopUserInteraction(user.user_id, 'like');
+                  }}
                 >
                   <Heart className="w-4 h-4" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTopUserInteraction(user.user_id, 'message');
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4" />
                 </Button>
               </div>
             </div>
