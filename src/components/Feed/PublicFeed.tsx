@@ -81,22 +81,33 @@ export const PublicFeed = () => {
 
   const fetchPublicacoes = async () => {
     try {
-      const { data, error } = await supabase
+      // First get publicacoes
+      const { data: publicacoesData, error: publicacoesError } = await supabase
         .from('publicacoes')
-        .select(`
-          *,
-          profiles!publicacoes_user_id_fkey (
-            display_name, 
-            avatar_url, 
-            city, 
-            state, 
-            subscription_type
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setPublicacoes(data || []);
+      if (publicacoesError) throw publicacoesError;
+
+      if (!publicacoesData) {
+        setPublicacoes([]);
+        return;
+      }
+
+      // Then get profiles for each publication
+      const userIds = [...new Set(publicacoesData.map(pub => pub.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url, city, state, subscription_type')
+        .in('user_id', userIds);
+
+      // Combine data
+      const publicacoesWithProfiles = publicacoesData.map(pub => ({
+        ...pub,
+        profiles: profilesData?.find(profile => profile.user_id === pub.user_id)
+      }));
+
+      setPublicacoes(publicacoesWithProfiles);
     } catch (error) {
       console.error('Erro ao buscar publicações:', error);
     } finally {
@@ -121,16 +132,32 @@ export const PublicFeed = () => {
 
   const fetchComentarios = async (publicacaoId: string) => {
     try {
-      const { data } = await supabase
+      // First get comments
+      const { data: comentariosData } = await supabase
         .from('comentarios_publicacoes')
-        .select(`
-          *,
-          profiles!comentarios_publicacoes_user_id_fkey (display_name, avatar_url)
-        `)
+        .select('*')
         .eq('publicacao_id', publicacaoId)
         .order('created_at', { ascending: false });
 
-      setComentarios(prev => ({ ...prev, [publicacaoId]: data || [] }));
+      if (!comentariosData) {
+        setComentarios(prev => ({ ...prev, [publicacaoId]: [] }));
+        return;
+      }
+
+      // Then get profiles for each comment
+      const userIds = [...new Set(comentariosData.map(com => com.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', userIds);
+
+      // Combine data
+      const comentariosWithProfiles = comentariosData.map(com => ({
+        ...com,
+        profiles: profilesData?.find(profile => profile.user_id === com.user_id)
+      }));
+
+      setComentarios(prev => ({ ...prev, [publicacaoId]: comentariosWithProfiles }));
     } catch (error) {
       console.error('Erro ao buscar comentários:', error);
     }
@@ -148,19 +175,20 @@ export const PublicFeed = () => {
 
     try {
       let mediaUrl = newPost.midia_url;
+      let mediaType = 'texto';
 
       // Upload image to Supabase Storage if a file was selected
       if (newPost.midia_url && newPost.midia_url.startsWith('blob:')) {
         const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-        const file = fileInput?.files?.[0];
+        const selectedFile = fileInput?.files?.[0];
         
-        if (file) {
-          const fileExt = file.name.split('.').pop();
+        if (selectedFile) {
+          const fileExt = selectedFile.name.split('.').pop();
           const fileName = `${profile?.user_id}/${Date.now()}.${fileExt}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('publicacoes')
-            .upload(fileName, file);
+            .upload(fileName, selectedFile);
 
           if (uploadError) throw uploadError;
 
@@ -169,6 +197,7 @@ export const PublicFeed = () => {
             .getPublicUrl(fileName);
 
           mediaUrl = publicUrl;
+          mediaType = selectedFile.type.startsWith('video/') ? 'video' : 'imagem';
         }
       }
 
@@ -177,7 +206,7 @@ export const PublicFeed = () => {
         .insert({
           user_id: profile?.user_id,
           descricao: newPost.descricao,
-          tipo_midia: mediaUrl ? (file?.type.startsWith('video/') ? 'video' : 'imagem') : 'texto',
+          tipo_midia: mediaType,
           midia_url: mediaUrl
         });
 
@@ -376,7 +405,7 @@ export const PublicFeed = () => {
                   <img src={publicacao.profiles.avatar_url} alt={publicacao.profiles.display_name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white font-bold">
-                    {publicacao.profiles?.display_name?.[0]}
+                    {publicacao.profiles?.display_name?.[0] || 'U'}
                   </div>
                 )}
               </div>
@@ -386,7 +415,7 @@ export const PublicFeed = () => {
                     className="font-semibold text-white cursor-pointer hover:text-primary"
                     onClick={() => handleViewProfile(publicacao.user_id)}
                   >
-                    {publicacao.profiles?.display_name}
+                    {publicacao.profiles?.display_name || 'Usuário'}
                   </p>
                   {publicacao.profiles?.subscription_type === 'premium' && (
                     <Crown className="w-4 h-4 text-yellow-500" />
@@ -469,13 +498,13 @@ export const PublicFeed = () => {
                           <img src={comentario.profiles.avatar_url} alt={comentario.profiles.display_name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                            {comentario.profiles?.display_name?.[0]}
+                            {comentario.profiles?.display_name?.[0] || 'U'}
                           </div>
                         )}
                       </div>
                       <div className="flex-1">
                         <p className="text-white">
-                          <span className="font-semibold">{comentario.profiles?.display_name}</span>
+                          <span className="font-semibold">{comentario.profiles?.display_name || 'Usuário'}</span>
                           {' '}
                           {comentario.comentario}
                         </p>
@@ -495,7 +524,7 @@ export const PublicFeed = () => {
                     <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                      {profile?.display_name?.[0]}
+                      {profile?.display_name?.[0] || 'U'}
                     </div>
                   )}
                 </div>
