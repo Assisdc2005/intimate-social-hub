@@ -29,8 +29,8 @@ export interface Profile {
   profile_completed: boolean;
   avatar_url?: string;
   premium_status: string;
-  tipo_assinatura: string; // Adicionado campo tipo_assinatura
-  assinatura_id?: string; // Adicionado campo assinatura_id
+  tipo_assinatura: string;
+  assinatura_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -61,7 +61,7 @@ export const useProfile = () => {
 
         if (error) {
           console.error('Error fetching profile:', error);
-        } else {
+        } else if (data) {
           // Garantir que os campos obrigatórios tenham valores padrão
           const profileData = {
             ...data,
@@ -104,14 +104,18 @@ export const useProfile = () => {
         return { error };
       }
 
-      // Garantir que os campos obrigatórios tenham valores padrão
-      const profileData = {
-        ...data,
-        tipo_assinatura: (data as any).tipo_assinatura || 'gratuito',
-        assinatura_id: (data as any).assinatura_id || null
-      } as Profile;
-      setProfile(profileData);
-      return { data: profileData };
+      if (data) {
+        // Garantir que os campos obrigatórios tenham valores padrão
+        const profileData = {
+          ...data,
+          tipo_assinatura: (data as any).tipo_assinatura || 'gratuito',
+          assinatura_id: (data as any).assinatura_id || null
+        } as Profile;
+        setProfile(profileData);
+        return { data: profileData };
+      }
+
+      return { error: 'No data returned' };
     } catch (error) {
       console.error('Update profile catch error:', error);
       return { error };
