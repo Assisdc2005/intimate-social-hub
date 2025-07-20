@@ -52,9 +52,7 @@ export const useProfile = () => {
         const { data, error } = await supabase
           .from('profiles')
           .select(`
-            *,
-            tipo_assinatura,
-            assinatura_id
+            *
           `)
           .eq('user_id', user.id)
           .single();
@@ -63,11 +61,37 @@ export const useProfile = () => {
           console.error('Error fetching profile:', error);
         } else if (data) {
           // Garantir que os campos obrigatórios tenham valores padrão
-          const profileData = {
-            ...data,
-            tipo_assinatura: (data as any).tipo_assinatura || 'gratuito',
-            assinatura_id: (data as any).assinatura_id || null
-          } as Profile;
+          const profileData: Profile = {
+            id: data.id,
+            user_id: data.user_id,
+            display_name: data.display_name,
+            bio: data.bio,
+            birth_date: data.birth_date,
+            gender: data.gender,
+            sexual_orientation: data.sexual_orientation,
+            state: data.state,
+            city: data.city,
+            profession: data.profession,
+            looking_for: data.looking_for,
+            objectives: data.objectives,
+            body_type: data.body_type,
+            height: data.height,
+            weight: data.weight,
+            ethnicity: data.ethnicity,
+            smokes: data.smokes,
+            drinks: data.drinks,
+            relationship_status: data.relationship_status,
+            interests: data.interests,
+            subscription_type: data.subscription_type || 'gratuito',
+            subscription_expires_at: data.subscription_expires_at,
+            profile_completed: data.profile_completed || false,
+            avatar_url: data.avatar_url,
+            premium_status: data.premium_status || 'nao_premium',
+            tipo_assinatura: 'gratuito', // Default value since column doesn't exist
+            assinatura_id: null, // Default value since column doesn't exist
+            created_at: data.created_at,
+            updated_at: data.updated_at
+          };
           setProfile(profileData);
         }
       } catch (error) {
@@ -90,11 +114,7 @@ export const useProfile = () => {
         .from('profiles')
         .update(updates)
         .eq('user_id', user.id)
-        .select(`
-          *,
-          tipo_assinatura,
-          assinatura_id
-        `)
+        .select()
         .single();
 
       console.log('Update result:', { data, error });
@@ -106,11 +126,37 @@ export const useProfile = () => {
 
       if (data) {
         // Garantir que os campos obrigatórios tenham valores padrão
-        const profileData = {
-          ...data,
-          tipo_assinatura: (data as any).tipo_assinatura || 'gratuito',
-          assinatura_id: (data as any).assinatura_id || null
-        } as Profile;
+        const profileData: Profile = {
+          id: data.id,
+          user_id: data.user_id,
+          display_name: data.display_name,
+          bio: data.bio,
+          birth_date: data.birth_date,
+          gender: data.gender,
+          sexual_orientation: data.sexual_orientation,
+          state: data.state,
+          city: data.city,
+          profession: data.profession,
+          looking_for: data.looking_for,
+          objectives: data.objectives,
+          body_type: data.body_type,
+          height: data.height,
+          weight: data.weight,
+          ethnicity: data.ethnicity,
+          smokes: data.smokes,
+          drinks: data.drinks,
+          relationship_status: data.relationship_status,
+          interests: data.interests,
+          subscription_type: data.subscription_type || 'gratuito',
+          subscription_expires_at: data.subscription_expires_at,
+          profile_completed: data.profile_completed || false,
+          avatar_url: data.avatar_url,
+          premium_status: data.premium_status || 'nao_premium',
+          tipo_assinatura: 'gratuito', // Default value since column doesn't exist
+          assinatura_id: null, // Default value since column doesn't exist
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        };
         setProfile(profileData);
         return { data: profileData };
       }
