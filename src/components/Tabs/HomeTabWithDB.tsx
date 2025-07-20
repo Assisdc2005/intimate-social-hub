@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Camera, Heart, MessageCircle, MapPin, Clock, Plus, Play, User } from "lucide-react";
+import { Camera, Heart, MessageCircle, MapPin, Clock, Plus, Play, User, Send, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,9 +20,16 @@ export const HomeTab = () => {
   const [loading, setLoading] = useState(true);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPost, setNewPost] = useState({ content: '', media_url: '' });
+  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [postComments, setPostComments] = useState<any[]>([]);
+  const [userLikes, setUserLikes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!profile?.user_id) return;
+      
       try {
         // Fetch recent posts with user profiles
         const { data: postsData } = await supabase
@@ -54,7 +61,7 @@ export const HomeTab = () => {
           .order('created_at', { ascending: false })
           .limit(3);
 
-        // Fetch feed posts for Top Sensuais Online
+        // Fetch feed posts for Top Sensuais Online with likes and comments
         const { data: feedPostsData } = await supabase
           .from('posts')
           .select(`
@@ -62,12 +69,19 @@ export const HomeTab = () => {
             profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
           `)
           .order('created_at', { ascending: false })
-          .limit(5);
+          .limit(10);
+
+        // Fetch user's likes
+        const { data: likesData } = await supabase
+          .from('likes')
+          .select('post_id')
+          .eq('user_id', profile?.user_id);
 
         setPosts(postsData || []);
         setTopUsers(usersData || []);
         setActivities(notificationsData || []);
         setFeedPosts(feedPostsData || []);
+        setUserLikes(new Set(likesData?.map(like => like.post_id) || []));
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -75,34 +89,89 @@ export const HomeTab = () => {
       }
     };
 
-    if (profile?.user_id) {
-      fetchData();
-    }
+    fetchData();
+
+    // Set up real-time subscription for posts
+    const channel = supabase
+      .channel('public:posts')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        (payload) => {
+          // Fetch the new post with profile data
+          supabase
+            .from('posts')
+            .select(`
+              *,
+              profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
+            `)
+            .eq('id', payload.new.id)
+            .single()
+            .then(({ data }) => {
+              if (data) {
+                setFeedPosts(prev => [data, ...prev]);
+              }
+            });
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        (payload) => {
+          setFeedPosts(prev => prev.map(post => 
+            post.id === payload.new.id ? { ...post, ...payload.new } : post
+          ));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [profile?.user_id]);
 
   const handleLike = async (postId: string) => {
     if (!isPremium) {
       toast({
         title: "Recurso Premium",
-        description: "Assine o Premium para curtir posts",
+        description: "Faça upgrade para o Premium e libere curtidas ilimitadas",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('likes')
-        .insert({ post_id: postId, user_id: profile?.user_id });
-
-      if (!error) {
-        toast({
-          title: "Post curtido!",
-          description: "Você curtiu este post",
+      const isLiked = userLikes.has(postId);
+      
+      if (isLiked) {
+        // Unlike
+        await supabase
+          .from('likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', profile?.user_id);
+        
+        setUserLikes(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(postId);
+          return newSet;
         });
+      } else {
+        // Like
+        await supabase
+          .from('likes')
+          .insert({ post_id: postId, user_id: profile?.user_id });
+        
+        setUserLikes(prev => new Set([...prev, postId]));
       }
+
+      // Update local state
+      setFeedPosts(prev => prev.map(post => 
+        post.id === postId 
+          ? { ...post, likes_count: isLiked ? post.likes_count - 1 : post.likes_count + 1 }
+          : post
+      ));
+
     } catch (error) {
-      console.error('Error liking post:', error);
+      console.error('Error toggling like:', error);
     }
   };
 
@@ -148,17 +217,6 @@ export const HomeTab = () => {
       setNewPost({ content: '', media_url: '' });
       setShowCreatePost(false);
       
-      // Refresh feed posts
-      const { data: feedPostsData } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      setFeedPosts(feedPostsData || []);
     } catch (error) {
       console.error('Error creating post:', error);
       toast({
@@ -167,6 +225,71 @@ export const HomeTab = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleAddComment = async (postId: string) => {
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: "Faça upgrade para o Premium e libere comentários ilimitados",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newComment.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .insert({
+          post_id: postId,
+          user_id: profile?.user_id,
+          content: newComment
+        });
+
+      if (error) throw error;
+
+      setNewComment('');
+      
+      // Update local state
+      setFeedPosts(prev => prev.map(post => 
+        post.id === postId 
+          ? { ...post, comments_count: post.comments_count + 1 }
+          : post
+      ));
+
+      // If viewing post modal, refresh comments
+      if (selectedPost?.id === postId) {
+        fetchPostComments(postId);
+      }
+
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const fetchPostComments = async (postId: string) => {
+    try {
+      const { data } = await supabase
+        .from('comments')
+        .select(`
+          *,
+          profiles!comments_user_id_fkey (display_name, avatar_url)
+        `)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: false });
+
+      setPostComments(data || []);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
+  const openPostModal = (post: any) => {
+    setSelectedPost(post);
+    setShowPostModal(true);
+    fetchPostComments(post.id);
   };
 
   const handleViewProfile = async (userId: string) => {
@@ -401,9 +524,9 @@ export const HomeTab = () => {
         
         <div className="space-y-6">
           {feedPosts.map((post) => (
-            <div key={post.id} className="bg-white/5 rounded-2xl p-6 border border-white/10">
+            <div key={post.id} className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
               {/* Post Header */}
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 p-4">
                 <div className="w-12 h-12 rounded-full bg-gradient-secondary overflow-hidden">
                   {post.profiles?.avatar_url ? (
                     <img src={post.profiles.avatar_url} alt={post.profiles.display_name} className="w-full h-full object-cover" />
@@ -414,7 +537,12 @@ export const HomeTab = () => {
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-white">{post.profiles?.display_name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-white">{post.profiles?.display_name}</p>
+                    {post.profiles?.subscription_type === 'premium' && (
+                      <Crown className="w-4 h-4 text-yellow-500" />
+                    )}
+                  </div>
                   <p className="text-sm text-gray-400 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {new Date(post.created_at).toLocaleString('pt-BR')}
@@ -424,12 +552,17 @@ export const HomeTab = () => {
 
               {/* Post Content */}
               {post.content && (
-                <p className="text-white mb-4">{post.content}</p>
+                <div className="px-4 pb-3">
+                  <p className="text-white">{post.content}</p>
+                </div>
               )}
 
               {/* Post Media */}
               {post.media_url && (
-                <div className="relative mb-4 rounded-xl overflow-hidden">
+                <div 
+                  className="relative cursor-pointer"
+                  onClick={() => openPostModal(post)}
+                >
                   <img 
                     src={post.media_url} 
                     alt="Post content" 
@@ -446,33 +579,77 @@ export const HomeTab = () => {
               )}
 
               {/* Post Actions */}
-              <div className="flex items-center gap-4 pt-4 border-t border-white/10">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleLike(post.id)}
-                  className="text-gray-400 hover:text-accent hover:bg-white/10"
-                >
-                  <Heart className="w-4 h-4 mr-2" />
-                  Curtir
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-gray-400 hover:text-white hover:bg-white/10"
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Comentar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleViewProfile(post.user_id)}
-                  className="text-gray-400 hover:text-white hover:bg-white/10"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Ver Perfil
-                </Button>
+              <div className="p-4">
+                <div className="flex items-center gap-4 mb-3">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleLike(post.id)}
+                    className={`text-gray-400 hover:text-red-500 hover:bg-white/10 ${
+                      userLikes.has(post.id) ? 'text-red-500' : ''
+                    }`}
+                  >
+                    <Heart className={`w-5 h-5 mr-2 ${userLikes.has(post.id) ? 'fill-current' : ''}`} />
+                    {post.likes_count || 0}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => openPostModal(post)}
+                    className="text-gray-400 hover:text-white hover:bg-white/10"
+                  >
+                    <MessageCircle className="w-5 h-5 mr-2" />
+                    {post.comments_count || 0}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleViewProfile(post.user_id)}
+                    className="text-gray-400 hover:text-white hover:bg-white/10"
+                  >
+                    <User className="w-5 h-5 mr-2" />
+                    Ver Perfil
+                  </Button>
+                </div>
+
+                {/* Comment Input */}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                        {profile?.display_name?.[0]}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 flex gap-2">
+                    <Input
+                      placeholder={isPremium ? "Adicione um comentário..." : "Upgrade para Premium para comentar"}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      disabled={!isPremium}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddComment(post.id)}
+                      disabled={!isPremium || !newComment.trim()}
+                      className="bg-gradient-primary hover:opacity-90"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {!isPremium && (
+                  <div className="mt-3 p-3 bg-gradient-primary/20 rounded-lg border border-primary/30">
+                    <p className="text-sm text-primary">
+                      ⭐ Faça upgrade para o Premium e libere curtidas e comentários ilimitados!
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -480,11 +657,127 @@ export const HomeTab = () => {
 
         {feedPosts.length === 0 && (
           <div className="text-center py-8 text-gray-400">
-            <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <Heart className="w-12 h-12 mx-auto mb-2 opacity-50" />
             <p>Nenhuma publicação encontrada</p>
           </div>
         )}
       </div>
+
+      {/* Post Modal */}
+      <Dialog open={showPostModal} onOpenChange={setShowPostModal}>
+        <DialogContent className="max-w-4xl bg-background/95 backdrop-blur border-white/20 p-0">
+          {selectedPost && (
+            <div className="flex flex-col md:flex-row max-h-[80vh]">
+              {/* Media Side */}
+              <div className="flex-1 bg-black flex items-center justify-center">
+                {selectedPost.media_url ? (
+                  <img 
+                    src={selectedPost.media_url} 
+                    alt="Post content" 
+                    className="max-w-full max-h-full object-contain"
+                  />
+                ) : (
+                  <div className="p-8 text-center">
+                    <p className="text-white text-lg">{selectedPost.content}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Comments Side */}
+              <div className="w-full md:w-96 flex flex-col bg-background/90">
+                {/* Header */}
+                <div className="flex items-center gap-3 p-4 border-b border-white/20">
+                  <div className="w-10 h-10 rounded-full bg-gradient-secondary overflow-hidden">
+                    {selectedPost.profiles?.avatar_url ? (
+                      <img src={selectedPost.profiles.avatar_url} alt={selectedPost.profiles.display_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white font-bold">
+                        {selectedPost.profiles?.display_name?.[0]}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white">{selectedPost.profiles?.display_name}</p>
+                    <p className="text-sm text-gray-400">
+                      {new Date(selectedPost.created_at).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Content */}
+                {selectedPost.content && (
+                  <div className="p-4 border-b border-white/20">
+                    <p className="text-white">{selectedPost.content}</p>
+                  </div>
+                )}
+
+                {/* Comments */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {postComments.map((comment) => (
+                    <div key={comment.id} className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
+                        {comment.profiles?.avatar_url ? (
+                          <img src={comment.profiles.avatar_url} alt={comment.profiles.display_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                            {comment.profiles?.display_name?.[0]}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white">
+                          <span className="font-semibold">{comment.profiles?.display_name}</span>
+                          {' '}
+                          {comment.content}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(comment.created_at).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Comment */}
+                <div className="p-4 border-t border-white/20">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleLike(selectedPost.id)}
+                      className={`text-gray-400 hover:text-red-500 ${
+                        userLikes.has(selectedPost.id) ? 'text-red-500' : ''
+                      }`}
+                    >
+                      <Heart className={`w-5 h-5 ${userLikes.has(selectedPost.id) ? 'fill-current' : ''}`} />
+                    </Button>
+                    <span className="text-sm text-gray-400">{selectedPost.likes_count || 0} curtidas</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mt-3">
+                    <Input
+                      placeholder={isPremium ? "Adicione um comentário..." : "Upgrade para Premium para comentar"}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      disabled={!isPremium}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddComment(selectedPost.id)}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddComment(selectedPost.id)}
+                      disabled={!isPremium || !newComment.trim()}
+                      className="bg-gradient-primary hover:opacity-90"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Feed de Atividades Recentes */}
       <div className="card-premium">
