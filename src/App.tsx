@@ -31,6 +31,7 @@ function AuthenticatedApp() {
 
   return (
     <Routes>
+      {/* Rota raiz - sempre redireciona para /auth se não autenticado */}
       <Route 
         path="/" 
         element={
@@ -45,30 +46,24 @@ function AuthenticatedApp() {
           )
         } 
       />
+      
+      {/* Página de autenticação */}
       <Route 
-        path="/home" 
+        path="/auth" 
         element={
           user ? (
             profile?.profile_completed ? (
-              <Index />
+              <Navigate to="/home" replace />
             ) : (
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Auth />
           )
         } 
       />
-      <Route 
-        path="/auth" 
-        element={user ? (
-          profile?.profile_completed ? (
-            <Navigate to="/home" replace />
-          ) : (
-            <Navigate to="/complete-profile" replace />
-          )
-        ) : <Auth />} 
-      />
+      
+      {/* Página de completar perfil - APENAS para usuários logados com perfil incompleto */}
       <Route 
         path="/complete-profile" 
         element={
@@ -83,6 +78,23 @@ function AuthenticatedApp() {
           )
         } 
       />
+      
+      {/* Todas as rotas protegidas - redirecionam para /auth se não autenticado */}
+      <Route 
+        path="/home" 
+        element={
+          user ? (
+            profile?.profile_completed ? (
+              <Index />
+            ) : (
+              <Navigate to="/complete-profile" replace />
+            )
+          ) : (
+            <Navigate to="/auth" replace />
+          )
+        } 
+      />
+      
       <Route 
         path="/profile" 
         element={
@@ -97,6 +109,7 @@ function AuthenticatedApp() {
           )
         } 
       />
+      
       <Route 
         path="/discover" 
         element={
@@ -111,6 +124,7 @@ function AuthenticatedApp() {
           )
         } 
       />
+      
       <Route 
         path="/messages" 
         element={
@@ -125,6 +139,7 @@ function AuthenticatedApp() {
           )
         } 
       />
+      
       <Route 
         path="/premium" 
         element={
@@ -139,6 +154,7 @@ function AuthenticatedApp() {
           )
         } 
       />
+      
       <Route 
         path="/profile/edit" 
         element={
@@ -153,6 +169,7 @@ function AuthenticatedApp() {
           )
         } 
       />
+      
       <Route 
         path="/profile/:userId" 
         element={
@@ -167,6 +184,7 @@ function AuthenticatedApp() {
           )
         } 
       />
+      
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
