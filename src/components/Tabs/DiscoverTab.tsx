@@ -1,172 +1,489 @@
-import { Search, Filter, MapPin, Heart, MessageCircle, UserPlus, Sliders } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Filter, MapPin, Heart, MessageCircle, UserPlus, Plus, Play, Clock, User, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export const DiscoverTab = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const { profile, isPremium } = useProfile();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [users, setUsers] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [newPost, setNewPost] = useState({ content: '', media_type: 'texto', media_url: '' });
+  const [filters, setFilters] = useState({
+    gender: '',
+    city: '',
+    relationship_status: '',
+    subscription_type: '',
+  });
+  const [loading, setLoading] = useState(true);
 
-  // Mock data para demonstração
-  const users = [
-    { id: 1, name: "Valentina", age: 26, location: "São Paulo, SP", distance: "2 km", interests: ["Arte", "Música"], premium: true, online: true },
-    { id: 2, name: "Diego", age: 29, location: "Rio de Janeiro, RJ", distance: "5 km", interests: ["Esportes", "Viagem"], premium: false, online: true },
-    { id: 3, name: "Camila", age: 31, location: "Belo Horizonte, MG", distance: "8 km", interests: ["Culinária", "Livros"], premium: true, online: false },
-    { id: 4, name: "André", age: 34, location: "Salvador, BA", distance: "12 km", interests: ["Música", "Dança"], premium: false, online: true },
-    { id: 5, name: "Larissa", age: 28, location: "Curitiba, PR", distance: "15 km", interests: ["Fotografia", "Arte"], premium: true, online: false },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch users
+        const { data: usersData, error: usersError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('profile_completed', true)
+          .neq('user_id', profile?.user_id)
+          .order('updated_at', { ascending: false });
 
-  const filters = [
-    { id: 'gender', label: 'Gênero', options: ['Feminino', 'Masculino', 'Não-binário'] },
-    { id: 'age', label: 'Idade', options: ['18-25', '26-35', '36-45', '46+'] },
-    { id: 'status', label: 'Status', options: ['Solteiro(a)', 'Casado(a)', 'Relacionamento aberto'] },
-    { id: 'interests', label: 'Interesses', options: ['Arte', 'Música', 'Esportes', 'Viagem', 'Culinária'] },
-  ];
+        // Fetch posts with profiles
+        const { data: postsData, error: postsError } = await supabase
+          .from('posts')
+          .select(`
+            *,
+            profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (usersError) {
+          console.error('Error fetching users:', usersError);
+        } else {
+          setUsers(usersData || []);
+          setFilteredUsers(usersData || []);
+        }
+
+        if (postsError) {
+          console.error('Error fetching posts:', postsError);
+        } else {
+          setPosts(postsData || []);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (profile?.user_id) {
+      fetchData();
+    }
+  }, [profile?.user_id]);
+
+  useEffect(() => {
+    let filtered = users;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(user =>
+        user.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.profession?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply other filters
+    if (filters.gender) {
+      filtered = filtered.filter(user => user.gender === filters.gender);
+    }
+    if (filters.city) {
+      filtered = filtered.filter(user => user.city?.toLowerCase().includes(filters.city.toLowerCase()));
+    }
+    if (filters.relationship_status) {
+      filtered = filtered.filter(user => user.relationship_status === filters.relationship_status);
+    }
+    if (filters.subscription_type) {
+      filtered = filtered.filter(user => user.subscription_type === filters.subscription_type);
+    }
+
+    setFilteredUsers(filtered);
+  }, [searchTerm, filters, users]);
+
+  const handleAddFriend = async (userId: string) => {
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: "Assine o Premium para adicionar amigos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('connections')
+        .insert({
+          requester_id: profile?.user_id,
+          addressee_id: userId,
+          status: 'pending'
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          toast({
+            title: "Solicitação já enviada",
+            description: "Você já enviou uma solicitação para este usuário",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "Solicitação enviada!",
+          description: "Solicitação de amizade enviada com sucesso",
+        });
+
+        // Create notification
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            from_user_id: profile?.user_id,
+            type: 'novo_amigo',
+            content: 'enviou uma solicitação de amizade'
+          });
+      }
+    } catch (error) {
+      console.error('Error adding friend:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao enviar solicitação",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMessage = async (userId: string) => {
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: "Assine o Premium para enviar mensagens",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Logic to start conversation
+    try {
+      // Check if conversation already exists
+      const { data: existingConversation } = await supabase
+        .from('conversations')
+        .select('*')
+        .or(`and(participant1_id.eq.${profile?.user_id},participant2_id.eq.${userId}),and(participant1_id.eq.${userId},participant2_id.eq.${profile?.user_id})`)
+        .single();
+
+      if (!existingConversation) {
+        // Create new conversation
+        await supabase
+          .from('conversations')
+          .insert({
+            participant1_id: profile?.user_id,
+            participant2_id: userId
+          });
+      }
+
+      navigate('/messages');
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+    }
+  };
+
+  const handleCreatePost = async () => {
+    if (!newPost.content.trim() && !newPost.media_url) {
+      toast({
+        title: "Erro",
+        description: "Adicione um conteúdo ou mídia",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .insert({
+          user_id: profile?.user_id,
+          content: newPost.content,
+          media_type: newPost.media_url ? 'imagem' : 'texto',
+          media_url: newPost.media_url
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Publicação criada!",
+        description: "Sua publicação foi criada com sucesso",
+      });
+
+      setNewPost({ content: '', media_type: 'texto', media_url: '' });
+      setShowCreatePost(false);
+      
+      // Refresh posts
+      const { data: postsData } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      setPosts(postsData || []);
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao criar publicação",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLike = async (postId: string) => {
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: "Assine o Premium para curtir posts",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('likes')
+        .insert({ post_id: postId, user_id: profile?.user_id });
+
+      if (!error) {
+        toast({
+          title: "Post curtido!",
+          description: "Você curtiu este post",
+        });
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
+  const handleViewProfile = async (userId: string) => {
+    // Record profile visit
+    try {
+      await supabase
+        .from('profile_visits')
+        .insert({
+          visited_user_id: userId,
+          visitor_user_id: profile?.user_id
+        });
+
+      // Create notification
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          from_user_id: profile?.user_id,
+          type: 'visita',
+          content: 'visitou seu perfil'
+        });
+    } catch (error) {
+      console.error('Error recording visit:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-white">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Header com busca */}
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-display font-bold text-gradient">Descobrir</h1>
+        <p className="text-lg text-foreground/80">Encontre pessoas incríveis perto de você</p>
+      </div>
+
+      {/* Filters Bar */}
       <div className="glass rounded-2xl p-4">
         <div className="flex gap-3 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-input/50 border-white/20 text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
           <Button
-            variant="outline"
-            size="icon"
+            className="bg-gradient-primary hover:opacity-90 text-white rounded-full flex items-center gap-2"
             onClick={() => setShowFilters(!showFilters)}
-            className={`border-white/20 ${showFilters ? 'bg-primary/20 border-primary/40' : 'bg-white/10 hover:bg-white/20'}`}
           >
-            <Filter className="w-5 h-5" />
+            <Filter className="h-4 w-4" />
+            Filtros
           </Button>
         </div>
 
-        {/* Filtros expandidos */}
+        {/* Filters */}
         {showFilters && (
-          <div className="space-y-3 pt-4 border-t border-white/10 animate-slide-up">
-            <div className="flex items-center gap-2 mb-3">
-              <Sliders className="w-4 h-4 text-primary" />
-              <span className="font-medium text-sm">Filtros Avançados</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              {filters.map((filter) => (
-                <div key={filter.id} className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">{filter.label}</label>
-                  <select className="w-full p-2 rounded-lg bg-input/50 border border-white/20 text-sm text-foreground">
-                    <option value="">Todos</option>
-                    {filter.options.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-            
-            <div className="flex gap-2 pt-3">
-              <Button size="sm" className="btn-premium flex-1">
-                Aplicar Filtros
-              </Button>
-              <Button size="sm" variant="outline" className="border-white/20 bg-white/10 hover:bg-white/20">
-                Limpar
-              </Button>
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Select value={filters.gender} onValueChange={(value) => setFilters({...filters, gender: value})}>
+              <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Gênero" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="masculino">Masculino</SelectItem>
+                <SelectItem value="feminino">Feminino</SelectItem>
+                <SelectItem value="nao_binario">Não-binário</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Input
+              placeholder="Cidade"
+              value={filters.city}
+              onChange={(e) => setFilters({...filters, city: e.target.value})}
+              className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
+            />
+
+            <Select value={filters.relationship_status} onValueChange={(value) => setFilters({...filters, relationship_status: value})}>
+              <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="solteiro">Solteiro(a)</SelectItem>
+                <SelectItem value="casado">Casado(a)</SelectItem>
+                <SelectItem value="relacionamento">Em relacionamento</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.subscription_type} onValueChange={(value) => setFilters({...filters, subscription_type: value})}>
+              <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="premium">Premium</SelectItem>
+                <SelectItem value="gratuito">Gratuito</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
 
-      {/* Contador de resultados */}
-      <div className="flex items-center justify-between px-2">
-        <p className="text-sm text-muted-foreground">
-          {users.length} pessoas encontradas
-        </p>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-xs text-green-400">Online agora</span>
-        </div>
-      </div>
 
-      {/* Lista de usuários */}
-      <div className="space-y-4">
-        {users.map((user) => (
-          <div key={user.id} className="card-premium hover:scale-[1.02] transition-all duration-300 cursor-pointer">
-            <div className="flex gap-4">
-              {/* Avatar */}
-              <div className="relative">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-secondary flex items-center justify-center text-white font-bold text-xl shadow-glow">
-                  {user.name[0]}
-                </div>
-                
-                {/* Indicadores */}
-                {user.online && (
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-background" />
-                )}
-                {user.premium && (
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-accent rounded-full flex items-center justify-center shadow-glow">
-                    <span className="text-xs font-bold text-white">👑</span>
+      {/* Users Cards Grid */}
+      <div className="card-premium">
+        <h3 className="text-xl font-semibold text-gradient mb-6">Perfis Recomendados</h3>
+        
+        <div className="space-y-4">
+          {filteredUsers.map((user) => (
+            <div key={user.id} className="bg-white/5 rounded-2xl p-6 border border-white/10">
+              {/* User Header */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full bg-gradient-secondary overflow-hidden">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-xl">
+                        {user.display_name?.[0]}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              {/* Informações */}
-              <div className="flex-1 space-y-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg">{user.name}, {user.age}</h3>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {user.location} • {user.distance}
-                    </p>
-                  </div>
-                  
-                  {user.online && (
-                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
-                      Online
-                    </span>
+                  {user.subscription_type === 'premium' && (
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-accent rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">★</span>
+                    </div>
                   )}
                 </div>
 
-                {/* Interesses */}
-                <div className="flex flex-wrap gap-1">
-                  {user.interests.map((interest) => (
-                    <span key={interest} className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                      {interest}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Botões de ação */}
-                <div className="flex gap-2 pt-2">
-                  <Button size="sm" variant="outline" className="flex-1 border-white/20 bg-white/10 hover:bg-white/20">
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Adicionar
-                  </Button>
-                  <Button size="sm" className="flex-1 btn-premium">
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Chat
-                  </Button>
-                  <Button size="sm" variant="outline" className="border-accent/40 bg-accent/10 hover:bg-accent/20">
-                    <Heart className="w-4 h-4" />
-                  </Button>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-white text-lg">{user.display_name}</h3>
+                    {user.subscription_type === 'premium' && (
+                      <span className="text-xs bg-gradient-primary px-2 py-1 rounded-full text-white font-semibold">
+                        PREMIUM
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p className="text-sm text-gray-300">
+                    {user.gender}, {user.birth_date ? new Date().getFullYear() - new Date(user.birth_date).getFullYear() : ''} anos • {user.sexual_orientation}
+                  </p>
+                  
+                  <div className="flex items-center gap-1 text-gray-400 text-sm mt-1">
+                    <MapPin className="h-3 w-3" />
+                    <span>{user.city}, {user.state}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* Bio */}
+              {user.bio && (
+                <p className="text-gray-300 mb-4">{user.bio}</p>
+              )}
+
+              {/* Sample Photos/Videos */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {[1, 2, 3].map((index) => (
+                  <div key={index} className="aspect-square bg-gradient-secondary rounded-lg overflow-hidden relative">
+                    {user.avatar_url && index === 1 ? (
+                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-purple-400/20 to-pink-400/20 flex items-center justify-center">
+                        <Camera className="w-6 h-6 text-white/50" />
+                      </div>
+                    )}
+                    {index === 3 && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <Play className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleAddFriend(user.user_id)}
+                  className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Adicionar
+                </Button>
+                
+                <Button
+                  size="sm"
+                  onClick={() => handleMessage(user.user_id)}
+                  className="flex-1 bg-gradient-primary hover:opacity-90 text-white"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Chat
+                </Button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* Botão para carregar mais */}
-      <div className="flex justify-center pt-4">
-        <Button variant="outline" className="border-white/20 bg-white/10 hover:bg-white/20">
-          Carregar mais perfis
-        </Button>
-      </div>
+      {filteredUsers.length === 0 && (
+        <div className="text-center py-8 text-gray-400">
+          <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+          <p>Nenhum usuário encontrado</p>
+        </div>
+      )}
+
+      {/* Load More Button */}
+      {filteredUsers.length > 0 && (
+        <div className="text-center pt-4">
+          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+            Carregar Mais
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
