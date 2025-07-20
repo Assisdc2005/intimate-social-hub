@@ -8,50 +8,53 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Sensual Nexus Connect Color Palette */
-    --background: 300 50% 8%;              /* Dark purple background */
-    --foreground: 0 0% 95%;                /* Light text */
+    /* Modern Purple Aesthetic - Softer & Elegant */
+    --background: 270 25% 4%;              /* Deep soft purple */
+    --foreground: 270 8% 92%;              /* Warm light text */
 
-    --card: 300 45% 12%;                   /* Darker purple cards */
-    --card-foreground: 0 0% 90%;           /* Card text */
+    --card: 270 20% 8%;                    /* Soft dark purple cards */
+    --card-foreground: 270 8% 88%;         /* Card text */
 
-    --popover: 300 40% 15%;                /* Popover background */
-    --popover-foreground: 0 0% 95%;        /* Popover text */
+    --popover: 270 18% 12%;                /* Popover background */
+    --popover-foreground: 270 8% 92%;      /* Popover text */
 
-    --primary: 320 70% 60%;                /* Magenta primary */
+    --primary: 280 100% 70%;               /* Vibrant purple primary */
     --primary-foreground: 0 0% 100%;       /* White text on primary */
 
-    --secondary: 280 60% 50%;              /* Purple secondary */
+    --secondary: 260 80% 65%;              /* Soft lavender secondary */
     --secondary-foreground: 0 0% 100%;     /* White text on secondary */
 
-    --muted: 300 30% 20%;                  /* Muted purple */
-    --muted-foreground: 0 0% 70%;          /* Muted text */
+    --muted: 270 15% 15%;                  /* Subtle muted purple */
+    --muted-foreground: 270 8% 65%;        /* Muted text */
 
-    --accent: 340 75% 65%;                 /* Pink accent */
+    --accent: 290 100% 75%;                /* Bright magenta accent */
     --accent-foreground: 0 0% 100%;        /* White text on accent */
 
-    --destructive: 0 84.2% 60.2%;          /* Red destructive */
+    --destructive: 0 84% 60%;              /* Red destructive */
     --destructive-foreground: 0 0% 100%;   /* White text on destructive */
 
-    --border: 300 25% 25%;                 /* Purple border */
-    --input: 300 30% 18%;                  /* Input background */
-    --ring: 320 70% 60%;                   /* Focus ring */
+    --border: 270 20% 18%;                 /* Subtle purple border */
+    --input: 270 15% 12%;                  /* Input background */
+    --ring: 280 100% 70%;                  /* Focus ring */
 
-    /* Premium gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(320, 70%, 60%), hsl(340, 75%, 65%));
-    --gradient-secondary: linear-gradient(135deg, hsl(280, 60%, 50%), hsl(300, 50%, 45%));
-    --gradient-hero: linear-gradient(135deg, hsl(300, 50%, 8%), hsl(280, 60%, 15%));
-    --gradient-glass: linear-gradient(135deg, hsla(320, 70%, 60%, 0.1), hsla(340, 75%, 65%, 0.1));
+    /* Elegant gradient system */
+    --gradient-primary: linear-gradient(135deg, hsl(280, 100%, 70%), hsl(290, 100%, 75%));
+    --gradient-secondary: linear-gradient(135deg, hsl(260, 80%, 65%), hsl(270, 60%, 60%));
+    --gradient-hero: linear-gradient(180deg, hsl(270, 25%, 4%), hsl(260, 30%, 8%));
+    --gradient-glass: linear-gradient(135deg, hsla(280, 100%, 70%, 0.1), hsla(290, 100%, 75%, 0.05));
+    --gradient-card: linear-gradient(145deg, hsla(270, 20%, 8%, 0.9), hsla(280, 25%, 12%, 0.7));
     
-    /* Shadows */
-    --shadow-glow: 0 0 30px hsla(320, 70%, 60%, 0.3);
-    --shadow-premium: 0 10px 30px hsla(320, 70%, 60%, 0.2);
-    --shadow-glass: 0 8px 32px hsla(300, 50%, 8%, 0.3);
+    /* Sophisticated shadows */
+    --shadow-glow: 0 0 40px hsla(280, 100%, 70%, 0.25);
+    --shadow-premium: 0 20px 60px hsla(280, 100%, 70%, 0.15);
+    --shadow-glass: 0 8px 32px hsla(270, 25%, 4%, 0.4);
+    --shadow-soft: 0 4px 20px hsla(270, 20%, 8%, 0.3);
     
-    /* Animations */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Smooth animations */
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     
-    --radius: 1rem;
+    --radius: 1.25rem;
 
     --sidebar-background: 0 0% 98%;
 

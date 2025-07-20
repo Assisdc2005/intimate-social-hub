@@ -3,7 +3,7 @@ import { Header } from "./Header";
 import { BottomNavigation } from "./BottomNavigation";
 import { HomeTab } from "../Tabs/HomeTabWithDB";
 import { DiscoverTab } from "../Tabs/DiscoverTabWithDB";
-import { MessagesTab } from "../Tabs/MessagesTab";
+import { MessagesTabComplete } from "../Tabs/MessagesTabComplete";
 import { PremiumTab } from "../Tabs/PremiumTab";
 import { ProfileTab } from "../Tabs/ProfileTab";
 
@@ -17,7 +17,7 @@ export const MainLayout = () => {
       case 'discover':
         return <DiscoverTab />;
       case 'messages':
-        return <MessagesTab />;
+        return <MessagesTabComplete />;
       case 'premium':
         return <PremiumTab />;
       case 'profile':

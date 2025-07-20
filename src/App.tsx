@@ -6,9 +6,11 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import { CompleteProfile } from "./pages/CompleteProfile";
+import { Profile } from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
 import { useProfile } from "./hooks/useProfile";
+import { AuthProvider } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +60,20 @@ function AuthenticatedApp() {
           )
         } 
       />
+      <Route 
+        path="/profile" 
+        element={
+          user ? (
+            profile?.profile_completed ? (
+              <Profile />
+            ) : (
+              <Navigate to="/complete-profile" replace />
+            )
+          ) : (
+            <Navigate to="/auth" replace />
+          )
+        } 
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -69,7 +85,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthenticatedApp />
+        <AuthProvider>
+          <AuthenticatedApp />
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
