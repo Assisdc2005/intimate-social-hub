@@ -15,7 +15,8 @@ import {
   Edit,
   MessageCircle,
   Users,
-  Target
+  Target,
+  ArrowLeft
 } from "lucide-react";
 
 export const ProfileTab = () => {
@@ -48,6 +49,18 @@ export const ProfileTab = () => {
 
   return (
     <div className="space-y-6 pb-6">
+      {/* Back Button */}
+      <div className="flex items-center gap-3 mb-4">
+        <Button 
+          onClick={() => navigate(-1)}
+          variant="ghost" 
+          size="sm"
+          className="text-gray-300 hover:text-white hover:bg-white/10"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
+      </div>
       {/* Profile Header */}
       <Card className="bg-glass backdrop-blur-md border-primary/20">
         <CardContent className="p-6">

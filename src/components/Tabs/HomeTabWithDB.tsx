@@ -242,14 +242,29 @@ export const HomeTab = () => {
                 rows={4}
                 maxLength={250}
               />
-              <Input
-                placeholder="URL da imagem/vídeo (opcional)"
-                value={newPost.media_url}
-                onChange={(e) => setNewPost({...newPost, media_url: e.target.value})}
-                className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
-              />
-              <div className="text-xs text-gray-400">
-                Formatos aceitos: .jpg, .png, .mp4
+              <div className="space-y-2">
+                <label className="text-sm text-gray-300">Anexar Imagem/Vídeo (opcional)</label>
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.mp4,.mov"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const url = URL.createObjectURL(file);
+                      setNewPost({...newPost, media_url: url});
+                    }
+                  }}
+                  className="block w-full text-sm text-gray-300
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-primary file:text-white
+                    hover:file:bg-primary/80
+                    file:cursor-pointer cursor-pointer"
+                />
+                <div className="text-xs text-gray-400">
+                  Formatos aceitos: .jpg, .png, .mp4, .mov
+                </div>
               </div>
               <Button onClick={handleCreatePost} className="w-full bg-gradient-primary hover:opacity-90">
                 Publicar
