@@ -1,15 +1,49 @@
-import { User, MapPin, Calendar, Heart, Edit, Settings, Camera, Star, Shield, Crown, ArrowLeft } from "lucide-react";
+import { User, MapPin, Calendar, Heart, Edit, Settings, Camera, Star, Shield, Crown, ArrowLeft, MessageCircle, Send, Play, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Post {
+  id: string;
+  content: string | null;
+  media_url: string | null;
+  media_type: 'texto' | 'imagem' | 'video';
+  likes_count: number;
+  comments_count: number;
+  created_at: string;
+  user_id: string;
+  user_liked?: boolean;
+}
+
+interface Comment {
+  id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  profiles: {
+    display_name: string;
+    avatar_url: string | null;
+  };
+}
 
 export const Profile = () => {
   const { profile, isPremium } = useProfile();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newComment, setNewComment] = useState<{ [key: string]: string }>({});
+  const [showComments, setShowComments] = useState<{ [key: string]: boolean }>({});
+  const [postComments, setPostComments] = useState<{ [key: string]: Comment[] }>({});
 
   if (!profile) {
     return (
@@ -28,6 +62,188 @@ export const Profile = () => {
       age--;
     }
     return age;
+  };
+
+  // Fetch user's posts
+  const fetchUserPosts = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id(display_name, avatar_url)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching user posts:', error);
+        return;
+      }
+
+      // Check which posts the user has liked
+      const postsWithLikes = await Promise.all(
+        (data || []).map(async (post) => {
+          const { data: likeData } = await supabase
+            .from('likes')
+            .select('id')
+            .eq('post_id', post.id)
+            .eq('user_id', user.id)
+            .single();
+
+          return {
+            ...post,
+            user_liked: !!likeData
+          };
+        })
+      );
+
+      setPosts(postsWithLikes);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserPosts();
+  }, [user?.id]);
+
+  const handleLike = async (postId: string) => {
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: "Assine o Premium para curtir publicações!",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user?.id) return;
+
+    try {
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+
+      if (post.user_liked) {
+        // Remove like
+        await supabase
+          .from('likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
+
+        setPosts(posts.map(p => 
+          p.id === postId 
+            ? { ...p, user_liked: false, likes_count: p.likes_count - 1 }
+            : p
+        ));
+      } else {
+        // Add like
+        await supabase
+          .from('likes')
+          .insert({ post_id: postId, user_id: user.id });
+
+        setPosts(posts.map(p => 
+          p.id === postId 
+            ? { ...p, user_liked: true, likes_count: p.likes_count + 1 }
+            : p
+        ));
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
+  };
+
+  const handleComment = async (postId: string) => {
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: "Assine o Premium para comentar!",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const comment = newComment[postId]?.trim();
+    if (!comment || !user?.id) return;
+
+    try {
+      await supabase
+        .from('comments')
+        .insert({
+          post_id: postId,
+          user_id: user.id,
+          content: comment
+        });
+
+      setNewComment(prev => ({ ...prev, [postId]: '' }));
+      
+      // Refresh comments
+      fetchComments(postId);
+      
+      // Update posts count
+      setPosts(posts.map(p => 
+        p.id === postId 
+          ? { ...p, comments_count: p.comments_count + 1 }
+          : p
+      ));
+
+      toast({
+        title: "Comentário adicionado!",
+        description: "Seu comentário foi publicado com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const fetchComments = async (postId: string) => {
+    try {
+      // First get comments
+      const { data: comments, error } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching comments:', error);
+        return;
+      }
+
+      // Then get profile data for each comment
+      const commentsWithProfiles = await Promise.all(
+        (comments || []).map(async (comment) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name, avatar_url')
+            .eq('user_id', comment.user_id)
+            .single();
+
+          return {
+            ...comment,
+            profiles: profile || { display_name: 'Usuário', avatar_url: null }
+          };
+        })
+      );
+
+      setPostComments(prev => ({ ...prev, [postId]: commentsWithProfiles }));
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const toggleComments = (postId: string) => {
+    const isShowing = showComments[postId];
+    setShowComments(prev => ({ ...prev, [postId]: !isShowing }));
+    
+    if (!isShowing && !postComments[postId]) {
+      fetchComments(postId);
+    }
   };
 
   const handleSignOut = async () => {
@@ -286,6 +502,167 @@ export const Profile = () => {
                 </Button>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Minhas Publicações */}
+        <Card className="glass backdrop-blur-xl border-primary/20">
+          <CardContent className="p-6">
+            <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-primary" />
+              Minhas Publicações
+            </h3>
+            
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : posts.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Você ainda não fez nenhuma publicação.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {posts.map((post) => (
+                  <div key={post.id} className="border border-primary/20 rounded-lg p-4 bg-background/50">
+                    {/* Post Content */}
+                    {post.content && (
+                      <p className="text-foreground mb-3">{post.content}</p>
+                    )}
+                    
+                    {/* Post Media */}
+                    {post.media_url && (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <div className="relative cursor-pointer group mb-3">
+                            {post.media_type === 'video' ? (
+                              <div className="relative">
+                                <video 
+                                  src={post.media_url}
+                                  className="w-full h-64 object-cover rounded-lg"
+                                  preload="metadata"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors rounded-lg">
+                                  <Play className="w-12 h-12 text-white" />
+                                </div>
+                              </div>
+                            ) : (
+                              <img 
+                                src={post.media_url}
+                                alt="Post"
+                                className="w-full h-64 object-cover rounded-lg group-hover:opacity-90 transition-opacity"
+                              />
+                            )}
+                          </div>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl w-full h-[80vh] p-0">
+                          {post.media_type === 'video' ? (
+                            <video 
+                              src={post.media_url}
+                              controls
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <img 
+                              src={post.media_url}
+                              alt="Post"
+                              className="w-full h-full object-contain"
+                            />
+                          )}
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {/* Post Actions */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleLike(post.id)}
+                          className={`flex items-center gap-2 ${
+                            post.user_liked 
+                              ? 'text-red-500 hover:text-red-600' 
+                              : 'text-muted-foreground hover:text-red-500'
+                          }`}
+                        >
+                          <Heart className={`w-4 h-4 ${post.user_liked ? 'fill-current' : ''}`} />
+                          <span>{post.likes_count}</span>
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleComments(post.id)}
+                          className="flex items-center gap-2 text-muted-foreground hover:text-primary"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>{post.comments_count}</span>
+                        </Button>
+                      </div>
+                      
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(post.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+
+                    {/* Comments Section */}
+                    {showComments[post.id] && (
+                      <div className="border-t border-primary/20 pt-3 space-y-3">
+                        {/* Comment Input */}
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Adicione um comentário..."
+                            value={newComment[post.id] || ''}
+                            onChange={(e) => setNewComment(prev => ({ 
+                              ...prev, 
+                              [post.id]: e.target.value 
+                            }))}
+                            onKeyPress={(e) => e.key === 'Enter' && handleComment(post.id)}
+                            className="flex-1"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleComment(post.id)}
+                            disabled={!newComment[post.id]?.trim()}
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        {/* Comments List */}
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {postComments[post.id]?.map((comment) => (
+                            <div key={comment.id} className="flex gap-2 text-sm">
+                              <div className="w-6 h-6 rounded-full bg-gradient-primary flex items-center justify-center text-white text-xs flex-shrink-0">
+                                {comment.profiles.avatar_url ? (
+                                  <img 
+                                    src={comment.profiles.avatar_url}
+                                    alt={comment.profiles.display_name}
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  comment.profiles.display_name[0]?.toUpperCase()
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-foreground">{comment.profiles.display_name}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(comment.created_at).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                                <p className="text-foreground/80">{comment.content}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
