@@ -2,12 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import landingImage from "@/assets/landing-couple.jpg";
+import { InstitutionalFooter } from "@/components/Layout/InstitutionalFooter";
 
 export const Landing = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
+    <div className="min-h-screen bg-gradient-hero flex flex-col">
       <div className="container mx-auto px-4 min-h-screen">
         <div className="grid lg:grid-cols-2 gap-8 min-h-screen items-center">
           {/* Left Column - Image */}
@@ -100,6 +101,8 @@ export const Landing = () => {
           </div>
         </div>
       </div>
+
+      <InstitutionalFooter />
     </div>
   );
 };

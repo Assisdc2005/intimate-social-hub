@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +13,11 @@ import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
 import { useProfile } from "./hooks/useProfile";
 import { AuthProvider } from "./hooks/useAuth";
+import { About } from "./pages/About";
+import { Terms } from "./pages/Terms";
+import { Privacy } from "./pages/Privacy";
+import { Refund } from "./pages/Refund";
+import { Help } from "./pages/Help";
 
 const queryClient = new QueryClient();
 
@@ -184,6 +188,13 @@ function AuthenticatedApp() {
           )
         } 
       />
+
+      {/* Novas rotas institucionais - acessíveis para todos */}
+      <Route path="/sobre" element={<About />} />
+      <Route path="/termos" element={<Terms />} />
+      <Route path="/privacidade" element={<Privacy />} />
+      <Route path="/reembolso" element={<Refund />} />
+      <Route path="/ajuda" element={<Help />} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
