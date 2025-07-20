@@ -1,9 +1,42 @@
-import { Crown, Check, Star, Zap, Eye, MessageCircle, Heart, Filter } from "lucide-react";
+
+import { Crown, Check, Star, Zap, Eye, MessageCircle, Heart, Filter, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
+import { useSubscription } from "@/hooks/useSubscription";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 
 export const PremiumTab = () => {
-  const { isPremium } = useProfile();
+  const { profile } = useProfile();
+  const { isPremium, subscription, loading, checkSubscription, createCheckout } = useSubscription();
+  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // Check for success/cancel parameters
+    if (searchParams.get('success') === 'true') {
+      toast({
+        title: "Pagamento realizado!",
+        description: "Sua assinatura Premium foi ativada com sucesso.",
+      });
+      // Remove the parameter from URL
+      window.history.replaceState({}, '', '/premium');
+      // Refresh subscription status
+      setTimeout(() => {
+        checkSubscription();
+      }, 2000);
+    } else if (searchParams.get('canceled') === 'true') {
+      toast({
+        title: "Pagamento cancelado",
+        description: "O processo de pagamento foi cancelado.",
+        variant: "destructive",
+      });
+      // Remove the parameter from URL
+      window.history.replaceState({}, '', '/premium');
+    }
+  }, [searchParams, toast, checkSubscription]);
+
   const premiumFeatures = [
     {
       icon: Heart,
@@ -39,7 +72,7 @@ export const PremiumTab = () => {
 
   const plans = [
     {
-      id: 'weekly',
+      id: 'price_1Rn2ekD3X7OLOCgdTVptrYmK',
       name: 'Semanal',
       price: 'R$ 15,00',
       period: '/semana',
@@ -47,7 +80,7 @@ export const PremiumTab = () => {
       highlight: false
     },
     {
-      id: 'biweekly',
+      id: 'price_1Rn2hQD3X7OLOCgddzwdYC6X',
       name: 'Quinzenal',
       price: 'R$ 20,00',
       period: '/15 dias',
@@ -55,14 +88,34 @@ export const PremiumTab = () => {
       highlight: true
     },
     {
-      id: 'monthly',
+      id: 'price_1Rn2hZD3X7OLOCgd3HzBOW1i',
       name: 'Mensal',
-      price: 'R$ 29,90',
+      price: 'R$ 30,00',
       period: '/mês',
       description: 'Máximo aproveitamento',
       highlight: false
     }
   ];
+
+  const handleSubscribe = async (priceId: string) => {
+    try {
+      await createCheckout(priceId);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível iniciar o pagamento. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-white text-lg">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -89,6 +142,34 @@ export const PremiumTab = () => {
           </div>
         </div>
       </div>
+
+      {/* Status da Assinatura */}
+      {isPremium && subscription && (
+        <div className="card-premium">
+          <h2 className="text-xl font-semibold text-gradient mb-4 text-center">
+            Status da Assinatura
+          </h2>
+          <div className="space-y-4">
+            <div className="bg-green-500/20 border border-green-500/50 rounded-xl p-4">
+              <div className="flex items-center gap-3 mb-2">
+                <Crown className="w-6 h-6 text-green-400" />
+                <span className="text-lg font-semibold text-green-400">Plano Ativo</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">
+                Plano: <span className="font-semibold capitalize">{subscription.periodo}</span>
+              </p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Valor: <span className="font-semibold">R$ {subscription.valor}</span>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Válido até: <span className="font-semibold">
+                  {new Date(subscription.data_fim).toLocaleDateString('pt-BR')}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Funcionalidades Premium */}
       <div className="card-premium">
@@ -127,7 +208,7 @@ export const PremiumTab = () => {
               <div 
                 key={plan.id} 
                 className={`
-                  relative p-6 rounded-2xl border transition-all duration-300 cursor-pointer hover:scale-[1.02]
+                  relative p-6 rounded-2xl border transition-all duration-300
                   ${plan.highlight 
                     ? 'border-primary/50 bg-gradient-to-br from-primary/10 to-accent/10 shadow-glow' 
                     : 'border-white/20 glass hover:border-primary/30'
@@ -154,6 +235,7 @@ export const PremiumTab = () => {
                 </div>
                 
                 <Button 
+                  onClick={() => handleSubscribe(plan.id)}
                   className={`
                     w-full py-3 font-semibold transition-all duration-300
                     ${plan.highlight 
@@ -162,7 +244,7 @@ export const PremiumTab = () => {
                     }
                   `}
                 >
-                  <Crown className="w-4 h-4 mr-2" />
+                  <CreditCard className="w-4 h-4 mr-2" />
                   Assinar {plan.name}
                 </Button>
               </div>
@@ -239,7 +321,10 @@ export const PremiumTab = () => {
           <p className="text-sm text-muted-foreground mb-4">
             Junte-se a milhares de usuários Premium e encontre conexões únicas
           </p>
-          <Button className="btn-premium w-full text-lg py-4">
+          <Button 
+            onClick={() => handleSubscribe(plans[1].id)} // Quinzenal (mais popular)
+            className="btn-premium w-full text-lg py-4"
+          >
             <Crown className="w-5 h-5 mr-2" />
             Começar Agora
           </Button>

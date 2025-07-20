@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -27,6 +28,7 @@ export interface Profile {
   subscription_expires_at?: string;
   profile_completed: boolean;
   avatar_url?: string;
+  premium_status: string;
   created_at: string;
   updated_at: string;
 }
@@ -96,20 +98,7 @@ export const useProfile = () => {
 
   const isPremium = () => {
     if (!profile) return false;
-    
-    // If subscription_type is premium, consider as premium
-    // If subscription_expires_at is set, check if it's not expired
-    if (profile.subscription_type === 'premium') {
-      if (!profile.subscription_expires_at) {
-        // If no expiration date is set, consider as premium
-        return true;
-      }
-      
-      const expiresAt = new Date(profile.subscription_expires_at);
-      return expiresAt > new Date();
-    }
-    
-    return false;
+    return profile.premium_status === 'premium';
   };
 
   return {

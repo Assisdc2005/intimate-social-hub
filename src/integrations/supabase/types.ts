@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      assinaturas: {
+        Row: {
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          periodo: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_price_id: string
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_fim: string
+          data_inicio?: string
+          id?: string
+          periodo: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_price_id: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          periodo?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_price_id?: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       comentarios_publicacoes: {
         Row: {
           comentario: string
@@ -316,6 +361,7 @@ export type Database = {
           interests: string[] | null
           looking_for: string | null
           objectives: string | null
+          premium_status: string | null
           profession: string | null
           profile_completed: boolean | null
           relationship_status:
@@ -350,6 +396,7 @@ export type Database = {
           interests?: string[] | null
           looking_for?: string | null
           objectives?: string | null
+          premium_status?: string | null
           profession?: string | null
           profile_completed?: boolean | null
           relationship_status?:
@@ -384,6 +431,7 @@ export type Database = {
           interests?: string[] | null
           looking_for?: string | null
           objectives?: string | null
+          premium_status?: string | null
           profession?: string | null
           profile_completed?: boolean | null
           relationship_status?:
@@ -519,7 +567,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      verificar_status_premium: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       body_type: "magro" | "atletico" | "mediano" | "curvilinio" | "plus_size"
