@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      comentarios_publicacoes: {
+        Row: {
+          comentario: string
+          created_at: string
+          id: string
+          publicacao_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comentario: string
+          created_at?: string
+          id?: string
+          publicacao_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comentario?: string
+          created_at?: string
+          id?: string
+          publicacao_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           content: string
@@ -97,6 +124,27 @@ export type Database = {
           last_message_at?: string | null
           participant1_id?: string
           participant2_id?: string
+        }
+        Relationships: []
+      }
+      curtidas_publicacoes: {
+        Row: {
+          created_at: string
+          id: string
+          publicacao_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          publicacao_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          publicacao_id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -353,6 +401,42 @@ export type Database = {
           updated_at?: string
           user_id?: string
           weight?: number | null
+        }
+        Relationships: []
+      }
+      publicacoes: {
+        Row: {
+          comentarios_count: number | null
+          created_at: string
+          curtidas_count: number | null
+          descricao: string | null
+          id: string
+          midia_url: string | null
+          tipo_midia: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comentarios_count?: number | null
+          created_at?: string
+          curtidas_count?: number | null
+          descricao?: string | null
+          id?: string
+          midia_url?: string | null
+          tipo_midia?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comentarios_count?: number | null
+          created_at?: string
+          curtidas_count?: number | null
+          descricao?: string | null
+          id?: string
+          midia_url?: string | null
+          tipo_midia?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
