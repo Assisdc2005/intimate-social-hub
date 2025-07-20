@@ -7,8 +7,8 @@ import { useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 export const PremiumTab = () => {
-  const { profile } = useProfile();
-  const { isPremium, subscription, loading, checkSubscription, createCheckout } = useSubscription();
+  const { profile, isPremium } = useProfile();
+  const { subscription, loading, checkSubscription, createCheckout } = useSubscription();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -157,7 +157,7 @@ export const PremiumTab = () => {
                 <span className="text-lg font-semibold text-green-400">Plano Ativo</span>
               </div>
               <p className="text-sm text-muted-foreground mb-2">
-                Plano: <span className="font-semibold capitalize">{subscription.periodo}</span>
+                Plano: <span className="font-semibold capitalize">{subscription.plano || subscription.periodo}</span>
               </p>
               <p className="text-sm text-muted-foreground mb-2">
                 Valor: <span className="font-semibold">R$ {subscription.valor}</span>

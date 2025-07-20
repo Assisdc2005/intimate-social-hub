@@ -33,32 +33,45 @@ serve(async (req) => {
       throw new Error("User not authenticated");
     }
 
-    // Call the verification function
+    console.log('Checking subscription for user:', user.id);
+
+    // Call the verification function to update expired subscriptions
     const { error } = await supabaseAdmin.rpc('verificar_status_premium');
     
     if (error) {
       console.error('Error calling verificar_status_premium:', error);
     }
 
-    // Get user's current subscription status
+    // Get user's current profile with subscription info
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('premium_status')
+      .select(`
+        premium_status, 
+        tipo_assinatura, 
+        assinatura_id,
+        assinaturas:assinatura_id (
+          id,
+          plano,
+          data_inicio,
+          data_fim,
+          valor,
+          periodo,
+          status
+        )
+      `)
       .eq('user_id', user.id)
       .single();
 
-    const { data: subscription } = await supabaseClient
-      .from('assinaturas')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    console.log('Profile data:', profile);
+
+    const isPremium = profile?.premium_status === 'premium' && profile?.tipo_assinatura === 'premium';
+    const subscription = profile?.assinaturas || null;
+
+    console.log('Is premium:', isPremium, 'Subscription:', subscription);
 
     return new Response(JSON.stringify({
-      isPremium: profile?.premium_status === 'premium',
-      subscription: subscription || null
+      isPremium,
+      subscription
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

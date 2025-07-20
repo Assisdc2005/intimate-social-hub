@@ -29,6 +29,8 @@ export interface Profile {
   profile_completed: boolean;
   avatar_url?: string;
   premium_status: string;
+  tipo_assinatura: string;
+  assinatura_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -98,7 +100,7 @@ export const useProfile = () => {
 
   const isPremium = () => {
     if (!profile) return false;
-    return profile.premium_status === 'premium';
+    return profile.premium_status === 'premium' && profile.tipo_assinatura === 'premium';
   };
 
   return {
