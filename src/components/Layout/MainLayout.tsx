@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Header } from "./Header";
 import { BottomNavigation } from "./BottomNavigation";
-import { HomeTab } from "../Tabs/HomeTab";
-import { DiscoverTab } from "../Tabs/DiscoverTab";
+import { HomeTab } from "../Tabs/HomeTabWithDB";
+import { DiscoverTab } from "../Tabs/DiscoverTabWithDB";
 import { MessagesTab } from "../Tabs/MessagesTab";
 import { PremiumTab } from "../Tabs/PremiumTab";
 import { ProfileTab } from "../Tabs/ProfileTab";

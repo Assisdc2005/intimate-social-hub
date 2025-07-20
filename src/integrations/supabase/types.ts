@@ -14,7 +14,348 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      connections: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          participant1_id: string
+          participant2_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          participant1_id: string
+          participant2_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          participant1_id?: string
+          participant2_id?: string
+        }
+        Relationships: []
+      }
+      likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          content: string | null
+          created_at: string
+          from_user_id: string | null
+          id: string
+          read_at: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          from_user_id?: string | null
+          id?: string
+          read_at?: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          from_user_id?: string | null
+          id?: string
+          read_at?: string | null
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          comments_count: number | null
+          content: string | null
+          created_at: string
+          id: string
+          likes_count: number | null
+          media_type: Database["public"]["Enums"]["post_type"]
+          media_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comments_count?: number | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          likes_count?: number | null
+          media_type?: Database["public"]["Enums"]["post_type"]
+          media_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comments_count?: number | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          likes_count?: number | null
+          media_type?: Database["public"]["Enums"]["post_type"]
+          media_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profile_visits: {
+        Row: {
+          created_at: string
+          id: string
+          visited_user_id: string
+          visitor_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          visited_user_id: string
+          visitor_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          visited_user_id?: string
+          visitor_user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          birth_date: string | null
+          body_type: Database["public"]["Enums"]["body_type"] | null
+          city: string | null
+          created_at: string
+          display_name: string
+          drinks: boolean | null
+          ethnicity: Database["public"]["Enums"]["ethnicity_type"] | null
+          gender: Database["public"]["Enums"]["gender_type"] | null
+          height: number | null
+          id: string
+          interests: string[] | null
+          looking_for: string | null
+          objectives: string | null
+          profession: string | null
+          profile_completed: boolean | null
+          relationship_status:
+            | Database["public"]["Enums"]["relationship_status"]
+            | null
+          sexual_orientation:
+            | Database["public"]["Enums"]["orientation_type"]
+            | null
+          smokes: boolean | null
+          state: string | null
+          subscription_expires_at: string | null
+          subscription_type:
+            | Database["public"]["Enums"]["subscription_type"]
+            | null
+          updated_at: string
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          birth_date?: string | null
+          body_type?: Database["public"]["Enums"]["body_type"] | null
+          city?: string | null
+          created_at?: string
+          display_name: string
+          drinks?: boolean | null
+          ethnicity?: Database["public"]["Enums"]["ethnicity_type"] | null
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          height?: number | null
+          id?: string
+          interests?: string[] | null
+          looking_for?: string | null
+          objectives?: string | null
+          profession?: string | null
+          profile_completed?: boolean | null
+          relationship_status?:
+            | Database["public"]["Enums"]["relationship_status"]
+            | null
+          sexual_orientation?:
+            | Database["public"]["Enums"]["orientation_type"]
+            | null
+          smokes?: boolean | null
+          state?: string | null
+          subscription_expires_at?: string | null
+          subscription_type?:
+            | Database["public"]["Enums"]["subscription_type"]
+            | null
+          updated_at?: string
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          birth_date?: string | null
+          body_type?: Database["public"]["Enums"]["body_type"] | null
+          city?: string | null
+          created_at?: string
+          display_name?: string
+          drinks?: boolean | null
+          ethnicity?: Database["public"]["Enums"]["ethnicity_type"] | null
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          height?: number | null
+          id?: string
+          interests?: string[] | null
+          looking_for?: string | null
+          objectives?: string | null
+          profession?: string | null
+          profile_completed?: boolean | null
+          relationship_status?:
+            | Database["public"]["Enums"]["relationship_status"]
+            | null
+          sexual_orientation?:
+            | Database["public"]["Enums"]["orientation_type"]
+            | null
+          smokes?: boolean | null
+          state?: string | null
+          subscription_expires_at?: string | null
+          subscription_type?:
+            | Database["public"]["Enums"]["subscription_type"]
+            | null
+          updated_at?: string
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +364,35 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      body_type: "magro" | "atletico" | "mediano" | "curvilinio" | "plus_size"
+      ethnicity_type:
+        | "branco"
+        | "negro"
+        | "pardo"
+        | "amarelo"
+        | "indigena"
+        | "outro"
+      gender_type: "masculino" | "feminino" | "nao_binario" | "outro"
+      notification_type:
+        | "curtida"
+        | "comentario"
+        | "visita"
+        | "mensagem"
+        | "novo_amigo"
+      orientation_type:
+        | "heterossexual"
+        | "homossexual"
+        | "bissexual"
+        | "pansexual"
+        | "outro"
+      post_type: "texto" | "imagem" | "video"
+      relationship_status:
+        | "solteiro"
+        | "casado"
+        | "relacionamento"
+        | "divorciado"
+        | "viuvo"
+      subscription_type: "gratuito" | "premium"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +519,40 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      body_type: ["magro", "atletico", "mediano", "curvilinio", "plus_size"],
+      ethnicity_type: [
+        "branco",
+        "negro",
+        "pardo",
+        "amarelo",
+        "indigena",
+        "outro",
+      ],
+      gender_type: ["masculino", "feminino", "nao_binario", "outro"],
+      notification_type: [
+        "curtida",
+        "comentario",
+        "visita",
+        "mensagem",
+        "novo_amigo",
+      ],
+      orientation_type: [
+        "heterossexual",
+        "homossexual",
+        "bissexual",
+        "pansexual",
+        "outro",
+      ],
+      post_type: ["texto", "imagem", "video"],
+      relationship_status: [
+        "solteiro",
+        "casado",
+        "relacionamento",
+        "divorciado",
+        "viuvo",
+      ],
+      subscription_type: ["gratuito", "premium"],
+    },
   },
 } as const
