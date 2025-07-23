@@ -95,22 +95,8 @@ serve(async (req) => {
           const subscriptionEnd = new Date(subscription.current_period_end * 1000);
           console.log('📅 Subscription end date:', subscriptionEnd);
 
-          // Determinar período da assinatura
-          let periodo = 'mensal';
-          if (metadata.periodo) {
-            periodo = metadata.periodo;
-          } else {
-            // Fallback baseado no price_id
-            const priceId = subscription.items.data[0].price.id;
-            if (priceId === 'price_1Rn2ekD3X7OLOCgdTVptrYmK') {
-              periodo = 'semanal';
-            } else if (priceId === 'price_1Rn2hQD3X7OLOCgddzwdYC6X') {
-              periodo = 'quinzenal';
-            } else if (priceId === 'price_1Rn2hZD3X7OLOCgd3HzBOW1i') {
-              periodo = 'mensal';
-            }
-          }
-
+          // Determinar período da assinatura baseado no metadata
+          let periodo = metadata.periodo || 'mensal';
           console.log('⏱️ Subscription period:', periodo);
 
           // Obter informações do preço para o valor
@@ -147,7 +133,7 @@ serve(async (req) => {
           console.log('✅ Subscription created with perfil_id:', newSubscription.id, 'perfil_id:', newSubscription.perfil_id);
           
           // Aguardar um pouco para o trigger processar
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
           // Verificar se a atualização foi bem-sucedida
           const { data: verifyProfile, error: verifyError } = await supabaseAdmin

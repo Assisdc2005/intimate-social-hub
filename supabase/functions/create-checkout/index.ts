@@ -128,7 +128,7 @@ serve(async (req) => {
 
     console.log('📋 Plan configuration:', planConfig);
 
-    // Criar sessão de checkout com price dinâmico
+    // Criar sessão de checkout com price dinâmico e metadata CRÍTICO
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
@@ -152,7 +152,7 @@ serve(async (req) => {
       success_url: `${req.headers.get("origin")}/premium?success=true`,
       cancel_url: `${req.headers.get("origin")}/premium?canceled=true`,
       metadata: {
-        user_id: user.id,
+        user_id: user.id, // CRÍTICO: incluir user_id no metadata
         periodo: periodo,
         plan_name: planConfig.planName,
       },
