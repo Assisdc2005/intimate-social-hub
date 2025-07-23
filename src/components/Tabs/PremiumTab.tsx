@@ -6,7 +6,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { CaktoCheckout } from '@/components/Checkout/CaktoCheckout';
+
 
 export const PremiumTab = () => {
   const { profile, isPremium, refreshProfile } = useProfile();

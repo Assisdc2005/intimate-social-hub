@@ -4,14 +4,14 @@ import { CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useProfile } from '@/hooks/useProfile';
-import { useCaktoCheckout } from '@/hooks/useCaktoCheckout';
+
 
 export const PaymentConfirmation = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { refreshProfile } = useProfile();
-  const { refreshCheckouts } = useCaktoCheckout();
+  
 
   const status = searchParams.get('status');
   const checkoutId = searchParams.get('checkout_id');
@@ -22,7 +22,6 @@ export const PaymentConfirmation = () => {
       // Refresh user data after successful payment
       setTimeout(async () => {
         await refreshProfile();
-        await refreshCheckouts();
       }, 2000);
 
       toast({
@@ -36,7 +35,7 @@ export const PaymentConfirmation = () => {
         variant: "destructive",
       });
     }
-  }, [status, message, toast, refreshProfile, refreshCheckouts]);
+  }, [status, message, toast, refreshProfile]);
 
   const handleGoHome = () => {
     navigate('/home');
