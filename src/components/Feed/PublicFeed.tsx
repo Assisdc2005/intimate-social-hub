@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Plus, Send, User, Clock, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,7 @@ interface Publicacao {
     avatar_url?: string;
     city?: string;
     state?: string;
-    subscription_type?: string;
+    tipo_assinatura?: string;
   };
 }
 
@@ -98,7 +97,7 @@ export const PublicFeed = () => {
       const userIds = [...new Set(publicacoesData.map(pub => pub.user_id))];
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('user_id, display_name, avatar_url, city, state, subscription_type')
+        .select('user_id, display_name, avatar_url, city, state, tipo_assinatura')
         .in('user_id', userIds);
 
       // Combine data
@@ -417,7 +416,7 @@ export const PublicFeed = () => {
                   >
                     {publicacao.profiles?.display_name || 'Usuário'}
                   </p>
-                  {publicacao.profiles?.subscription_type === 'premium' && (
+                  {publicacao.profiles?.tipo_assinatura === 'premium' && (
                     <Crown className="w-4 h-4 text-yellow-500" />
                   )}
                 </div>
