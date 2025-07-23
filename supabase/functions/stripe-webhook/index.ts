@@ -107,6 +107,8 @@ serve(async (req) => {
                   console.log('✅ Found profile by email lookup');
                   // Atualizar metadata para usar o user_id correto
                   metadata.user_id = userByEmail.user.id;
+                  profile.id = profileByEmail.id;
+                  profile.user_id = profileByEmail.user_id;
                 } else {
                   console.error('❌ No profile found even with email lookup');
                   break;
@@ -128,11 +130,12 @@ serve(async (req) => {
 
           console.log('💰 Subscription value:', valor);
 
-          // Inserir registro na tabela assinaturas
+          // Inserir registro na tabela assinaturas COM perfil_id preenchido
           const { data: newSubscription, error: subscriptionError } = await supabaseAdmin
             .from('assinaturas')
             .insert({
               user_id: metadata.user_id,
+              perfil_id: profile.id, // CRÍTICO: incluir perfil_id para o trigger funcionar
               stripe_customer_id: session.customer,
               stripe_subscription_id: session.subscription,
               stripe_price_id: priceId,
@@ -151,54 +154,16 @@ serve(async (req) => {
             break;
           }
 
-          console.log('✅ Subscription created:', newSubscription.id);
-
-          // ATUALIZAR PERFIL PARA PREMIUM - ESTA É A PARTE CRÍTICA
-          console.log('🔄 Updating profile to premium for user:', metadata.user_id);
+          console.log('✅ Subscription created with perfil_id:', newSubscription.id, 'perfil_id:', newSubscription.perfil_id);
           
-          const { data: updatedProfile, error: updateError } = await supabaseAdmin
-            .from('profiles')
-            .update({ 
-              tipo_assinatura: 'premium',
-              subscription_expires_at: subscriptionEnd.toISOString(),
-              assinatura_id: newSubscription.id
-            })
-            .eq('user_id', metadata.user_id)
-            .select()
-            .single();
-
-          if (updateError) {
-            console.error('❌ CRITICAL ERROR - Failed to update profile to premium:', updateError);
-            
-            // Tentar novamente com diferentes estratégias
-            console.log('🔄 Retrying profile update...');
-            
-            // Tentar atualizar por email se disponível
-            if (customer.email) {
-              const { error: emailUpdateError } = await supabaseAdmin
-                .from('profiles')
-                .update({ 
-                  tipo_assinatura: 'premium',
-                  subscription_expires_at: subscriptionEnd.toISOString(),
-                  assinatura_id: newSubscription.id
-                })
-                .eq('user_id', metadata.user_id);
-              
-              if (emailUpdateError) {
-                console.error('❌ CRITICAL ERROR - Second attempt failed:', emailUpdateError);
-              } else {
-                console.log('✅ Profile updated to premium on retry');
-              }
-            }
-          } else {
-            console.log('✅ Profile successfully updated to premium:', updatedProfile);
-          }
+          // O trigger agora atualizará automaticamente o perfil para premium
+          console.log('🔄 Trigger will automatically update profile to premium');
 
           // Verificar se a atualização foi bem-sucedida
           const { data: verifyProfile, error: verifyError } = await supabaseAdmin
             .from('profiles')
             .select('tipo_assinatura, subscription_expires_at, assinatura_id')
-            .eq('user_id', metadata.user_id)
+            .eq('id', profile.id)
             .single();
             
           if (verifyError) {
@@ -207,7 +172,7 @@ serve(async (req) => {
             console.log('🔍 Profile verification result:', verifyProfile);
             
             if (verifyProfile.tipo_assinatura === 'premium') {
-              console.log('✅ SUCCESS - Profile is now premium!');
+              console.log('✅ SUCCESS - Profile is now premium via trigger!');
             } else {
               console.error('❌ FAILURE - Profile is still not premium:', verifyProfile.tipo_assinatura);
             }
@@ -238,21 +203,30 @@ serve(async (req) => {
             if (userData.user) {
               console.log('✅ Found user for invoice payment:', userData.user.id);
               
-              // Atualizar perfil para premium
-              const subscriptionEnd = new Date(subscription.current_period_end * 1000);
-              
-              const { error: updateError } = await supabaseAdmin
+              // Buscar perfil do usuário
+              const { data: profile } = await supabaseAdmin
                 .from('profiles')
-                .update({ 
-                  tipo_assinatura: 'premium',
-                  subscription_expires_at: subscriptionEnd.toISOString()
-                })
-                .eq('user_id', userData.user.id);
+                .select('id')
+                .eq('user_id', userData.user.id)
+                .single();
 
-              if (updateError) {
-                console.error('❌ Error updating profile for invoice payment:', updateError);
-              } else {
-                console.log('✅ Profile updated to premium for invoice payment');
+              if (profile) {
+                // Atualizar assinatura existente ou criar nova
+                const subscriptionEnd = new Date(subscription.current_period_end * 1000);
+                
+                const { error: updateError } = await supabaseAdmin
+                  .from('assinaturas')
+                  .update({ 
+                    data_fim: subscriptionEnd.toISOString(),
+                    status: 'active'
+                  })
+                  .eq('stripe_subscription_id', invoice.subscription);
+
+                if (updateError) {
+                  console.error('❌ Error updating subscription for invoice payment:', updateError);
+                } else {
+                  console.log('✅ Subscription updated for invoice payment');
+                }
               }
             }
           }
@@ -264,7 +238,7 @@ serve(async (req) => {
         const subscription = event.data.object as any;
         console.log('🚫 Subscription canceled:', subscription.id);
         
-        // Atualizar status da assinatura
+        // Atualizar status da assinatura para canceled
         const { error: updateError } = await supabaseAdmin
           .from('assinaturas')
           .update({ status: 'canceled' })
@@ -272,32 +246,8 @@ serve(async (req) => {
 
         if (updateError) {
           console.error('❌ Error updating subscription status:', updateError);
-        }
-
-        // Buscar e atualizar perfil do usuário
-        const { data: subscriptionData } = await supabaseAdmin
-          .from('assinaturas')
-          .select('user_id')
-          .eq('stripe_subscription_id', subscription.id)
-          .single();
-
-        if (subscriptionData) {
-          console.log('🔄 Updating profile to free for user:', subscriptionData.user_id);
-          
-          const { error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .update({ 
-              tipo_assinatura: 'gratuito',
-              subscription_expires_at: null,
-              assinatura_id: null
-            })
-            .eq('user_id', subscriptionData.user_id);
-
-          if (profileError) {
-            console.error('❌ Error updating profile to free:', profileError);
-          } else {
-            console.log('✅ Profile updated to free for user:', subscriptionData.user_id);
-          }
+        } else {
+          console.log('✅ Subscription status updated to canceled - trigger will update profile');
         }
         break;
       }
