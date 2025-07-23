@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       assinaturas: {
         Row: {
+          cakto_checkout_id: string | null
           created_at: string
           data_fim: string
           data_inicio: string
@@ -32,6 +33,7 @@ export type Database = {
           valor: number
         }
         Insert: {
+          cakto_checkout_id?: string | null
           created_at?: string
           data_fim: string
           data_inicio?: string
@@ -48,6 +50,7 @@ export type Database = {
           valor: number
         }
         Update: {
+          cakto_checkout_id?: string | null
           created_at?: string
           data_fim?: string
           data_inicio?: string
@@ -72,6 +75,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cakto_checkouts: {
+        Row: {
+          amount: number | null
+          checkout_id: string | null
+          created_at: string
+          id: string
+          periodo: string | null
+          status: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          checkout_id?: string | null
+          created_at?: string
+          id?: string
+          periodo?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          checkout_id?: string | null
+          created_at?: string
+          id?: string
+          periodo?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       comentarios_publicacoes: {
         Row: {

@@ -6,6 +6,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { CaktoCheckout } from '@/components/Checkout/CaktoCheckout';
 
 export const PremiumTab = () => {
   const { profile, isPremium, refreshProfile } = useProfile();
@@ -116,43 +117,19 @@ export const PremiumTab = () => {
     }
   ];
 
-  const handleSubscribe = async (planId: string) => {
-    try {
-      console.log('🛒 Starting subscription process for plan:', planId);
-      
-      const plan = plans.find(p => p.id === planId);
-      if (!plan) {
-        throw new Error('Plano não encontrado');
-      }
+  const handleSubscribeSuccess = () => {
+    toast({
+      title: "Redirecionando para pagamento",
+      description: "Você será redirecionado para a página de pagamento da Cakto",
+    });
+  };
 
-      toast({
-        title: "Processando...",
-        description: "Criando sessão de pagamento...",
-      });
-
-      await createCheckout(plan.id);
-      
-    } catch (error) {
-      console.error('❌ Error in handleSubscribe:', error);
-      
-      let errorMessage = "Não foi possível iniciar o pagamento. Tente novamente.";
-      
-      if (error instanceof Error) {
-        if (error.message.includes('resource_missing')) {
-          errorMessage = "Erro na configuração do sistema de pagamento. Contate o suporte.";
-        } else if (error.message.includes('User not authenticated')) {
-          errorMessage = "Você precisa estar logado para assinar um plano.";
-        } else if (error.message.includes('network')) {
-          errorMessage = "Erro de conexão. Verifique sua internet e tente novamente.";
-        }
-      }
-      
-      toast({
-        title: "Erro no pagamento",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    }
+  const handleSubscribeError = (error: string) => {
+    toast({
+      title: "Erro no pagamento",
+      description: error,
+      variant: "destructive",
+    });
   };
 
   const handleRefreshStatus = async () => {
@@ -316,19 +293,14 @@ export const PremiumTab = () => {
                   </div>
                 </div>
                 
-                <Button 
-                  onClick={() => handleSubscribe(plan.id)}
-                  className={`
-                    w-full py-3 font-semibold transition-all duration-300
-                    ${plan.highlight 
-                      ? 'btn-premium shadow-glow' 
-                      : 'btn-secondary'
-                    }
-                  `}
-                >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Assinar {plan.name}
-                </Button>
+                <CaktoCheckout
+                  planId={plan.id}
+                  amount={plan.amount / 100} // Converter de centavos para reais
+                  periodo={plan.id}
+                  description={`Assinatura Premium ${plan.name}`}
+                  onSuccess={handleSubscribeSuccess}
+                  onError={handleSubscribeError}
+                />
               </div>
             ))}
           </div>
@@ -403,13 +375,14 @@ export const PremiumTab = () => {
           <p className="text-sm text-muted-foreground mb-4">
             Junte-se a milhares de usuários Premium e encontre conexões únicas
           </p>
-          <Button 
-            onClick={() => handleSubscribe('quinzenal')} // Quinzenal (mais popular)
-            className="btn-premium w-full text-lg py-4"
-          >
-            <Crown className="w-5 h-5 mr-2" />
-            Começar Agora
-          </Button>
+          <CaktoCheckout
+            planId="quinzenal"
+            amount={20} // R$ 20,00
+            periodo="quinzenal"
+            description="Assinatura Premium Quinzenal"
+            onSuccess={handleSubscribeSuccess}
+            onError={handleSubscribeError}
+          />
         </div>
       )}
     </div>
