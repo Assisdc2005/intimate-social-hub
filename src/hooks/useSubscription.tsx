@@ -62,37 +62,31 @@ export const useSubscription = () => {
     }
   };
 
-  const createCheckout = async (priceId: string) => {
+  const createCheckout = async (planId: string) => {
     try {
-      console.log('🛒 Creating checkout for price:', priceId);
+      console.log('🛒 Creating checkout for plan:', planId);
       
       // Verificar se o usuário está autenticado
       if (!user) {
-        throw new Error('User not authenticated');
+        throw new Error('Usuário não autenticado');
       }
 
-      // Determinar o período baseado no price_id
-      let periodo = 'mensal';
-      if (priceId === 'price_1Rn2ekD3X7OLOCgdTVptrYmK') {
-        periodo = 'semanal';
-      } else if (priceId === 'price_1Rn2hQD3X7OLOCgddzwdYC6X') {
-        periodo = 'quinzenal';
-      } else if (priceId === 'price_1Rn2hZD3X7OLOCgd3HzBOW1i') {
-        periodo = 'mensal';
-      }
-
-      console.log('💰 Creating checkout with period:', periodo);
+      console.log('💰 Creating checkout with plan:', planId);
 
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
-          priceId,
-          periodo
+          priceId: planId, // Manter compatibilidade
+          periodo: planId  // Novo campo
         }
       });
 
       if (error) {
         console.error('❌ Checkout error:', error);
-        throw error;
+        throw new Error(error.message || 'Erro ao criar checkout');
+      }
+
+      if (!data || !data.url) {
+        throw new Error('URL de checkout não recebida');
       }
 
       console.log('✅ Checkout session created, opening URL:', data.url);

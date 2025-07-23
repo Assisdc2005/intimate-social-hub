@@ -1,3 +1,4 @@
+
 import { Crown, Check, Star, Zap, Eye, MessageCircle, Heart, Filter, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
@@ -84,40 +85,71 @@ export const PremiumTab = () => {
     }
   ];
 
+  // Planos atualizados com price IDs corretos ou método de criação dinâmica
   const plans = [
     {
-      id: 'price_1Rn2ekD3X7OLOCgdTVptrYmK',
+      id: 'semanal',
       name: 'Semanal',
       price: 'R$ 15,00',
       period: '/semana',
       description: 'Ideal para experimentar',
-      highlight: false
+      highlight: false,
+      amount: 1500 // em centavos
     },
     {
-      id: 'price_1Rn2hQD3X7OLOCgddzwdYC6X',
+      id: 'quinzenal',
       name: 'Quinzenal',
       price: 'R$ 20,00',
       period: '/15 dias',
       description: 'Boa relação custo-benefício',
-      highlight: true
+      highlight: true,
+      amount: 2000 // em centavos
     },
     {
-      id: 'price_1Rn2hZD3X7OLOCgd3HzBOW1i',
+      id: 'mensal',
       name: 'Mensal',
       price: 'R$ 30,00',
       period: '/mês',
       description: 'Máximo aproveitamento',
-      highlight: false
+      highlight: false,
+      amount: 3000 // em centavos
     }
   ];
 
-  const handleSubscribe = async (priceId: string) => {
+  const handleSubscribe = async (planId: string) => {
     try {
-      await createCheckout(priceId);
-    } catch (error) {
+      console.log('🛒 Starting subscription process for plan:', planId);
+      
+      const plan = plans.find(p => p.id === planId);
+      if (!plan) {
+        throw new Error('Plano não encontrado');
+      }
+
       toast({
-        title: "Erro",
-        description: "Não foi possível iniciar o pagamento. Tente novamente.",
+        title: "Processando...",
+        description: "Criando sessão de pagamento...",
+      });
+
+      await createCheckout(plan.id);
+      
+    } catch (error) {
+      console.error('❌ Error in handleSubscribe:', error);
+      
+      let errorMessage = "Não foi possível iniciar o pagamento. Tente novamente.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('resource_missing')) {
+          errorMessage = "Erro na configuração do sistema de pagamento. Contate o suporte.";
+        } else if (error.message.includes('User not authenticated')) {
+          errorMessage = "Você precisa estar logado para assinar um plano.";
+        } else if (error.message.includes('network')) {
+          errorMessage = "Erro de conexão. Verifique sua internet e tente novamente.";
+        }
+      }
+      
+      toast({
+        title: "Erro no pagamento",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -372,7 +404,7 @@ export const PremiumTab = () => {
             Junte-se a milhares de usuários Premium e encontre conexões únicas
           </p>
           <Button 
-            onClick={() => handleSubscribe(plans[1].id)} // Quinzenal (mais popular)
+            onClick={() => handleSubscribe('quinzenal')} // Quinzenal (mais popular)
             className="btn-premium w-full text-lg py-4"
           >
             <Crown className="w-5 h-5 mr-2" />

@@ -16,11 +16,7 @@ serve(async (req) => {
   try {
     const { priceId, periodo } = await req.json();
     
-    if (!priceId) {
-      throw new Error("Price ID is required");
-    }
-
-    console.log('💰 Creating checkout session for price:', priceId);
+    console.log('💰 Creating checkout session for plan:', periodo);
 
     // Verificar se as variáveis de ambiente estão definidas
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
@@ -28,11 +24,13 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
     if (!stripeSecretKey) {
-      throw new Error("STRIPE_SECRET_KEY is not configured");
+      console.error("❌ STRIPE_SECRET_KEY not configured");
+      throw new Error("Configuração de pagamento não encontrada");
     }
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Supabase environment variables are not configured");
+      console.error("❌ Supabase environment variables not configured");
+      throw new Error("Configuração do banco de dados não encontrada");
     }
 
     // Criar cliente Supabase para autenticação
@@ -41,14 +39,15 @@ serve(async (req) => {
     // Obter usuário autenticado
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error("No authorization header");
+      throw new Error("Usuário não autenticado");
     }
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !userData.user) {
-      throw new Error("User not authenticated");
+      console.error("❌ User authentication failed:", userError);
+      throw new Error("Falha na autenticação do usuário");
     }
 
     const user = userData.user;
@@ -61,68 +60,102 @@ serve(async (req) => {
 
     // Verificar se o cliente já existe no Stripe
     let customerId = null;
-    const existingCustomers = await stripe.customers.list({
-      email: user.email,
-      limit: 1,
-    });
-
-    if (existingCustomers.data.length > 0) {
-      customerId = existingCustomers.data[0].id;
-      console.log('✅ Existing customer found:', customerId);
-    } else {
-      // Criar novo cliente
-      const customer = await stripe.customers.create({
+    try {
+      const existingCustomers = await stripe.customers.list({
         email: user.email,
-        metadata: {
-          user_id: user.id,
-        },
+        limit: 1,
       });
-      customerId = customer.id;
-      console.log('✅ New customer created:', customerId);
+
+      if (existingCustomers.data.length > 0) {
+        customerId = existingCustomers.data[0].id;
+        console.log('✅ Existing customer found:', customerId);
+      } else {
+        // Criar novo cliente
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: {
+            user_id: user.id,
+          },
+        });
+        customerId = customer.id;
+        console.log('✅ New customer created:', customerId);
+      }
+    } catch (stripeError) {
+      console.error('❌ Stripe customer error:', stripeError);
+      throw new Error("Erro ao configurar dados do cliente");
     }
 
-    // Determinar valores baseado no preço
-    let lineItems = [];
-    let sessionMetadata = {
-      user_id: user.id,
-      periodo: periodo || 'mensal'
+    // Determinar configuração do plano
+    let planConfig = {
+      amount: 1500, // padrão semanal
+      currency: 'brl',
+      interval: 'week' as const,
+      intervalCount: 1,
+      planName: 'Premium Semanal'
     };
 
-    if (priceId === 'price_1Rn2ekD3X7OLOCgdTVptrYmK') {
-      // Semanal
-      lineItems = [{
-        price: priceId,
-        quantity: 1,
-      }];
-      sessionMetadata.periodo = 'semanal';
-    } else if (priceId === 'price_1Rn2hQD3X7OLOCgddzwdYC6X') {
-      // Quinzenal
-      lineItems = [{
-        price: priceId,
-        quantity: 1,
-      }];
-      sessionMetadata.periodo = 'quinzenal';
-    } else if (priceId === 'price_1Rn2hZD3X7OLOCgd3HzBOW1i') {
-      // Mensal
-      lineItems = [{
-        price: priceId,
-        quantity: 1,
-      }];
-      sessionMetadata.periodo = 'mensal';
-    } else {
-      throw new Error("Invalid price ID");
+    switch (periodo) {
+      case 'semanal':
+        planConfig = {
+          amount: 1500,
+          currency: 'brl',
+          interval: 'week' as const,
+          intervalCount: 1,
+          planName: 'Premium Semanal'
+        };
+        break;
+      case 'quinzenal':
+        planConfig = {
+          amount: 2000,
+          currency: 'brl',
+          interval: 'week' as const,
+          intervalCount: 2,
+          planName: 'Premium Quinzenal'
+        };
+        break;
+      case 'mensal':
+        planConfig = {
+          amount: 3000,
+          currency: 'brl',
+          interval: 'month' as const,
+          intervalCount: 1,
+          planName: 'Premium Mensal'
+        };
+        break;
+      default:
+        throw new Error("Plano não reconhecido");
     }
 
-    console.log('💰 Creating checkout session with metadata:', sessionMetadata);
+    console.log('📋 Plan configuration:', planConfig);
 
-    // Criar sessão de checkout
+    // Criar sessão de checkout com price dinâmico
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      line_items: lineItems,
+      line_items: [
+        {
+          price_data: {
+            currency: planConfig.currency,
+            product_data: {
+              name: planConfig.planName,
+              description: `Assinatura premium ${periodo}`,
+            },
+            unit_amount: planConfig.amount,
+            recurring: {
+              interval: planConfig.interval,
+              interval_count: planConfig.intervalCount,
+            },
+          },
+          quantity: 1,
+        },
+      ],
       mode: 'subscription',
       success_url: `${req.headers.get("origin")}/premium?success=true`,
       cancel_url: `${req.headers.get("origin")}/premium?canceled=true`,
-      metadata: sessionMetadata,
+      metadata: {
+        user_id: user.id,
+        periodo: periodo,
+        plan_name: planConfig.planName,
+      },
     });
 
     console.log('✅ Checkout session created:', session.id);
@@ -134,7 +167,13 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('❌ Error creating checkout:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    
+    let errorMessage = "Erro interno do servidor";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
+    return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
