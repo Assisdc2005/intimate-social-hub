@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { toast } from "@/hooks/use-toast"
-import { type Profile } from '@/hooks/useProfile';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, 
@@ -17,11 +17,23 @@ import {
   KeyRound,
   Copy,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  MapPin,
+  Calendar,
+  Briefcase,
+  Heart,
+  Users,
+  Target,
+  Camera,
+  MessageCircle,
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { useTheme } from "@/components/ThemeProvider"
@@ -37,10 +49,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
+interface UserPost {
+  id: string;
+  content: string;
+  media_url?: string;
+  media_type: string;
+  created_at: string;
+  likes_count: number;
+  comments_count: number;
+}
+
 export default function Profile() {
   const { user, updatePassword, signOut } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { profile, isPremium, loading: profileLoading } = useProfile();
+  const [userPosts, setUserPosts] = useState<UserPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordMatch, setPasswordMatch] = useState(true);
@@ -52,38 +75,46 @@ export default function Profile() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (user) {
-        setLoading(true);
-        try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
+    const fetchUserPosts = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
 
-          if (error) {
-            console.error('Error fetching profile:', error);
-            toast({
-              title: "Erro",
-              description: "Erro ao carregar perfil.",
-              variant: "destructive",
-            });
-          } else {
-            setProfile(data as Profile);
-          }
-        } finally {
-          setLoading(false);
+        if (error) {
+          console.error('Error fetching posts:', error);
+        } else {
+          setUserPosts(data || []);
         }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setPostsLoading(false);
       }
     };
 
-    fetchProfile();
+    fetchUserPosts();
   }, [user]);
 
   useEffect(() => {
     setIsDarkTheme(theme === "dark");
   }, [theme]);
+
+  const calculateAge = (birthDate: string) => {
+    if (!birthDate) return null;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   const handleThemeToggle = () => {
     const newTheme = isDarkTheme ? "light" : "dark";
@@ -168,7 +199,6 @@ export default function Profile() {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       navigate('/login');
-      // TODO: Implement account deletion logic here (supabase.auth.deleteUser requires admin privileges)
       toast({
         title: "Sucesso",
         description: "Conta excluída com sucesso!",
@@ -200,7 +230,7 @@ export default function Profile() {
     }
   };
 
-  if (loading) {
+  if (profileLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
@@ -208,9 +238,11 @@ export default function Profile() {
     );
   }
 
+  const age = profile?.birth_date ? calculateAge(profile.birth_date) : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-      {/* Back Button - Top Left Position */}
+      {/* Back Button */}
       <div className="fixed top-4 left-4 z-50">
         <Button 
           onClick={() => navigate('/home')}
@@ -224,208 +256,322 @@ export default function Profile() {
       </div>
 
       <div className="container mx-auto px-4 py-12">
-        <div className="max-w-3xl mx-auto bg-glass backdrop-blur-md rounded-3xl shadow-xl border border-primary/20 p-8 space-y-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-white mb-2">Configurações da Conta</h1>
-            <p className="text-gray-300">Gerencie sua conta e preferências.</p>
-          </div>
-
-          {/* Account Information Section */}
-          <div className="card">
-            <h2 className="card-title">Informações da Conta</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm text-gray-400">Nome</p>
-                  <p className="text-white">{profile?.display_name}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm text-gray-400">Email</p>
-                  <p className="text-white">{user?.email}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Change Password Section */}
-          <div className="card">
-            <h2 className="card-title">Alterar Senha</h2>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="newPassword">Nova Senha</Label>
+        <div className="max-w-4xl mx-auto space-y-8">
+          
+          {/* Profile Header */}
+          <Card className="bg-glass backdrop-blur-md border-primary/20">
+            <CardContent className="p-8">
+              <div className="flex items-start gap-6">
                 <div className="relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    id="newPassword"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="bg-input/50 border-white/20 text-foreground placeholder:text-muted-foreground"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                  >
-                    {showPassword ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4"
-                      >
-                        <path d="M2 2l20 20M11.18 11.18A7.962 7.962 0 0 1 12 12c0 3.59 3.07 6.5 6.68 7.65"></path>
-                        <path d="M2 2l20 20M11.18 11.18A7.962 7.962 0 0 1 12 12c0 3.59 3.07 6.5 6.68 7.65"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <line x1="3" x2="21" y1="3" y2="21"></line>
-                      </svg>
+                  <div className="w-32 h-32 rounded-full bg-gradient-primary overflow-hidden">
+                    {profile?.avatar_url ? (
+                      <img 
+                        src={profile.avatar_url} 
+                        alt={profile.display_name} 
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4"
-                      >
-                        <path d="M2 2l20 20M11.18 11.18A7.962 7.962 0 0 1 12 12c0 3.59 3.07 6.5 6.68 7.65"></path>
-                        <path d="M17.52 17.52A3 3 0 1 0 12 12"></path>
-                        <path d="M2 2l20 20M11.18 11.18A7.962 7.962 0 0 1 12 12c0 3.59 3.07 6.5 6.68 7.65"></path>
-                      </svg>
+                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-4xl">
+                        {profile?.display_name?.[0]?.toUpperCase() || 'U'}
+                      </div>
                     )}
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="confirmNewPassword">Confirmar Nova Senha</Label>
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  id="confirmNewPassword"
-                  value={confirmNewPassword}
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  className="bg-input/50 border-white/20 text-foreground placeholder:text-muted-foreground"
-                />
-                {!passwordMatch && (
-                  <p className="text-red-500 text-sm mt-1">As senhas não coincidem.</p>
-                )}
-              </div>
-              <Button onClick={handleChangePassword} className="w-full">
-                Alterar Senha
-              </Button>
-            </div>
-          </div>
-
-          {/* Generate Password Section */}
-          <div className="card">
-            <h2 className="card-title">Gerar Senha Segura</h2>
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <Input
-                  type="text"
-                  value={generatedPassword}
-                  readOnly
-                  className="flex-1 bg-input/50 border-white/20 text-foreground placeholder:text-muted-foreground mr-2"
-                />
-                <Button onClick={copyToClipboard} disabled={!generatedPassword} variant="secondary">
-                  {isCopied ? (
-                    <Check className="w-4 h-4 mr-2" />
-                  ) : (
-                    <Copy className="w-4 h-4 mr-2" />
+                  </div>
+                  {isPremium && (
+                    <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center">
+                      <Crown className="h-5 w-5 text-white" />
+                    </div>
                   )}
-                  {isCopied ? 'Copiado!' : 'Copiar'}
-                </Button>
-              </div>
-              <Button onClick={generatePassword} className="w-full">
-                Gerar Senha
-              </Button>
-            </div>
-          </div>
+                </div>
 
-          {/* Theme Settings Section */}
-          <div className="card">
-            <h2 className="card-title">Aparência</h2>
-            <div className="flex items-center justify-between">
-              <span className="text-white">Usar tema escuro</span>
-              <Switch id="theme" checked={isDarkTheme} onCheckedChange={handleThemeToggle} />
-            </div>
-          </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-4">
+                    <h1 className="text-3xl font-bold text-white">{profile?.display_name}</h1>
+                    {isPremium && (
+                      <Badge className="bg-gradient-primary text-white px-3 py-1">
+                        PREMIUM
+                      </Badge>
+                    )}
+                  </div>
 
-          {/* Premium Status Section */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Crown className="h-8 w-8 text-yellow-500" />
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Status Premium</h2>
-                  <p className="text-gray-300">
-                    {profile?.tipo_assinatura === 'premium' ? 'Você tem acesso Premium' : 'Upgrade para Premium'}
-                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-primary" />
+                      <span>{user?.email}</span>
+                    </div>
+                    
+                    {age && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span>{age} anos</span>
+                      </div>
+                    )}
+                    
+                    {profile?.gender && (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-primary" />
+                        <span className="capitalize">{profile.gender}</span>
+                      </div>
+                    )}
+                    
+                    {(profile?.city || profile?.state) && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-primary" />
+                        <span>{profile.city}{profile.city && profile.state && ', '}{profile.state}</span>
+                      </div>
+                    )}
+                    
+                    {profile?.profession && (
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-primary" />
+                        <span>{profile.profession}</span>
+                      </div>
+                    )}
+                    
+                    {profile?.sexual_orientation && (
+                      <div className="flex items-center gap-2">
+                        <Heart className="h-4 w-4 text-primary" />
+                        <span className="capitalize">{profile.sexual_orientation}</span>
+                      </div>
+                    )}
+                    
+                    {profile?.relationship_status && (
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-primary" />
+                        <span className="capitalize">{profile.relationship_status}</span>
+                      </div>
+                    )}
+                    
+                    {profile?.looking_for && (
+                      <div className="flex items-center gap-2">
+                        <Target className="h-4 w-4 text-primary" />
+                        <span>{profile.looking_for}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {profile?.bio && (
+                    <p className="text-gray-300 mt-4 leading-relaxed">{profile.bio}</p>
+                  )}
+
+                  <div className="flex gap-3 mt-6">
+                    <Button 
+                      onClick={() => navigate('/profile/edit')}
+                      className="bg-gradient-primary hover:opacity-90 text-white"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar Perfil
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  profile?.tipo_assinatura === 'premium' 
-                    ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' 
-                    : 'bg-gray-600/20 text-gray-400 border border-gray-600/30'
-                }`}>
-                  {profile?.tipo_assinatura === 'premium' ? 'Premium Ativo' : 'Gratuito'}
-                </span>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Mostrar informações da assinatura se premium */}
-            {profile?.tipo_assinatura === 'premium' && profile?.subscription_expires_at && (
-              <div className="mb-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
-                <p className="text-sm text-green-400">
-                  Assinatura válida até: {new Date(profile.subscription_expires_at).toLocaleDateString('pt-BR')}
-                </p>
-              </div>
+          {/* Additional Profile Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Physical Info */}
+            {(profile?.height || profile?.weight || profile?.body_type || profile?.ethnicity) && (
+              <Card className="bg-glass backdrop-blur-md border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-white">Informações Físicas</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {profile?.height && (
+                    <div>
+                      <p className="text-sm text-gray-400">Altura</p>
+                      <p className="text-white">{profile.height} cm</p>
+                    </div>
+                  )}
+                  {profile?.weight && (
+                    <div>
+                      <p className="text-sm text-gray-400">Peso</p>
+                      <p className="text-white">{profile.weight} kg</p>
+                    </div>
+                  )}
+                  {profile?.body_type && (
+                    <div>
+                      <p className="text-sm text-gray-400">Tipo Físico</p>
+                      <p className="text-white capitalize">{profile.body_type}</p>
+                    </div>
+                  )}
+                  {profile?.ethnicity && (
+                    <div>
+                      <p className="text-sm text-gray-400">Etnia</p>
+                      <p className="text-white capitalize">{profile.ethnicity}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
 
-            <Button onClick={handleSubscriptionManagement} className="w-full">
-              Gerenciar Assinatura
-            </Button>
+            {/* Lifestyle Info */}
+            {(profile?.smokes !== undefined || profile?.drinks !== undefined) && (
+              <Card className="bg-glass backdrop-blur-md border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-white">Estilo de Vida</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {profile?.smokes !== undefined && (
+                    <div>
+                      <p className="text-sm text-gray-400">Fuma</p>
+                      <p className="text-white">{profile.smokes ? 'Sim' : 'Não'}</p>
+                    </div>
+                  )}
+                  {profile?.drinks !== undefined && (
+                    <div>
+                      <p className="text-sm text-gray-400">Bebe</p>
+                      <p className="text-white">{profile.drinks ? 'Sim' : 'Não'}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* Danger Zone Section */}
-          <div className="card">
-            <h2 className="card-title text-red-500">Zona de Perigo</h2>
-            <div className="space-y-4">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full">
-                    Excluir Conta
+          {/* Interests */}
+          {profile?.interests && profile.interests.length > 0 && (
+            <Card className="bg-glass backdrop-blur-md border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-white">Interesses</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {profile.interests.map((interest, index) => (
+                    <Badge 
+                      key={index}
+                      className="bg-primary/20 text-primary border border-primary/30"
+                    >
+                      {interest}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Posts Section */}
+          <Card className="bg-glass backdrop-blur-md border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Camera className="h-5 w-5" />
+                Minhas Publicações ({userPosts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {postsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : userPosts.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Você ainda não fez nenhuma publicação</p>
+                  <Button 
+                    onClick={() => navigate('/home')}
+                    className="mt-4 bg-gradient-primary hover:opacity-90 text-white"
+                  >
+                    Fazer primeira publicação
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-glass backdrop-blur-md border border-red-500/30">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-500 text-white hover:bg-red-600">Excluir</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button onClick={handleSignOut} variant="ghost" className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/20">
-                Sair da Conta
-              </Button>
-            </div>
-          </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {userPosts.map((post) => (
+                    <Card key={post.id} className="bg-white/5 border-white/10">
+                      <CardContent className="p-4">
+                        {post.media_url && (
+                          <div className="aspect-square rounded-lg overflow-hidden mb-3">
+                            <img 
+                              src={post.media_url} 
+                              alt="Post"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        
+                        {post.content && (
+                          <p className="text-white mb-3 text-sm">{post.content}</p>
+                        )}
+                        
+                        <div className="flex items-center justify-between text-xs text-gray-400">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              <Heart className="w-3 h-3" />
+                              {post.likes_count}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MessageCircle className="w-3 h-3" />
+                              {post.comments_count}
+                            </div>
+                          </div>
+                          <span>
+                            {new Date(post.created_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Account Settings */}
+          <Card className="bg-glass backdrop-blur-md border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-white">Configurações da Conta</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              
+              {/* Premium Status */}
+              <div className="flex items-center justify-between p-4 bg-gradient-primary/20 rounded-lg border border-primary/30">
+                <div className="flex items-center gap-3">
+                  <Crown className="h-6 w-6 text-primary" />
+                  <div>
+                    <p className="text-white font-medium">Status da Assinatura</p>
+                    <p className="text-sm text-gray-300">
+                      {isPremium ? 'Premium Ativo' : 'Conta Gratuita'}
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleSubscriptionManagement}
+                  variant="outline"
+                  className="border-primary/30 text-primary hover:bg-primary/20"
+                >
+                  Gerenciar
+                </Button>
+              </div>
+
+              {/* Theme Toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-white">Tema escuro</span>
+                <Switch checked={isDarkTheme} onCheckedChange={handleThemeToggle} />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => navigate('/profile/edit')}
+                  variant="outline" 
+                  className="w-full border-primary/30 text-primary hover:bg-primary/20"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar Perfil
+                </Button>
+                
+                <Button 
+                  onClick={handleSignOut}
+                  variant="ghost" 
+                  className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair da Conta
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
         </div>
       </div>
     </div>
