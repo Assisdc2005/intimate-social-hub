@@ -20,11 +20,23 @@ serve(async (req) => {
       throw new Error("Price ID is required");
     }
 
+    console.log('💰 Creating checkout session for price:', priceId);
+
+    // Verificar se as variáveis de ambiente estão definidas
+    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    if (!stripeSecretKey) {
+      throw new Error("STRIPE_SECRET_KEY is not configured");
+    }
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Supabase environment variables are not configured");
+    }
+
     // Criar cliente Supabase para autenticação
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     // Obter usuário autenticado
     const authHeader = req.headers.get("Authorization");
@@ -43,7 +55,7 @@ serve(async (req) => {
     console.log('🔍 User authenticated:', user.id, user.email);
 
     // Inicializar Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripe = new Stripe(stripeSecretKey, {
       apiVersion: "2023-10-16",
     });
 
@@ -101,7 +113,7 @@ serve(async (req) => {
       throw new Error("Invalid price ID");
     }
 
-    console.log('💰 Creating checkout session for:', sessionMetadata);
+    console.log('💰 Creating checkout session with metadata:', sessionMetadata);
 
     // Criar sessão de checkout
     const session = await stripe.checkout.sessions.create({
@@ -114,6 +126,7 @@ serve(async (req) => {
     });
 
     console.log('✅ Checkout session created:', session.id);
+    console.log('✅ Session URL:', session.url);
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

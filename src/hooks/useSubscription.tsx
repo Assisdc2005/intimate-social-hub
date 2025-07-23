@@ -66,6 +66,11 @@ export const useSubscription = () => {
     try {
       console.log('🛒 Creating checkout for price:', priceId);
       
+      // Verificar se o usuário está autenticado
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       // Determinar o período baseado no price_id
       let periodo = 'mensal';
       if (priceId === 'price_1Rn2ekD3X7OLOCgdTVptrYmK') {
@@ -75,6 +80,8 @@ export const useSubscription = () => {
       } else if (priceId === 'price_1Rn2hZD3X7OLOCgd3HzBOW1i') {
         periodo = 'mensal';
       }
+
+      console.log('💰 Creating checkout with period:', periodo);
 
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 

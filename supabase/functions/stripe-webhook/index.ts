@@ -17,8 +17,11 @@ serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
   
   if (!signature) {
+    console.error("❌ No signature found");
     return new Response("No signature", { status: 400 });
   }
+
+  console.log("🔔 Webhook received with signature:", signature);
 
   try {
     const body = await req.text();
@@ -34,6 +37,7 @@ serve(async (req) => {
       case 'checkout.session.completed': {
         const session = event.data.object as any;
         console.log('💳 Checkout session completed:', session.id);
+        console.log('💳 Session details:', JSON.stringify(session, null, 2));
         
         if (session.mode === 'subscription') {
           const subscription = await stripe.subscriptions.retrieve(session.subscription);
@@ -232,6 +236,7 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error('❌ Webhook error:', err);
+    console.error('❌ Error details:', err.message);
     return new Response(`Webhook error: ${err.message}`, { status: 400 });
   }
 });
