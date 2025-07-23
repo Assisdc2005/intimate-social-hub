@@ -183,7 +183,7 @@ export const PremiumTab = () => {
       </div>
 
       {/* Status da Assinatura */}
-      {isPremium && subscription && (
+      {isPremium && (
         <div className="card-premium">
           <h2 className="text-xl font-semibold text-gradient mb-4 text-center">
             Status da Assinatura
@@ -194,17 +194,28 @@ export const PremiumTab = () => {
                 <Crown className="w-6 h-6 text-green-400" />
                 <span className="text-lg font-semibold text-green-400">Plano Ativo</span>
               </div>
-              <p className="text-sm text-muted-foreground mb-2">
-                Plano: <span className="font-semibold capitalize">{subscription.plano || subscription.periodo}</span>
-              </p>
-              <p className="text-sm text-muted-foreground mb-2">
-                Valor: <span className="font-semibold">R$ {subscription.valor}</span>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Válido até: <span className="font-semibold">
-                  {new Date(subscription.data_fim).toLocaleDateString('pt-BR')}
-                </span>
-              </p>
+              {subscription && (
+                <>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Plano: <span className="font-semibold capitalize">{subscription.plano || subscription.periodo}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Valor: <span className="font-semibold">R$ {subscription.valor}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Válido até: <span className="font-semibold">
+                      {new Date(subscription.data_fim).toLocaleDateString('pt-BR')}
+                    </span>
+                  </p>
+                </>
+              )}
+              {profile?.subscription_expires_at && !subscription && (
+                <p className="text-sm text-muted-foreground">
+                  Válido até: <span className="font-semibold">
+                    {new Date(profile.subscription_expires_at).toLocaleDateString('pt-BR')}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         </div>

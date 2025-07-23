@@ -14,41 +14,51 @@ serve(async (req) => {
   }
 
   try {
+    const { priceId, periodo } = await req.json();
+    
+    if (!priceId) {
+      throw new Error("Price ID is required");
+    }
+
+    // Criar cliente Supabase para autenticação
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
-    const authHeader = req.headers.get("Authorization")!;
-    const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
-    const user = data.user;
-    
-    if (!user?.email) {
-      throw new Error("User not authenticated or email not available");
+    // Obter usuário autenticado
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("No authorization header");
     }
 
-    console.log('Creating checkout for user:', user.id, user.email);
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    
+    if (userError || !userData.user) {
+      throw new Error("User not authenticated");
+    }
 
-    const { priceId, periodo } = await req.json();
-    console.log('Price ID:', priceId, 'Período:', periodo);
+    const user = userData.user;
+    console.log('🔍 User authenticated:', user.id, user.email);
 
+    // Inicializar Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
 
-    // Check if customer exists
-    const customers = await stripe.customers.list({
+    // Verificar se o cliente já existe no Stripe
+    let customerId = null;
+    const existingCustomers = await stripe.customers.list({
       email: user.email,
       limit: 1,
     });
 
-    let customerId;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-      console.log('Existing customer found:', customerId);
+    if (existingCustomers.data.length > 0) {
+      customerId = existingCustomers.data[0].id;
+      console.log('✅ Existing customer found:', customerId);
     } else {
-      console.log('Creating new customer for:', user.email);
+      // Criar novo cliente
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: {
@@ -56,47 +66,64 @@ serve(async (req) => {
         },
       });
       customerId = customer.id;
-      console.log('New customer created:', customerId);
+      console.log('✅ New customer created:', customerId);
     }
 
-    const origin = req.headers.get("origin") || "https://5d172bad-6d41-43a5-824d-85d7287a6f00.lovableproject.com";
+    // Determinar valores baseado no preço
+    let lineItems = [];
+    let sessionMetadata = {
+      user_id: user.id,
+      periodo: periodo || 'mensal'
+    };
 
-    console.log('Creating checkout session...');
+    if (priceId === 'price_1Rn2ekD3X7OLOCgdTVptrYmK') {
+      // Semanal
+      lineItems = [{
+        price: priceId,
+        quantity: 1,
+      }];
+      sessionMetadata.periodo = 'semanal';
+    } else if (priceId === 'price_1Rn2hQD3X7OLOCgddzwdYC6X') {
+      // Quinzenal
+      lineItems = [{
+        price: priceId,
+        quantity: 1,
+      }];
+      sessionMetadata.periodo = 'quinzenal';
+    } else if (priceId === 'price_1Rn2hZD3X7OLOCgd3HzBOW1i') {
+      // Mensal
+      lineItems = [{
+        price: priceId,
+        quantity: 1,
+      }];
+      sessionMetadata.periodo = 'mensal';
+    } else {
+      throw new Error("Invalid price ID");
+    }
+
+    console.log('💰 Creating checkout session for:', sessionMetadata);
+
+    // Criar sessão de checkout
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: "subscription",
-      success_url: `${origin}/premium?success=true`,
-      cancel_url: `${origin}/premium?canceled=true`,
-      metadata: {
-        user_id: user.id,
-        periodo: periodo || 'mensal', // Incluir o período no metadata
-      },
-      subscription_data: {
-        metadata: {
-          user_id: user.id,
-          periodo: periodo || 'mensal',
-        },
-      },
+      line_items: lineItems,
+      mode: 'subscription',
+      success_url: `${req.headers.get("origin")}/premium?success=true`,
+      cancel_url: `${req.headers.get("origin")}/premium?canceled=true`,
+      metadata: sessionMetadata,
     });
 
-    console.log('Checkout session created:', session.id);
-    console.log('Session URL:', session.url);
+    console.log('✅ Checkout session created:', session.id);
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error('Error creating checkout:', error);
+    console.error('❌ Error creating checkout:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status: 400,
     });
   }
 });

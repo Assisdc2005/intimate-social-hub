@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -27,6 +26,8 @@ export interface Profile {
   profile_completed: boolean;
   avatar_url?: string;
   tipo_assinatura: 'gratuito' | 'premium'; // FONTE ÚNICA DA VERDADE
+  subscription_expires_at?: string; // Novo campo
+  assinatura_id?: string; // Novo campo
   created_at: string;
   updated_at: string;
 }
@@ -85,6 +86,8 @@ export const useProfile = () => {
           profile_completed: data.profile_completed || false,
           avatar_url: data.avatar_url,
           tipo_assinatura: tipoAssinatura, // CAMPO PRINCIPAL
+          subscription_expires_at: data.subscription_expires_at, // Novo campo
+          assinatura_id: data.assinatura_id, // Novo campo
           created_at: data.created_at,
           updated_at: data.updated_at
         };
@@ -130,6 +133,8 @@ export const useProfile = () => {
               ...profile,
               ...payload.new,
               tipo_assinatura: tipoAssinatura,
+              subscription_expires_at: payload.new.subscription_expires_at,
+              assinatura_id: payload.new.assinatura_id,
             } as Profile;
             
             console.log('🔄 Updated profile status:', updatedProfile.tipo_assinatura);

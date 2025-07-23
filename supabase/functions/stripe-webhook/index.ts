@@ -49,13 +49,40 @@ serve(async (req) => {
           console.log('👤 Customer email:', customer.email);
 
           // Obter metadata da session
-          const metadata = session.metadata;
+          const metadata = session.metadata || {};
           console.log('📝 Session metadata:', metadata);
 
-          if (!metadata || !metadata.user_id) {
-            console.error('❌ No user_id in metadata');
+          let userIdToUse = metadata.user_id;
+
+          // Se não tiver user_id no metadata, tentar buscar por email
+          if (!userIdToUse && customer.email) {
+            console.log('🔍 Trying to find user by email:', customer.email);
+            const { data: userByEmail } = await supabaseAdmin.auth.admin.getUserByEmail(customer.email);
+            
+            if (userByEmail.user) {
+              userIdToUse = userByEmail.user.id;
+              console.log('✅ Found user by email:', userIdToUse);
+            }
+          }
+
+          if (!userIdToUse) {
+            console.error('❌ No user_id found in metadata or by email');
             break;
           }
+
+          // Buscar perfil do usuário no Supabase
+          const { data: profile, error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .select('id, user_id, display_name')
+            .eq('user_id', userIdToUse)
+            .single();
+
+          if (profileError || !profile) {
+            console.error('❌ Error finding profile:', profileError);
+            break;
+          }
+
+          console.log('✅ Profile found:', profile.id);
 
           // Calcular data de fim da assinatura
           const subscriptionEnd = new Date(subscription.current_period_end * 1000);
@@ -79,50 +106,6 @@ serve(async (req) => {
 
           console.log('⏱️ Subscription period:', periodo);
 
-          // Buscar perfil do usuário no Supabase
-          const { data: profile, error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .select('id, user_id, display_name')
-            .eq('user_id', metadata.user_id)
-            .single();
-
-          if (profileError || !profile) {
-            console.error('❌ Error finding profile:', profileError);
-            
-            // Tentar buscar por email como fallback
-            if (customer.email) {
-              console.log('🔍 Trying to find user by email:', customer.email);
-              const { data: userByEmail } = await supabaseAdmin.auth.admin.getUserByEmail(customer.email);
-              
-              if (userByEmail.user) {
-                console.log('✅ Found user by email:', userByEmail.user.id);
-                
-                const { data: profileByEmail } = await supabaseAdmin
-                  .from('profiles')
-                  .select('id, user_id, display_name')
-                  .eq('user_id', userByEmail.user.id)
-                  .single();
-                
-                if (profileByEmail) {
-                  console.log('✅ Found profile by email lookup');
-                  // Atualizar metadata para usar o user_id correto
-                  metadata.user_id = userByEmail.user.id;
-                  profile.id = profileByEmail.id;
-                  profile.user_id = profileByEmail.user_id;
-                } else {
-                  console.error('❌ No profile found even with email lookup');
-                  break;
-                }
-              } else {
-                console.error('❌ No user found by email');
-                break;
-              }
-            } else {
-              console.error('❌ No customer email available');
-              break;
-            }
-          }
-
           // Obter informações do preço para o valor
           const priceId = subscription.items.data[0].price.id;
           const price = await stripe.prices.retrieve(priceId);
@@ -134,7 +117,7 @@ serve(async (req) => {
           const { data: newSubscription, error: subscriptionError } = await supabaseAdmin
             .from('assinaturas')
             .insert({
-              user_id: metadata.user_id,
+              user_id: userIdToUse,
               perfil_id: profile.id, // CRÍTICO: incluir perfil_id para o trigger funcionar
               stripe_customer_id: session.customer,
               stripe_subscription_id: session.subscription,
@@ -156,8 +139,8 @@ serve(async (req) => {
 
           console.log('✅ Subscription created with perfil_id:', newSubscription.id, 'perfil_id:', newSubscription.perfil_id);
           
-          // O trigger agora atualizará automaticamente o perfil para premium
-          console.log('🔄 Trigger will automatically update profile to premium');
+          // Aguardar um pouco para o trigger processar
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
           // Verificar se a atualização foi bem-sucedida
           const { data: verifyProfile, error: verifyError } = await supabaseAdmin
@@ -174,7 +157,23 @@ serve(async (req) => {
             if (verifyProfile.tipo_assinatura === 'premium') {
               console.log('✅ SUCCESS - Profile is now premium via trigger!');
             } else {
-              console.error('❌ FAILURE - Profile is still not premium:', verifyProfile.tipo_assinatura);
+              console.error('❌ FAILURE - Profile is still not premium, trying manual update');
+              
+              // Tentar atualização manual como fallback
+              const { error: manualUpdateError } = await supabaseAdmin
+                .from('profiles')
+                .update({
+                  tipo_assinatura: 'premium',
+                  subscription_expires_at: subscriptionEnd.toISOString(),
+                  assinatura_id: newSubscription.id
+                })
+                .eq('id', profile.id);
+                
+              if (manualUpdateError) {
+                console.error('❌ Manual update failed:', manualUpdateError);
+              } else {
+                console.log('✅ Manual update successful');
+              }
             }
           }
         }
@@ -187,48 +186,22 @@ serve(async (req) => {
         
         if (invoice.subscription) {
           const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
-          const customer = await stripe.customers.retrieve(invoice.customer);
           
-          if (typeof customer === 'string') {
-            console.error('❌ Customer is a string, expected object');
-            break;
-          }
+          // Atualizar assinatura existente
+          const subscriptionEnd = new Date(subscription.current_period_end * 1000);
+          
+          const { error: updateError } = await supabaseAdmin
+            .from('assinaturas')
+            .update({ 
+              data_fim: subscriptionEnd.toISOString(),
+              status: 'active'
+            })
+            .eq('stripe_subscription_id', invoice.subscription);
 
-          console.log('👤 Customer email for invoice:', customer.email);
-
-          // Buscar usuário por email
-          if (customer.email) {
-            const { data: userData } = await supabaseAdmin.auth.admin.getUserByEmail(customer.email);
-            
-            if (userData.user) {
-              console.log('✅ Found user for invoice payment:', userData.user.id);
-              
-              // Buscar perfil do usuário
-              const { data: profile } = await supabaseAdmin
-                .from('profiles')
-                .select('id')
-                .eq('user_id', userData.user.id)
-                .single();
-
-              if (profile) {
-                // Atualizar assinatura existente ou criar nova
-                const subscriptionEnd = new Date(subscription.current_period_end * 1000);
-                
-                const { error: updateError } = await supabaseAdmin
-                  .from('assinaturas')
-                  .update({ 
-                    data_fim: subscriptionEnd.toISOString(),
-                    status: 'active'
-                  })
-                  .eq('stripe_subscription_id', invoice.subscription);
-
-                if (updateError) {
-                  console.error('❌ Error updating subscription for invoice payment:', updateError);
-                } else {
-                  console.log('✅ Subscription updated for invoice payment');
-                }
-              }
-            }
+          if (updateError) {
+            console.error('❌ Error updating subscription for invoice payment:', updateError);
+          } else {
+            console.log('✅ Subscription updated for invoice payment');
           }
         }
         break;

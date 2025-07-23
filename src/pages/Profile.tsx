@@ -384,6 +384,15 @@ export default function Profile() {
               </div>
             </div>
 
+            {/* Mostrar informações da assinatura se premium */}
+            {profile?.tipo_assinatura === 'premium' && profile?.subscription_expires_at && (
+              <div className="mb-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
+                <p className="text-sm text-green-400">
+                  Assinatura válida até: {new Date(profile.subscription_expires_at).toLocaleDateString('pt-BR')}
+                </p>
+              </div>
+            )}
+
             <Button onClick={handleSubscriptionManagement} className="w-full">
               Gerenciar Assinatura
             </Button>
