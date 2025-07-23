@@ -209,7 +209,7 @@ export const DiscoverTab = () => {
   };
 
   const checkPremiumFeature = (action: string) => {
-    if (profile?.subscription_type !== 'premium') {
+    if (profile?.tipo_assinatura !== 'premium') {
       toast({
         title: "Recurso Premium",
         description: `Para ${action}, você precisa ser um membro premium.`,
@@ -329,7 +329,7 @@ export const DiscoverTab = () => {
                 
                 {/* Indicadores */}
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-background" />
-                {user.subscription_type === 'premium' && (
+                {user.tipo_assinatura === 'premium' && (
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-accent rounded-full flex items-center justify-center shadow-glow">
                     <span className="text-xs font-bold text-white">👑</span>
                   </div>

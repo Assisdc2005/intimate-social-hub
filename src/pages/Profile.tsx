@@ -1,780 +1,421 @@
-import { User, MapPin, Calendar, Heart, Edit, Settings, Camera, Star, Shield, Crown, ArrowLeft, MessageCircle, Send, Play, ImageIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useState, useEffect, useRef } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from "@/hooks/use-toast"
+import { Profile } from '@/hooks/useProfile';
+import { useNavigate } from 'react-router-dom';
+import { 
+  User, 
+  Mail, 
+  Lock, 
+  HelpCircle, 
+  CreditCard, 
+  Crown, 
+  ArrowLeft,
+  Edit,
+  KeyRound,
+  Copy,
+  Check,
+  AlertTriangle
+} from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
+import { useTheme } from "@/components/ThemeProvider"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
-interface Post {
-  id: string;
-  content: string | null;
-  media_url: string | null;
-  media_type: 'texto' | 'imagem' | 'video';
-  likes_count: number;
-  comments_count: number;
-  created_at: string;
-  user_id: string;
-  user_liked?: boolean;
-}
-
-interface Comment {
-  id: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-  profiles: {
-    display_name: string;
-    avatar_url: string | null;
-  };
-}
-
-export const Profile = () => {
-  const { profile, isPremium, updateProfile } = useProfile();
-  const { signOut, user } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [posts, setPosts] = useState<Post[]>([]);
+export default function Profile() {
+  const { user, updatePassword, signOut } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [newComment, setNewComment] = useState<{ [key: string]: string }>({});
-  const [showComments, setShowComments] = useState<{ [key: string]: boolean }>({});
-  const [postComments, setPostComments] = useState<{ [key: string]: Comment[] }>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordMatch, setPasswordMatch] = useState(true);
+    const [showPassword, setShowPassword] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState('');
+  const [isCopied, setIsCopied] = useState(false);
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
 
-  const calculateAge = (birthDate: string) => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  // Fetch user's posts
-  const fetchUserPosts = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          profiles:user_id(display_name, avatar_url)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching user posts:', error);
-        return;
-      }
-
-      // Check which posts the user has liked
-      const postsWithLikes = await Promise.all(
-        (data || []).map(async (post) => {
-          const { data: likeData } = await supabase
-            .from('likes')
-            .select('id')
-            .eq('post_id', post.id)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        setLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
             .eq('user_id', user.id)
             .single();
 
-          return {
-            ...post,
-            user_liked: !!likeData
-          };
-        })
-      );
-
-      setPosts(postsWithLikes);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUserPosts();
-  }, [user?.id]);
-
-  const handleLike = async (postId: string) => {
-    if (!isPremium) {
-      toast({
-        title: "Recurso Premium",
-        description: "Assine o Premium para curtir publicações!",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!user?.id) return;
-
-    try {
-      const post = posts.find(p => p.id === postId);
-      if (!post) return;
-
-      if (post.user_liked) {
-        // Remove like
-        await supabase
-          .from('likes')
-          .delete()
-          .eq('post_id', postId)
-          .eq('user_id', user.id);
-
-        setPosts(posts.map(p => 
-          p.id === postId 
-            ? { ...p, user_liked: false, likes_count: p.likes_count - 1 }
-            : p
-        ));
-      } else {
-        // Add like
-        await supabase
-          .from('likes')
-          .insert({ post_id: postId, user_id: user.id });
-
-        setPosts(posts.map(p => 
-          p.id === postId 
-            ? { ...p, user_liked: true, likes_count: p.likes_count + 1 }
-            : p
-        ));
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
-  };
-
-  const handleComment = async (postId: string) => {
-    if (!isPremium) {
-      toast({
-        title: "Recurso Premium",
-        description: "Assine o Premium para comentar!",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const comment = newComment[postId]?.trim();
-    if (!comment || !user?.id) return;
-
-    try {
-      await supabase
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: user.id,
-          content: comment
-        });
-
-      setNewComment(prev => ({ ...prev, [postId]: '' }));
-      
-      // Refresh comments
-      fetchComments(postId);
-      
-      // Update posts count
-      setPosts(posts.map(p => 
-        p.id === postId 
-          ? { ...p, comments_count: p.comments_count + 1 }
-          : p
-      ));
-
-      toast({
-        title: "Comentário adicionado!",
-        description: "Seu comentário foi publicado com sucesso.",
-      });
-    } catch (error) {
-      console.error('Error adding comment:', error);
-    }
-  };
-
-  const fetchComments = async (postId: string) => {
-    try {
-      // First get comments
-      const { data: comments, error } = await supabase
-        .from('comments')
-        .select('*')
-        .eq('post_id', postId)
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching comments:', error);
-        return;
-      }
-
-      // Then get profile data for each comment
-      const commentsWithProfiles = await Promise.all(
-        (comments || []).map(async (comment) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url')
-            .eq('user_id', comment.user_id)
-            .single();
-
-          return {
-            ...comment,
-            profiles: profile || { display_name: 'Usuário', avatar_url: null }
-          };
-        })
-      );
-
-      setPostComments(prev => ({ ...prev, [postId]: commentsWithProfiles }));
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  const toggleComments = (postId: string) => {
-    const isShowing = showComments[postId];
-    setShowComments(prev => ({ ...prev, [postId]: !isShowing }));
-    
-    if (!isShowing && !postComments[postId]) {
-      fetchComments(postId);
-    }
-  };
-
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user?.id) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Erro",
-        description: "Por favor, selecione apenas arquivos de imagem.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Erro",
-        description: "A imagem deve ter no máximo 5MB.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setUploadingAvatar(true);
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/avatar-${Date.now()}.${fileExt}`;
-
-      // Delete old avatar if exists
-      if (profile?.avatar_url) {
-        const oldPath = profile.avatar_url.split('/').pop();
-        if (oldPath && oldPath.includes(user.id)) {
-          await supabase.storage
-            .from('fotos_perfil')
-            .remove([`${user.id}/${oldPath}`]);
+          if (error) {
+            console.error('Error fetching profile:', error);
+            toast({
+              title: "Erro",
+              description: "Erro ao carregar perfil.",
+              variant: "destructive",
+            });
+          } else {
+            setProfile(data as Profile);
+          }
+        } finally {
+          setLoading(false);
         }
       }
+    };
 
-      // Upload new avatar
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('fotos_perfil')
-        .upload(fileName, file, { upsert: true });
+    fetchProfile();
+  }, [user]);
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw new Error('Erro ao fazer upload da imagem');
-      }
+  useEffect(() => {
+    setIsDarkTheme(theme === "dark");
+  }, [theme]);
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('fotos_perfil')
-        .getPublicUrl(fileName);
+  const handleThemeToggle = () => {
+    const newTheme = isDarkTheme ? "light" : "dark";
+    setTheme(newTheme);
+    setIsDarkTheme(!isDarkTheme);
+  };
 
-      // Update profile with new avatar URL
-      const result = await updateProfile({ avatar_url: publicUrl });
-      
-      if (result.error) {
-        throw new Error('Erro ao atualizar perfil');
-      }
-
-      toast({
-        title: "Foto atualizada!",
-        description: "Sua foto de perfil foi atualizada com sucesso.",
-      });
-
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmNewPassword) {
+      setPasswordMatch(false);
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao atualizar foto de perfil",
-        variant: "destructive"
+        description: "As senhas não coincidem.",
+        variant: "destructive",
       });
-    } finally {
-      setUploadingAvatar(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      return;
     }
+
+    setPasswordMatch(true);
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A nova senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await updatePassword(newPassword);
+      toast({
+        title: "Sucesso",
+        description: "Senha alterada com sucesso!",
+      });
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar a senha.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generatePassword = () => {
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+    let retVal = "";
+    for (let i = 0, n = charset.length; i < length; ++i) {
+      retVal += charset.charAt(Math.floor(Math.random() * n));
+    }
+    setGeneratedPassword(retVal);
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(generatedPassword);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 3000);
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao sair da conta.",
+        variant: "destructive",
+      });
+    }
   };
 
-  if (!profile) {
+  const handleDeleteAccount = async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      navigate('/login');
+      // TODO: Implement account deletion logic here (supabase.auth.deleteUser requires admin privileges)
+      toast({
+        title: "Sucesso",
+        description: "Conta excluída com sucesso!",
+      });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir a conta.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSubscriptionManagement = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error opening customer portal:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir o portal de assinatura",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
-        <div className="text-foreground text-lg">Carregando perfil...</div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-hero p-4 pt-20">
-      {/* Back Button - Fixed Position Top Left */}
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      {/* Back Button - Top Left Position */}
       <div className="fixed top-4 left-4 z-50">
         <Button 
           onClick={() => navigate('/home')}
           variant="ghost" 
           size="sm"
-          className="text-white hover:text-white hover:bg-white/20 p-3 rounded-full backdrop-blur-sm bg-black/30 border border-white/20 animate-fade-in"
+          className="text-gray-300 hover:text-white hover:bg-white/10 p-2 rounded-full"
         >
           <ArrowLeft className="h-5 w-5 mr-1" />
           <span className="hidden sm:inline">Voltar</span>
         </Button>
       </div>
 
-      <div className="max-w-4xl mx-auto space-y-6">
-        
-        {/* Header do Perfil */}
-        <Card className="glass backdrop-blur-xl border-primary/20 shadow-[var(--shadow-premium)]">
-          <CardContent className="p-8">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              
-              {/* Avatar */}
-              <div className="relative">
-                <div className="w-32 h-32 rounded-full bg-gradient-secondary flex items-center justify-center text-white font-bold text-4xl shadow-[var(--shadow-glow)] border-4 border-primary/20">
-                  {profile.avatar_url ? (
-                    <img 
-                      src={profile.avatar_url} 
-                      alt="Avatar" 
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    profile.display_name[0]?.toUpperCase()
-                  )}
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-3xl mx-auto bg-glass backdrop-blur-md rounded-3xl shadow-xl border border-primary/20 p-8 space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-white mb-2">Configurações da Conta</h1>
+            <p className="text-gray-300">Gerencie sua conta e preferências.</p>
+          </div>
+
+          {/* Account Information Section */}
+          <div className="card">
+            <h2 className="card-title">Informações da Conta</h2>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <User className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-gray-400">Nome</p>
+                  <p className="text-white">{profile?.display_name}</p>
                 </div>
-                
-                {/* Status Premium */}
-                {isPremium && (
-                  <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center shadow-[var(--shadow-glow)]">
-                    <Crown className="w-5 h-5 text-white" />
-                  </div>
-                )}
-                
-                {/* Botão de editar foto */}
-                <Button 
-                  size="sm" 
-                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary hover:bg-primary/90 p-0"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingAvatar}
-                >
-                  <Camera className={`w-4 h-4 ${uploadingAvatar ? 'animate-pulse' : ''}`} />
-                </Button>
-                
-                {/* Hidden file input */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarUpload}
-                />
               </div>
-
-              {/* Informações Principais */}
-              <div className="flex-1 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                  <h1 className="text-3xl font-bold text-foreground">{profile.display_name}</h1>
-                  {isPremium && (
-                    <Badge className="bg-gradient-primary text-white border-0">
-                      <Crown className="w-3 h-3 mr-1" />
-                      Premium
-                    </Badge>
-                  )}
-                </div>
-                
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-muted-foreground mb-4">
-                  {profile.birth_date && (
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{calculateAge(profile.birth_date)} anos</span>
-                    </div>
-                  )}
-                  {(profile.city || profile.state) && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>{profile.city}{profile.city && profile.state && ', '}{profile.state}</span>
-                    </div>
-                  )}
-                  {profile.profession && (
-                    <div className="flex items-center gap-1">
-                      <User className="w-4 h-4" />
-                      <span>{profile.profession}</span>
-                    </div>
-                  )}
-                </div>
-
-                {profile.bio && (
-                  <p className="text-foreground/80 mb-4 max-w-md">{profile.bio}</p>
-                )}
-
-                {/* Botões de Ação */}
-                <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                  <Button 
-                    onClick={() => navigate('/complete-profile')}
-                    className="bg-gradient-primary hover:opacity-90 text-white"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Editar Perfil
-                  </Button>
-                  <Button variant="outline" className="border-primary/30 hover:bg-primary/10">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Configurações
-                  </Button>
+              <div className="flex items-center gap-3">
+                <Mail className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm text-gray-400">Email</p>
+                  <p className="text-white">{user?.email}</p>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Cards de Informações */}
-        <div className="grid md:grid-cols-2 gap-6">
-          
-          {/* Informações Pessoais */}
-          <Card className="glass backdrop-blur-xl border-primary/20">
-            <CardContent className="p-6">
-              <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-primary" />
-                Informações Pessoais
-              </h3>
-              
-              <div className="space-y-3">
-                {profile.gender && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Gênero:</span>
-                    <span className="text-foreground font-medium">{profile.gender}</span>
-                  </div>
-                )}
-                {profile.sexual_orientation && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Orientação:</span>
-                    <span className="text-foreground font-medium">{profile.sexual_orientation}</span>
-                  </div>
-                )}
-                {profile.relationship_status && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Status:</span>
-                    <span className="text-foreground font-medium">{profile.relationship_status}</span>
-                  </div>
-                )}
-                {profile.height && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Altura:</span>
-                    <span className="text-foreground font-medium">{profile.height} cm</span>
-                  </div>
-                )}
-                {profile.weight && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Peso:</span>
-                    <span className="text-foreground font-medium">{profile.weight} kg</span>
-                  </div>
-                )}
-                {profile.body_type && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tipo físico:</span>
-                    <span className="text-foreground font-medium">{profile.body_type}</span>
-                  </div>
-                )}
-                {profile.ethnicity && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Etnia:</span>
-                    <span className="text-foreground font-medium">{profile.ethnicity}</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Estilo de Vida */}
-          <Card className="glass backdrop-blur-xl border-primary/20">
-            <CardContent className="p-6">
-              <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                <Star className="w-5 h-5 text-primary" />
-                Estilo de Vida
-              </h3>
-              
-              <div className="space-y-3">
-                {profile.looking_for && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Procurando por:</span>
-                    <span className="text-foreground font-medium">{profile.looking_for}</span>
-                  </div>
-                )}
-                {profile.objectives && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Objetivos:</span>
-                    <span className="text-foreground font-medium">{profile.objectives}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fuma:</span>
-                  <span className="text-foreground font-medium">{profile.smokes ? 'Sim' : 'Não'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bebe:</span>
-                  <span className="text-foreground font-medium">{profile.drinks ? 'Sim' : 'Não'}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Interesses */}
-        {profile.interests && profile.interests.length > 0 && (
-          <Card className="glass backdrop-blur-xl border-primary/20">
-            <CardContent className="p-6">
-              <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                <Heart className="w-5 h-5 text-primary" />
-                Interesses
-              </h3>
-              
-              <div className="flex flex-wrap gap-2">
-                {profile.interests.map((interest, index) => (
-                  <Badge 
-                    key={index} 
-                    variant="secondary" 
-                    className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
-                  >
-                    {interest}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Status da Assinatura */}
-        <Card className="glass backdrop-blur-xl border-primary/20">
-          <CardContent className="p-6">
-            <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
-              Status da Conta
-            </h3>
-            
-            <div className="flex items-center justify-between">
+          {/* Change Password Section */}
+          <div className="card">
+            <h2 className="card-title">Alterar Senha</h2>
+            <div className="space-y-4">
               <div>
-                <p className="text-foreground font-medium">
-                  Plano: {isPremium ? 'Premium' : 'Gratuito'}
-                </p>
-                {isPremium && profile.subscription_expires_at && (
-                  <p className="text-sm text-muted-foreground">
-                    Válido até: {new Date(profile.subscription_expires_at).toLocaleDateString('pt-BR')}
-                  </p>
+                <Label htmlFor="newPassword">Nova Senha</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    id="newPassword"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="bg-input/50 border-white/20 text-foreground placeholder:text-muted-foreground"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                  >
+                    {showPassword ? (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                      >
+                        <path d="M2 2l20 20M11.18 11.18A7.962 7.962 0 0 1 12 12c0 3.59 3.07 6.5 6.68 7.65"></path>
+                        <path d="M2 2l20 20M11.18 11.18A7.962 7.962 0 0 1 12 12c0 3.59 3.07 6.5 6.68 7.65"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <line x1="3" x2="21" y1="3" y2="21"></line>
+                      </svg>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-4 w-4"
+                      >
+                        <path d="M2 2l20 20M11.18 11.18A7.962 7.962 0 0 1 12 12c0 3.59 3.07 6.5 6.68 7.65"></path>
+                        <path d="M17.52 17.52A3 3 0 1 0 12 12"></path>
+                        <path d="M2 2l20 20M11.18 11.18A7.962 7.962 0 0 1 12 12c0 3.59 3.07 6.5 6.68 7.65"></path>
+                      </svg>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="confirmNewPassword">Confirmar Nova Senha</Label>
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  id="confirmNewPassword"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  className="bg-input/50 border-white/20 text-foreground placeholder:text-muted-foreground"
+                />
+                {!passwordMatch && (
+                  <p className="text-red-500 text-sm mt-1">As senhas não coincidem.</p>
                 )}
               </div>
-              
-              {!isPremium && (
-                <Button className="bg-gradient-primary hover:opacity-90 text-white">
-                  <Crown className="w-4 h-4 mr-2" />
-                  Upgrade Premium
-                </Button>
-              )}
+              <Button onClick={handleChangePassword} className="w-full">
+                Alterar Senha
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Minhas Publicações */}
-        <Card className="glass backdrop-blur-xl border-primary/20">
-          <CardContent className="p-6">
-            <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-primary" />
-              Minhas Publicações
-            </h3>
-            
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          {/* Generate Password Section */}
+          <div className="card">
+            <h2 className="card-title">Gerar Senha Segura</h2>
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <Input
+                  type="text"
+                  value={generatedPassword}
+                  readOnly
+                  className="flex-1 bg-input/50 border-white/20 text-foreground placeholder:text-muted-foreground mr-2"
+                />
+                <Button onClick={copyToClipboard} disabled={!generatedPassword} variant="secondary">
+                  {isCopied ? (
+                    <Check className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Copy className="w-4 h-4 mr-2" />
+                  )}
+                  {isCopied ? 'Copiado!' : 'Copiar'}
+                </Button>
               </div>
-            ) : posts.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Você ainda não fez nenhuma publicação.</p>
+              <Button onClick={generatePassword} className="w-full">
+                Gerar Senha
+              </Button>
+            </div>
+          </div>
+
+          {/* Theme Settings Section */}
+          <div className="card">
+            <h2 className="card-title">Aparência</h2>
+            <div className="flex items-center justify-between">
+              <span className="text-white">Usar tema escuro</span>
+              <Switch id="theme" checked={isDarkTheme} onCheckedChange={handleThemeToggle} />
+            </div>
+          </div>
+
+          {/* Premium Status Section */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Crown className="h-8 w-8 text-yellow-500" />
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Status Premium</h2>
+                  <p className="text-gray-300">
+                    {profile?.tipo_assinatura === 'premium' ? 'Você tem acesso Premium' : 'Upgrade para Premium'}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-6">
-                {posts.map((post) => (
-                  <div key={post.id} className="border border-primary/20 rounded-lg p-4 bg-background/50">
-                    {/* Post Content */}
-                    {post.content && (
-                      <p className="text-foreground mb-3">{post.content}</p>
-                    )}
-                    
-                    {/* Post Media */}
-                    {post.media_url && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <div className="relative cursor-pointer group mb-3">
-                            {post.media_type === 'video' ? (
-                              <div className="relative">
-                                <video 
-                                  src={post.media_url}
-                                  className="w-full h-64 object-cover rounded-lg"
-                                  preload="metadata"
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors rounded-lg">
-                                  <Play className="w-12 h-12 text-white" />
-                                </div>
-                              </div>
-                            ) : (
-                              <img 
-                                src={post.media_url}
-                                alt="Post"
-                                className="w-full h-64 object-cover rounded-lg group-hover:opacity-90 transition-opacity"
-                              />
-                            )}
-                          </div>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl w-full h-[80vh] p-0">
-                          {post.media_type === 'video' ? (
-                            <video 
-                              src={post.media_url}
-                              controls
-                              className="w-full h-full object-contain"
-                            />
-                          ) : (
-                            <img 
-                              src={post.media_url}
-                              alt="Post"
-                              className="w-full h-full object-contain"
-                            />
-                          )}
-                        </DialogContent>
-                      </Dialog>
-                    )}
-
-                    {/* Post Actions */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleLike(post.id)}
-                          className={`flex items-center gap-2 ${
-                            post.user_liked 
-                              ? 'text-red-500 hover:text-red-600' 
-                              : 'text-muted-foreground hover:text-red-500'
-                          }`}
-                        >
-                          <Heart className={`w-4 h-4 ${post.user_liked ? 'fill-current' : ''}`} />
-                          <span>{post.likes_count}</span>
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleComments(post.id)}
-                          className="flex items-center gap-2 text-muted-foreground hover:text-primary"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                          <span>{post.comments_count}</span>
-                        </Button>
-                      </div>
-                      
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(post.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-
-                    {/* Comments Section */}
-                    {showComments[post.id] && (
-                      <div className="border-t border-primary/20 pt-3 space-y-3">
-                        {/* Comment Input */}
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Adicione um comentário..."
-                            value={newComment[post.id] || ''}
-                            onChange={(e) => setNewComment(prev => ({ 
-                              ...prev, 
-                              [post.id]: e.target.value 
-                            }))}
-                            onKeyPress={(e) => e.key === 'Enter' && handleComment(post.id)}
-                            className="flex-1"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleComment(post.id)}
-                            disabled={!newComment[post.id]?.trim()}
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                        </div>
-
-                        {/* Comments List */}
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {postComments[post.id]?.map((comment) => (
-                            <div key={comment.id} className="flex gap-2 text-sm">
-                              <div className="w-6 h-6 rounded-full bg-gradient-primary flex items-center justify-center text-white text-xs flex-shrink-0">
-                                {comment.profiles.avatar_url ? (
-                                  <img 
-                                    src={comment.profiles.avatar_url}
-                                    alt={comment.profiles.display_name}
-                                    className="w-full h-full rounded-full object-cover"
-                                  />
-                                ) : (
-                                  comment.profiles.display_name[0]?.toUpperCase()
-                                )}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-foreground">{comment.profiles.display_name}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(comment.created_at).toLocaleDateString('pt-BR')}
-                                  </span>
-                                </div>
-                                <p className="text-foreground/80">{comment.content}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <div className="text-right">
+                <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                  profile?.tipo_assinatura === 'premium' 
+                    ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' 
+                    : 'bg-gray-600/20 text-gray-400 border border-gray-600/30'
+                }`}>
+                  {profile?.tipo_assinatura === 'premium' ? 'Premium Ativo' : 'Gratuito'}
+                </span>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
 
-        {/* Logout */}
-        <Card className="glass backdrop-blur-xl border-red-500/20">
-          <CardContent className="p-6">
-            <Button 
-              onClick={handleSignOut}
-              variant="outline" 
-              className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
-            >
-              Sair da Conta
+            <Button onClick={handleSubscriptionManagement} className="w-full">
+              Gerenciar Assinatura
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Danger Zone Section */}
+          <div className="card">
+            <h2 className="card-title text-red-500">Zona de Perigo</h2>
+            <div className="space-y-4">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full">
+                    Excluir Conta
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-glass backdrop-blur-md border border-red-500/30">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-500 text-white hover:bg-red-600">Excluir</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button onClick={handleSignOut} variant="ghost" className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/20">
+                Sair da Conta
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
+}

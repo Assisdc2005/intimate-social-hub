@@ -259,7 +259,7 @@ export const HomeTab = () => {
   };
 
   const checkPremiumFeature = (action: string) => {
-    if (profile?.subscription_type !== 'premium') {
+    if (profile?.tipo_assinatura !== 'premium') {
       toast({
         title: "Recurso Premium",
         description: `Para ${action}, você precisa ser um membro premium.`,

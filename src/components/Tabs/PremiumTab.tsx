@@ -151,7 +151,6 @@ export const PremiumTab = () => {
           <div className="text-sm space-y-1">
             <div>tipo_assinatura: {profile?.tipo_assinatura || 'loading...'}</div>
             <div>isPremium: {isPremium ? 'true' : 'false'}</div>
-            <div>assinatura_id: {profile?.assinatura_id || 'null'}</div>
           </div>
           <Button onClick={handleRefreshStatus} size="sm" className="mt-2">
             Verificar Status
