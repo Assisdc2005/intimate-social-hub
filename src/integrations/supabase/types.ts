@@ -360,7 +360,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          assinatura_id: string | null
           avatar_url: string | null
           bio: string | null
           birth_date: string | null
@@ -376,7 +375,6 @@ export type Database = {
           interests: string[] | null
           looking_for: string | null
           objectives: string | null
-          premium_status: string | null
           profession: string | null
           profile_completed: boolean | null
           relationship_status:
@@ -387,17 +385,12 @@ export type Database = {
             | null
           smokes: boolean | null
           state: string | null
-          subscription_expires_at: string | null
-          subscription_type:
-            | Database["public"]["Enums"]["subscription_type"]
-            | null
-          tipo_assinatura: string | null
+          tipo_assinatura: string
           updated_at: string
           user_id: string
           weight: number | null
         }
         Insert: {
-          assinatura_id?: string | null
           avatar_url?: string | null
           bio?: string | null
           birth_date?: string | null
@@ -413,7 +406,6 @@ export type Database = {
           interests?: string[] | null
           looking_for?: string | null
           objectives?: string | null
-          premium_status?: string | null
           profession?: string | null
           profile_completed?: boolean | null
           relationship_status?:
@@ -424,17 +416,12 @@ export type Database = {
             | null
           smokes?: boolean | null
           state?: string | null
-          subscription_expires_at?: string | null
-          subscription_type?:
-            | Database["public"]["Enums"]["subscription_type"]
-            | null
-          tipo_assinatura?: string | null
+          tipo_assinatura?: string
           updated_at?: string
           user_id: string
           weight?: number | null
         }
         Update: {
-          assinatura_id?: string | null
           avatar_url?: string | null
           bio?: string | null
           birth_date?: string | null
@@ -450,7 +437,6 @@ export type Database = {
           interests?: string[] | null
           looking_for?: string | null
           objectives?: string | null
-          premium_status?: string | null
           profession?: string | null
           profile_completed?: boolean | null
           relationship_status?:
@@ -461,11 +447,7 @@ export type Database = {
             | null
           smokes?: boolean | null
           state?: string | null
-          subscription_expires_at?: string | null
-          subscription_type?:
-            | Database["public"]["Enums"]["subscription_type"]
-            | null
-          tipo_assinatura?: string | null
+          tipo_assinatura?: string
           updated_at?: string
           user_id?: string
           weight?: number | null
