@@ -86,7 +86,6 @@ export const PremiumTab = () => {
     }
   ];
 
-  // Planos atualizados com price IDs corretos ou método de criação dinâmica
   const plans = [
     {
       id: 'semanal',
@@ -95,7 +94,7 @@ export const PremiumTab = () => {
       period: '/semana',
       description: 'Ideal para experimentar',
       highlight: false,
-      amount: 1500 // em centavos
+      caktoLink: 'https://pay.cakto.com.br/3a9q7wi_492897'
     },
     {
       id: 'quinzenal',
@@ -104,7 +103,7 @@ export const PremiumTab = () => {
       period: '/15 dias',
       description: 'Boa relação custo-benefício',
       highlight: true,
-      amount: 2000 // em centavos
+      caktoLink: 'https://pay.cakto.com.br/333ki7u_492920'
     },
     {
       id: 'mensal',
@@ -113,23 +112,18 @@ export const PremiumTab = () => {
       period: '/mês',
       description: 'Máximo aproveitamento',
       highlight: false,
-      amount: 3000 // em centavos
+      caktoLink: 'https://pay.cakto.com.br/uh3imfg_492928'
     }
   ];
 
-  const handleSubscribeSuccess = () => {
+  const handleSubscribe = (caktoLink: string, planName: string) => {
     toast({
       title: "Redirecionando para pagamento",
-      description: "Você será redirecionado para a página de pagamento da Cakto",
+      description: `Você será redirecionado para o checkout do plano ${planName}`,
     });
-  };
-
-  const handleSubscribeError = (error: string) => {
-    toast({
-      title: "Erro no pagamento",
-      description: error,
-      variant: "destructive",
-    });
+    
+    // Abrir link da Cakto em nova aba
+    window.open(caktoLink, '_blank');
   };
 
   const handleRefreshStatus = async () => {
@@ -293,14 +287,19 @@ export const PremiumTab = () => {
                   </div>
                 </div>
                 
-                <CaktoCheckout
-                  planId={plan.id}
-                  amount={plan.amount / 100} // Converter de centavos para reais
-                  periodo={plan.id}
-                  description={`Assinatura Premium ${plan.name}`}
-                  onSuccess={handleSubscribeSuccess}
-                  onError={handleSubscribeError}
-                />
+                <Button 
+                  onClick={() => handleSubscribe(plan.caktoLink, plan.name)}
+                  className={`
+                    w-full py-3 font-semibold transition-all duration-300
+                    ${plan.highlight 
+                      ? 'btn-premium shadow-glow' 
+                      : 'btn-secondary'
+                    }
+                  `}
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Assinar {plan.name}
+                </Button>
               </div>
             ))}
           </div>
@@ -375,14 +374,13 @@ export const PremiumTab = () => {
           <p className="text-sm text-muted-foreground mb-4">
             Junte-se a milhares de usuários Premium e encontre conexões únicas
           </p>
-          <CaktoCheckout
-            planId="quinzenal"
-            amount={20} // R$ 20,00
-            periodo="quinzenal"
-            description="Assinatura Premium Quinzenal"
-            onSuccess={handleSubscribeSuccess}
-            onError={handleSubscribeError}
-          />
+          <Button 
+            onClick={() => handleSubscribe('https://pay.cakto.com.br/333ki7u_492920', 'Quinzenal')}
+            className="btn-premium w-full text-lg py-4"
+          >
+            <Crown className="w-5 h-5 mr-2" />
+            Começar Agora
+          </Button>
         </div>
       )}
     </div>

@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cakto-signature",
 };
 
 serve(async (req) => {
@@ -13,6 +13,7 @@ serve(async (req) => {
 
   try {
     console.log('🔔 Cakto webhook received');
+    console.log('📨 Headers:', Object.fromEntries(req.headers.entries()));
     
     const body = await req.text();
     const signature = req.headers.get("x-cakto-signature");
@@ -20,17 +21,26 @@ serve(async (req) => {
     console.log('📨 Webhook body received:', body);
     console.log('🔐 Signature:', signature);
 
-    // Verificar assinatura do webhook (implementar conforme documentação da Cakto)
+    // Verificar assinatura do webhook se configurada
     const webhookSecret = Deno.env.get("CAKTO_WEBHOOK_SECRET");
     if (webhookSecret && signature) {
-      // Aqui você implementaria a verificação da assinatura conforme a documentação da Cakto
-      // Exemplo: verificar HMAC SHA256
       console.log('🔍 Verifying webhook signature...');
+      // Implementar verificação de assinatura conforme documentação da Cakto
+      // Por exemplo, HMAC SHA256
     }
 
-    const event = JSON.parse(body);
-    console.log('📄 Event type:', event.type);
-    console.log('📄 Event data:', event.data);
+    let event;
+    try {
+      event = JSON.parse(body);
+    } catch (error) {
+      console.error('❌ Invalid JSON:', error);
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    console.log('📄 Event received:', event);
 
     // Criar cliente Supabase com chave de serviço
     const supabase = createClient(
@@ -39,62 +49,108 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    switch (event.type) {
-      case "checkout.payment_approved":
-      case "payment.completed":
-        await handlePaymentCompleted(supabase, event.data);
-        break;
-      
-      case "checkout.payment_failed":
-      case "payment.failed":
-        await handlePaymentFailed(supabase, event.data);
-        break;
-      
-      case "subscription.canceled":
-        await handleSubscriptionCanceled(supabase, event.data);
-        break;
-      
-      default:
-        console.log('ℹ️ Unhandled event type:', event.type);
-    }
+    // Processar diferentes tipos de eventos da Cakto
+    await processWebhookEvent(supabase, event);
 
-    return new Response(JSON.stringify({ received: true }), {
+    return new Response(JSON.stringify({ received: true, status: "processed" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
     console.error('❌ Webhook error:', error);
-    return new Response(JSON.stringify({ error: "Webhook processing failed" }), {
+    return new Response(JSON.stringify({ 
+      error: "Webhook processing failed",
+      message: error instanceof Error ? error.message : "Unknown error"
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
   }
 });
 
+async function processWebhookEvent(supabase: any, event: any) {
+  console.log('🔄 Processing webhook event:', event);
+
+  // Identificar o tipo de evento baseado na estrutura
+  const eventType = event.type || event.event_type || determineEventType(event);
+  
+  console.log('📋 Event type determined:', eventType);
+
+  switch (eventType) {
+    case 'payment.approved':
+    case 'payment.completed':
+    case 'checkout.completed':
+    case 'subscription.activated':
+      await handlePaymentCompleted(supabase, event);
+      break;
+    
+    case 'payment.failed':
+    case 'payment.canceled':
+    case 'checkout.failed':
+      await handlePaymentFailed(supabase, event);
+      break;
+    
+    case 'subscription.canceled':
+    case 'subscription.expired':
+      await handleSubscriptionCanceled(supabase, event);
+      break;
+    
+    default:
+      console.log('ℹ️ Unhandled event type:', eventType);
+      console.log('📋 Full event data:', event);
+  }
+}
+
+function determineEventType(event: any): string {
+  // Determinar tipo de evento baseado nos campos disponíveis
+  if (event.status === 'approved' || event.status === 'paid') {
+    return 'payment.completed';
+  }
+  if (event.status === 'failed' || event.status === 'canceled') {
+    return 'payment.failed';
+  }
+  return 'unknown';
+}
+
 async function handlePaymentCompleted(supabase: any, data: any) {
   console.log('✅ Processing payment completed:', data);
   
   try {
-    const checkoutId = data.checkout_id || data.id;
-    const userId = data.metadata?.user_id;
-    const periodo = data.metadata?.periodo;
+    // Extrair informações do evento
+    const customerEmail = data.customer?.email || data.email || data.buyer?.email;
+    const amount = data.amount || data.value || data.total;
+    const productId = data.product_id || data.product?.id;
+    const transactionId = data.transaction_id || data.id;
     
-    if (!userId) {
-      console.error('❌ No user_id in webhook data');
+    console.log('📋 Payment details:', { customerEmail, amount, productId, transactionId });
+
+    if (!customerEmail) {
+      console.error('❌ No customer email found in webhook data');
       return;
     }
 
-    // Atualizar status do checkout
-    await supabase
-      .from("cakto_checkouts")
-      .update({ status: "completed" })
-      .eq("checkout_id", checkoutId);
+    // Buscar usuário pelo email
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+    
+    if (userError) {
+      console.error('❌ Error fetching users:', userError);
+      return;
+    }
+
+    const user = userData.users.find((u: any) => u.email === customerEmail);
+    
+    if (!user) {
+      console.error('❌ User not found with email:', customerEmail);
+      return;
+    }
+
+    console.log('👤 User found:', user.id, user.email);
 
     // Buscar perfil do usuário
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", userId)
+      .eq("user_id", user.id)
       .single();
 
     if (profileError) {
@@ -102,105 +158,149 @@ async function handlePaymentCompleted(supabase: any, data: any) {
       return;
     }
 
-    // Calcular data de expiração baseada no período
-    const now = new Date();
-    let expiresAt = new Date();
+    // Determinar período da assinatura baseado no produto/link
+    let periodo = 'semanal';
+    let dataFim = new Date();
     
-    switch (periodo) {
-      case "semanal":
-        expiresAt.setDate(now.getDate() + 7);
-        break;
-      case "quinzenal":
-        expiresAt.setDate(now.getDate() + 14);
-        break;
-      case "mensal":
-        expiresAt.setMonth(now.getMonth() + 1);
-        break;
-      default:
-        expiresAt.setDate(now.getDate() + 7); // Default semanal
+    // Mapear produtos para períodos
+    if (productId?.includes('492897') || data.product_name?.includes('Semanal')) {
+      periodo = 'semanal';
+      dataFim.setDate(dataFim.getDate() + 7);
+    } else if (productId?.includes('492920') || data.product_name?.includes('Quinzenal')) {
+      periodo = 'quinzenal';
+      dataFim.setDate(dataFim.getDate() + 14);
+    } else if (productId?.includes('492928') || data.product_name?.includes('Mensal')) {
+      periodo = 'mensal';
+      dataFim.setMonth(dataFim.getMonth() + 1);
+    } else {
+      // Default para semanal
+      dataFim.setDate(dataFim.getDate() + 7);
     }
+
+    console.log('📅 Subscription period:', periodo, 'expires:', dataFim);
 
     // Criar nova assinatura
     const { data: subscription, error: subError } = await supabase
       .from("assinaturas")
       .insert({
-        user_id: userId,
+        user_id: user.id,
         perfil_id: profile.id,
-        cakto_checkout_id: checkoutId,
+        cakto_transaction_id: transactionId,
         status: "active",
-        data_inicio: now.toISOString(),
-        data_fim: expiresAt.toISOString(),
-        valor: data.amount ? data.amount / 100 : 0, // Converter de centavos
+        data_inicio: new Date().toISOString(),
+        data_fim: dataFim.toISOString(),
+        valor: amount || 0,
         periodo: periodo,
         plano: `Premium ${periodo}`,
+        stripe_customer_id: customerEmail, // Usar email como identificador
+        stripe_subscription_id: transactionId,
+        stripe_price_id: productId || 'cakto-' + periodo,
       })
       .select()
       .single();
 
     if (subError) {
       console.error('❌ Error creating subscription:', subError);
+      
+      // Se falhar, tentar atualizar manualmente o perfil
+      await updateProfileToPremium(supabase, user.id, dataFim);
       return;
     }
 
-    // Atualizar perfil para premium - manual fallback se o trigger falhar
-    try {
-      await supabase
-        .from("profiles")
-        .update({
-          tipo_assinatura: "premium",
-          subscription_expires_at: expiresAt.toISOString(),
-          assinatura_id: subscription.id,
-        })
-        .eq("id", userId);
-      
-      console.log('✅ Profile updated to premium manually');
-    } catch (updateError) {
-      console.error('⚠️ Manual profile update failed, relying on trigger:', updateError);
-    }
+    console.log('✅ Subscription created:', subscription);
 
-    console.log('✅ Payment completed successfully processed');
+    // Atualizar perfil para premium - manual fallback se o trigger falhar
+    await updateProfileToPremium(supabase, user.id, dataFim, subscription.id);
+
+    console.log('✅ Payment completed successfully processed for user:', user.email);
   } catch (error) {
     console.error('❌ Error processing payment completed:', error);
+  }
+}
+
+async function updateProfileToPremium(supabase: any, userId: string, expiresAt: Date, subscriptionId?: string) {
+  try {
+    const updateData: any = {
+      tipo_assinatura: "premium",
+      subscription_expires_at: expiresAt.toISOString(),
+    };
+
+    if (subscriptionId) {
+      updateData.assinatura_id = subscriptionId;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update(updateData)
+      .eq("user_id", userId);
+    
+    if (error) {
+      console.error('❌ Error updating profile to premium:', error);
+    } else {
+      console.log('✅ Profile updated to premium successfully');
+    }
+  } catch (error) {
+    console.error('❌ Error in updateProfileToPremium:', error);
   }
 }
 
 async function handlePaymentFailed(supabase: any, data: any) {
   console.log('❌ Processing payment failed:', data);
   
-  const checkoutId = data.checkout_id || data.id;
+  const customerEmail = data.customer?.email || data.email || data.buyer?.email;
+  const transactionId = data.transaction_id || data.id;
   
-  await supabase
-    .from("cakto_checkouts")
-    .update({ status: "failed" })
-    .eq("checkout_id", checkoutId);
+  console.log('📋 Failed payment details:', { customerEmail, transactionId });
+  
+  // Log para debug, mas não fazemos nada específico para falhas
+  // O usuário permanece gratuito
 }
 
 async function handleSubscriptionCanceled(supabase: any, data: any) {
   console.log('🚫 Processing subscription canceled:', data);
   
   try {
-    const subscriptionId = data.subscription_id || data.id;
-    const userId = data.metadata?.user_id;
+    const customerEmail = data.customer?.email || data.email || data.buyer?.email;
+    const transactionId = data.transaction_id || data.subscription_id || data.id;
     
-    if (userId) {
-      // Atualizar assinatura para cancelada
-      await supabase
-        .from("assinaturas")
-        .update({ status: "canceled" })
-        .eq("cakto_checkout_id", subscriptionId);
-      
-      // Atualizar perfil para gratuito
-      await supabase
-        .from("profiles")
-        .update({
-          tipo_assinatura: "gratuito",
-          subscription_expires_at: null,
-          assinatura_id: null,
-        })
-        .eq("id", userId);
-      
-      console.log('✅ Subscription canceled successfully processed');
+    if (!customerEmail) {
+      console.error('❌ No customer email found in cancelation data');
+      return;
     }
+
+    // Buscar usuário pelo email
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+    
+    if (userError) {
+      console.error('❌ Error fetching users:', userError);
+      return;
+    }
+
+    const user = userData.users.find((u: any) => u.email === customerEmail);
+    
+    if (!user) {
+      console.error('❌ User not found with email:', customerEmail);
+      return;
+    }
+
+    // Atualizar assinaturas para cancelada
+    await supabase
+      .from("assinaturas")
+      .update({ status: "canceled" })
+      .eq("user_id", user.id)
+      .eq("status", "active");
+    
+    // Atualizar perfil para gratuito
+    await supabase
+      .from("profiles")
+      .update({
+        tipo_assinatura: "gratuito",
+        subscription_expires_at: null,
+        assinatura_id: null,
+      })
+      .eq("user_id", user.id);
+    
+    console.log('✅ Subscription canceled successfully processed for user:', user.email);
   } catch (error) {
     console.error('❌ Error processing subscription cancelation:', error);
   }
