@@ -28,8 +28,7 @@ export interface Profile {
   subscription_expires_at?: string;
   profile_completed: boolean;
   avatar_url?: string;
-  premium_status: string;
-  tipo_assinatura: string;
+  tipo_assinatura: 'gratuito' | 'premium'; // FONTE ÚNICA DA VERDADE
   assinatura_id?: string;
   created_at: string;
   updated_at: string;
@@ -48,7 +47,7 @@ export const useProfile = () => {
     }
 
     try {
-      console.log('Fetching profile for user:', user.id);
+      console.log('🔍 Fetching profile for user:', user.id);
       
       const { data, error } = await supabase
         .from('profiles')
@@ -57,11 +56,11 @@ export const useProfile = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.error('❌ Error fetching profile:', error);
       } else if (data) {
-        console.log('Profile data loaded:', data);
+        console.log('✅ Profile data loaded:', data);
         
-        // Map data to Profile interface with proper defaults
+        // Map data to Profile interface
         const profileData: Profile = {
           id: data.id,
           user_id: data.user_id,
@@ -83,22 +82,21 @@ export const useProfile = () => {
           drinks: data.drinks,
           relationship_status: data.relationship_status,
           interests: data.interests,
-          subscription_type: data.subscription_type || 'gratuito',
+          subscription_type: data.tipo_assinatura || 'gratuito', // Usar tipo_assinatura como fonte
           subscription_expires_at: data.subscription_expires_at,
           profile_completed: data.profile_completed || false,
           avatar_url: data.avatar_url,
-          premium_status: data.premium_status || 'nao_premium',
-          tipo_assinatura: data.tipo_assinatura || 'gratuito',
-          assinatura_id: data.assinatura_id || null,
+          tipo_assinatura: data.tipo_assinatura || 'gratuito', // CAMPO PRINCIPAL
+          assinatura_id: data.assinatura_id,
           created_at: data.created_at,
           updated_at: data.updated_at
         };
         
-        console.log('Profile premium status:', profileData.tipo_assinatura);
+        console.log('🎯 Profile subscription status:', profileData.tipo_assinatura);
         setProfile(profileData);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error:', error);
     } finally {
       setLoading(false);
     }
@@ -112,7 +110,7 @@ export const useProfile = () => {
   useEffect(() => {
     if (!user) return;
 
-    console.log('Setting up real-time subscription for profile changes');
+    console.log('📡 Setting up real-time subscription for profile changes');
     
     const channel = supabase
       .channel('profile-changes')
@@ -125,24 +123,26 @@ export const useProfile = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Profile updated via real-time:', payload.new);
+          console.log('📡 Profile updated via real-time:', payload.new);
           
           // Atualizar o estado do perfil com os novos dados
-          const updatedProfile = {
-            ...profile,
-            ...payload.new,
-            premium_status: payload.new.premium_status || 'nao_premium',
-            tipo_assinatura: payload.new.tipo_assinatura || 'gratuito',
-          } as Profile;
-          
-          console.log('Updated profile status:', updatedProfile.tipo_assinatura);
-          setProfile(updatedProfile);
+          if (payload.new) {
+            const updatedProfile = {
+              ...profile,
+              ...payload.new,
+              tipo_assinatura: payload.new.tipo_assinatura || 'gratuito',
+              subscription_type: payload.new.tipo_assinatura || 'gratuito',
+            } as Profile;
+            
+            console.log('🔄 Updated profile status:', updatedProfile.tipo_assinatura);
+            setProfile(updatedProfile);
+          }
         }
       )
       .subscribe();
 
     return () => {
-      console.log('Unsubscribing from profile changes');
+      console.log('📡 Unsubscribing from profile changes');
       supabase.removeChannel(channel);
     };
   }, [user, profile]);
@@ -151,7 +151,7 @@ export const useProfile = () => {
     if (!user) return { error: 'Not authenticated' };
 
     try {
-      console.log('Updating profile for user:', user.id, 'with updates:', updates);
+      console.log('🔄 Updating profile for user:', user.id, 'with updates:', updates);
       
       const { data, error } = await supabase
         .from('profiles')
@@ -160,10 +160,8 @@ export const useProfile = () => {
         .select()
         .single();
 
-      console.log('Update result:', { data, error });
-
       if (error) {
-        console.error('Supabase update error:', error);
+        console.error('❌ Supabase update error:', error);
         return { error };
       }
 
@@ -190,13 +188,12 @@ export const useProfile = () => {
           drinks: data.drinks,
           relationship_status: data.relationship_status,
           interests: data.interests,
-          subscription_type: data.subscription_type || 'gratuito',
+          subscription_type: data.tipo_assinatura || 'gratuito',
           subscription_expires_at: data.subscription_expires_at,
           profile_completed: data.profile_completed || false,
           avatar_url: data.avatar_url,
-          premium_status: data.premium_status || 'nao_premium',
           tipo_assinatura: data.tipo_assinatura || 'gratuito',
-          assinatura_id: data.assinatura_id || null,
+          assinatura_id: data.assinatura_id,
           created_at: data.created_at,
           updated_at: data.updated_at
         };
@@ -206,14 +203,15 @@ export const useProfile = () => {
 
       return { error: 'No data returned' };
     } catch (error) {
-      console.error('Update profile catch error:', error);
+      console.error('❌ Update profile catch error:', error);
       return { error };
     }
   };
 
   // Função para recarregar o perfil manualmente
   const refreshProfile = async () => {
-    console.log('Manually refreshing profile...');
+    console.log('🔄 Manually refreshing profile...');
+    setLoading(true);
     await fetchProfile();
   };
 
@@ -221,7 +219,7 @@ export const useProfile = () => {
   const isPremium = () => {
     if (!profile) return false;
     const isPremiumStatus = profile.tipo_assinatura === 'premium';
-    console.log('isPremium check:', isPremiumStatus, 'tipo_assinatura:', profile.tipo_assinatura);
+    console.log('🎯 isPremium check:', isPremiumStatus, 'tipo_assinatura:', profile.tipo_assinatura);
     return isPremiumStatus;
   };
 

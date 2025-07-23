@@ -19,7 +19,7 @@ interface Subscription {
 
 export const useSubscription = () => {
   const { user } = useAuth();
-  const { profile, refreshProfile } = useProfile();
+  const { profile, refreshProfile, isPremium } = useProfile();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,21 +31,32 @@ export const useSubscription = () => {
     }
 
     try {
-      console.log('Checking subscription for user:', user.id);
+      console.log('🔍 Checking subscription for user:', user.id);
       
-      // Primeiro atualizar o perfil para garantir dados mais recentes
+      // Sempre atualizar o perfil primeiro
       await refreshProfile();
       
-      const { data, error } = await supabase.functions.invoke('check-subscription');
+      // Buscar dados da assinatura diretamente no banco
+      const { data: subscriptionData, error } = await supabase
+        .from('assinaturas')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
       
-      if (error) {
-        console.error('Error checking subscription:', error);
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Error checking subscription:', error);
+      } else if (subscriptionData) {
+        console.log('✅ Subscription data found:', subscriptionData);
+        setSubscription(subscriptionData);
       } else {
-        console.log('Subscription check result:', data);
-        setSubscription(data.subscription);
+        console.log('ℹ️ No active subscription found');
+        setSubscription(null);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error:', error);
     } finally {
       setLoading(false);
     }
@@ -53,7 +64,7 @@ export const useSubscription = () => {
 
   const createCheckout = async (priceId: string) => {
     try {
-      console.log('Creating checkout for price:', priceId);
+      console.log('🛒 Creating checkout for price:', priceId);
       
       // Determinar o período baseado no price_id
       let periodo = 'mensal';
@@ -68,20 +79,19 @@ export const useSubscription = () => {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           priceId,
-          periodo // Incluir o período no metadata
+          periodo
         }
       });
 
       if (error) {
-        console.error('Checkout error:', error);
+        console.error('❌ Checkout error:', error);
         throw error;
       }
 
-      console.log('Checkout session created, opening URL:', data.url);
-      // Abrir checkout em nova aba
+      console.log('✅ Checkout session created, opening URL:', data.url);
       window.open(data.url, '_blank');
     } catch (error) {
-      console.error('Error creating checkout:', error);
+      console.error('❌ Error creating checkout:', error);
       throw error;
     }
   };
@@ -90,11 +100,9 @@ export const useSubscription = () => {
     checkSubscription();
   }, [user]);
 
-  // Usar o valor isPremium do useProfile que é baseado no tipo_assinatura
-  const isPremium = profile?.tipo_assinatura === 'premium';
-
+  // Usar o valor isPremium do useProfile (baseado exclusivamente em tipo_assinatura)
   return {
-    isPremium,
+    isPremium, // Do useProfile
     subscription,
     loading,
     checkSubscription,

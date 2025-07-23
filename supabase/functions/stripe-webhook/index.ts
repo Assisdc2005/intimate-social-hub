@@ -28,147 +28,233 @@ serve(async (req) => {
       Deno.env.get("STRIPE_WEBHOOK_SECRET") || ""
     );
 
-    console.log('Webhook event:', event.type);
+    console.log('🔔 Webhook event received:', event.type);
 
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as any;
-        console.log('Checkout completed:', session.id);
+        console.log('💳 Checkout session completed:', session.id);
         
         if (session.mode === 'subscription') {
           const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          console.log('📋 Subscription retrieved:', subscription.id);
+
+          // Obter customer do Stripe
           const customer = await stripe.customers.retrieve(session.customer);
-          
           if (typeof customer === 'string') {
-            console.error('Customer is a string, expected object');
+            console.error('❌ Customer is a string, expected object');
             break;
           }
 
-          // Get metadata from session
+          console.log('👤 Customer email:', customer.email);
+
+          // Obter metadata da session
           const metadata = session.metadata;
-          console.log('Session metadata:', metadata);
+          console.log('📝 Session metadata:', metadata);
 
           if (!metadata || !metadata.user_id) {
-            console.error('No user_id in metadata');
+            console.error('❌ No user_id in metadata');
             break;
           }
 
-          // Calculate end date based on period
-          let dataFim = new Date();
-          let periodo = 'mensal'; // default
-          
+          // Calcular data de fim da assinatura
+          const subscriptionEnd = new Date(subscription.current_period_end * 1000);
+          console.log('📅 Subscription end date:', subscriptionEnd);
+
+          // Determinar período da assinatura
+          let periodo = 'mensal';
           if (metadata.periodo) {
             periodo = metadata.periodo;
-            switch (metadata.periodo) {
-              case 'semanal':
-                dataFim.setDate(dataFim.getDate() + 7);
-                break;
-              case 'quinzenal':
-                dataFim.setDate(dataFim.getDate() + 15);
-                break;
-              case 'mensal':
-                dataFim.setMonth(dataFim.getMonth() + 1);
-                break;
-            }
           } else {
-            // Fallback: determine period from price
+            // Fallback baseado no price_id
             const priceId = subscription.items.data[0].price.id;
             if (priceId === 'price_1Rn2ekD3X7OLOCgdTVptrYmK') {
               periodo = 'semanal';
-              dataFim.setDate(dataFim.getDate() + 7);
             } else if (priceId === 'price_1Rn2hQD3X7OLOCgddzwdYC6X') {
               periodo = 'quinzenal';
-              dataFim.setDate(dataFim.getDate() + 15);
             } else if (priceId === 'price_1Rn2hZD3X7OLOCgd3HzBOW1i') {
               periodo = 'mensal';
-              dataFim.setMonth(dataFim.getMonth() + 1);
             }
           }
 
-          console.log('Creating subscription for user:', metadata.user_id);
+          console.log('⏱️ Subscription period:', periodo);
 
-          // Get user profile
+          // Buscar perfil do usuário no Supabase
           const { data: profile, error: profileError } = await supabaseAdmin
             .from('profiles')
-            .select('id')
+            .select('id, user_id, display_name')
             .eq('user_id', metadata.user_id)
             .single();
 
           if (profileError || !profile) {
-            console.error('Error getting profile:', profileError);
-            break;
+            console.error('❌ Error finding profile:', profileError);
+            
+            // Tentar buscar por email como fallback
+            if (customer.email) {
+              console.log('🔍 Trying to find user by email:', customer.email);
+              const { data: userByEmail } = await supabaseAdmin.auth.admin.getUserByEmail(customer.email);
+              
+              if (userByEmail.user) {
+                console.log('✅ Found user by email:', userByEmail.user.id);
+                
+                const { data: profileByEmail } = await supabaseAdmin
+                  .from('profiles')
+                  .select('id, user_id, display_name')
+                  .eq('user_id', userByEmail.user.id)
+                  .single();
+                
+                if (profileByEmail) {
+                  console.log('✅ Found profile by email lookup');
+                  // Atualizar metadata para usar o user_id correto
+                  metadata.user_id = userByEmail.user.id;
+                } else {
+                  console.error('❌ No profile found even with email lookup');
+                  break;
+                }
+              } else {
+                console.error('❌ No user found by email');
+                break;
+              }
+            } else {
+              console.error('❌ No customer email available');
+              break;
+            }
           }
 
-          console.log('Found profile:', profile.id);
-
-          // Get price info for value
+          // Obter informações do preço para o valor
           const priceId = subscription.items.data[0].price.id;
           const price = await stripe.prices.retrieve(priceId);
-          const valor = (price.unit_amount || 0) / 100; // Convert from cents to currency
+          const valor = (price.unit_amount || 0) / 100;
 
-          // Insert subscription record
+          console.log('💰 Subscription value:', valor);
+
+          // Inserir registro na tabela assinaturas
           const { data: newSubscription, error: subscriptionError } = await supabaseAdmin
             .from('assinaturas')
             .insert({
-              perfil_id: profile.id,
               user_id: metadata.user_id,
-              plano: periodo,
               stripe_customer_id: session.customer,
               stripe_subscription_id: session.subscription,
               stripe_price_id: priceId,
               status: 'active',
-              data_fim: dataFim.toISOString(),
+              data_inicio: new Date().toISOString(),
+              data_fim: subscriptionEnd.toISOString(),
               valor: valor,
               periodo: periodo,
+              plano: periodo,
             })
             .select()
             .single();
 
           if (subscriptionError) {
-            console.error('Error inserting subscription:', subscriptionError);
+            console.error('❌ Error inserting subscription:', subscriptionError);
             break;
           }
 
-          console.log('Subscription created:', newSubscription.id);
+          console.log('✅ Subscription created:', newSubscription.id);
 
-          // IMPORTANTE: Atualizar profile com status premium OBRIGATORIAMENTE
-          const { error: profileUpdateError } = await supabaseAdmin
+          // ATUALIZAR PERFIL PARA PREMIUM - ESTA É A PARTE CRÍTICA
+          console.log('🔄 Updating profile to premium for user:', metadata.user_id);
+          
+          const { data: updatedProfile, error: updateError } = await supabaseAdmin
             .from('profiles')
             .update({ 
-              premium_status: 'premium',
-              tipo_assinatura: 'premium', // Garantir que seja 'premium' e não 'gratuito'
+              tipo_assinatura: 'premium',
+              subscription_expires_at: subscriptionEnd.toISOString(),
               assinatura_id: newSubscription.id
             })
-            .eq('id', profile.id);
+            .eq('user_id', metadata.user_id)
+            .select()
+            .single();
 
-          if (profileUpdateError) {
-            console.error('ERRO CRÍTICO - Falha ao atualizar profile para premium:', profileUpdateError);
-            // Tentar novamente uma vez
-            const { error: retryError } = await supabaseAdmin
-              .from('profiles')
-              .update({ 
-                premium_status: 'premium',
-                tipo_assinatura: 'premium',
-                assinatura_id: newSubscription.id
-              })
-              .eq('user_id', metadata.user_id); // Usar user_id como fallback
+          if (updateError) {
+            console.error('❌ CRITICAL ERROR - Failed to update profile to premium:', updateError);
             
-            if (retryError) {
-              console.error('ERRO CRÍTICO - Segunda tentativa falhou:', retryError);
-            } else {
-              console.log('Profile atualizado para premium na segunda tentativa');
+            // Tentar novamente com diferentes estratégias
+            console.log('🔄 Retrying profile update...');
+            
+            // Tentar atualizar por email se disponível
+            if (customer.email) {
+              const { error: emailUpdateError } = await supabaseAdmin
+                .from('profiles')
+                .update({ 
+                  tipo_assinatura: 'premium',
+                  subscription_expires_at: subscriptionEnd.toISOString(),
+                  assinatura_id: newSubscription.id
+                })
+                .eq('user_id', metadata.user_id);
+              
+              if (emailUpdateError) {
+                console.error('❌ CRITICAL ERROR - Second attempt failed:', emailUpdateError);
+              } else {
+                console.log('✅ Profile updated to premium on retry');
+              }
             }
           } else {
-            console.log('✅ Profile atualizado para premium com sucesso:', metadata.user_id);
+            console.log('✅ Profile successfully updated to premium:', updatedProfile);
+          }
+
+          // Verificar se a atualização foi bem-sucedida
+          const { data: verifyProfile, error: verifyError } = await supabaseAdmin
+            .from('profiles')
+            .select('tipo_assinatura, subscription_expires_at, assinatura_id')
+            .eq('user_id', metadata.user_id)
+            .single();
             
-            // Verificar se realmente foi atualizado
-            const { data: verifyProfile } = await supabaseAdmin
-              .from('profiles')
-              .select('premium_status, tipo_assinatura')
-              .eq('id', profile.id)
-              .single();
+          if (verifyError) {
+            console.error('❌ Error verifying profile update:', verifyError);
+          } else {
+            console.log('🔍 Profile verification result:', verifyProfile);
+            
+            if (verifyProfile.tipo_assinatura === 'premium') {
+              console.log('✅ SUCCESS - Profile is now premium!');
+            } else {
+              console.error('❌ FAILURE - Profile is still not premium:', verifyProfile.tipo_assinatura);
+            }
+          }
+        }
+        break;
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as any;
+        console.log('💳 Invoice payment succeeded:', invoice.id);
+        
+        if (invoice.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+          const customer = await stripe.customers.retrieve(invoice.customer);
+          
+          if (typeof customer === 'string') {
+            console.error('❌ Customer is a string, expected object');
+            break;
+          }
+
+          console.log('👤 Customer email for invoice:', customer.email);
+
+          // Buscar usuário por email
+          if (customer.email) {
+            const { data: userData } = await supabaseAdmin.auth.admin.getUserByEmail(customer.email);
+            
+            if (userData.user) {
+              console.log('✅ Found user for invoice payment:', userData.user.id);
               
-            console.log('Verificação do profile após update:', verifyProfile);
+              // Atualizar perfil para premium
+              const subscriptionEnd = new Date(subscription.current_period_end * 1000);
+              
+              const { error: updateError } = await supabaseAdmin
+                .from('profiles')
+                .update({ 
+                  tipo_assinatura: 'premium',
+                  subscription_expires_at: subscriptionEnd.toISOString()
+                })
+                .eq('user_id', userData.user.id);
+
+              if (updateError) {
+                console.error('❌ Error updating profile for invoice payment:', updateError);
+              } else {
+                console.log('✅ Profile updated to premium for invoice payment');
+              }
+            }
           }
         }
         break;
@@ -176,40 +262,41 @@ serve(async (req) => {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as any;
-        console.log('Subscription canceled:', subscription.id);
+        console.log('🚫 Subscription canceled:', subscription.id);
         
-        // Update subscription status
+        // Atualizar status da assinatura
         const { error: updateError } = await supabaseAdmin
           .from('assinaturas')
           .update({ status: 'canceled' })
           .eq('stripe_subscription_id', subscription.id);
 
         if (updateError) {
-          console.error('Error updating subscription:', updateError);
+          console.error('❌ Error updating subscription status:', updateError);
         }
 
-        // Get subscription and update profile
+        // Buscar e atualizar perfil do usuário
         const { data: subscriptionData } = await supabaseAdmin
           .from('assinaturas')
-          .select('perfil_id, user_id')
+          .select('user_id')
           .eq('stripe_subscription_id', subscription.id)
           .single();
 
         if (subscriptionData) {
-          // Update profile to remove premium status
+          console.log('🔄 Updating profile to free for user:', subscriptionData.user_id);
+          
           const { error: profileError } = await supabaseAdmin
             .from('profiles')
             .update({ 
-              premium_status: 'nao_premium',
               tipo_assinatura: 'gratuito',
+              subscription_expires_at: null,
               assinatura_id: null
             })
-            .eq('id', subscriptionData.perfil_id);
+            .eq('user_id', subscriptionData.user_id);
 
           if (profileError) {
-            console.error('Error updating profile:', profileError);
+            console.error('❌ Error updating profile to free:', profileError);
           } else {
-            console.log('Profile updated to non-premium for user:', subscriptionData.user_id);
+            console.log('✅ Profile updated to free for user:', subscriptionData.user_id);
           }
         }
         break;
@@ -221,7 +308,7 @@ serve(async (req) => {
       status: 200,
     });
   } catch (err) {
-    console.error('Webhook error:', err);
+    console.error('❌ Webhook error:', err);
     return new Response(`Webhook error: ${err.message}`, { status: 400 });
   }
 });
