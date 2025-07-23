@@ -60,6 +60,9 @@ export const useProfile = () => {
       } else if (data) {
         console.log('✅ Profile data loaded:', data);
         
+        // Ensure tipo_assinatura is properly typed
+        const tipoAssinatura = (data.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
+        
         // Map data to Profile interface
         const profileData: Profile = {
           id: data.id,
@@ -82,11 +85,11 @@ export const useProfile = () => {
           drinks: data.drinks,
           relationship_status: data.relationship_status,
           interests: data.interests,
-          subscription_type: data.tipo_assinatura || 'gratuito', // Usar tipo_assinatura como fonte
+          subscription_type: tipoAssinatura,
           subscription_expires_at: data.subscription_expires_at,
           profile_completed: data.profile_completed || false,
           avatar_url: data.avatar_url,
-          tipo_assinatura: data.tipo_assinatura || 'gratuito', // CAMPO PRINCIPAL
+          tipo_assinatura: tipoAssinatura, // CAMPO PRINCIPAL
           assinatura_id: data.assinatura_id,
           created_at: data.created_at,
           updated_at: data.updated_at
@@ -127,11 +130,13 @@ export const useProfile = () => {
           
           // Atualizar o estado do perfil com os novos dados
           if (payload.new) {
+            const tipoAssinatura = (payload.new.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
+            
             const updatedProfile = {
               ...profile,
               ...payload.new,
-              tipo_assinatura: payload.new.tipo_assinatura || 'gratuito',
-              subscription_type: payload.new.tipo_assinatura || 'gratuito',
+              tipo_assinatura: tipoAssinatura,
+              subscription_type: tipoAssinatura,
             } as Profile;
             
             console.log('🔄 Updated profile status:', updatedProfile.tipo_assinatura);
@@ -166,6 +171,9 @@ export const useProfile = () => {
       }
 
       if (data) {
+        // Ensure tipo_assinatura is properly typed
+        const tipoAssinatura = (data.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
+        
         // Map updated data to Profile interface
         const profileData: Profile = {
           id: data.id,
@@ -188,11 +196,11 @@ export const useProfile = () => {
           drinks: data.drinks,
           relationship_status: data.relationship_status,
           interests: data.interests,
-          subscription_type: data.tipo_assinatura || 'gratuito',
+          subscription_type: tipoAssinatura,
           subscription_expires_at: data.subscription_expires_at,
           profile_completed: data.profile_completed || false,
           avatar_url: data.avatar_url,
-          tipo_assinatura: data.tipo_assinatura || 'gratuito',
+          tipo_assinatura: tipoAssinatura,
           assinatura_id: data.assinatura_id,
           created_at: data.created_at,
           updated_at: data.updated_at

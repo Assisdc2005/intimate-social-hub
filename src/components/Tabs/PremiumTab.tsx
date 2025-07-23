@@ -46,7 +46,6 @@ export const PremiumTab = () => {
     if (profile) {
       console.log('PremiumTab - Profile loaded:', {
         tipo_assinatura: profile.tipo_assinatura,
-        premium_status: profile.premium_status,
         isPremium: isPremium
       });
     }
@@ -151,7 +150,6 @@ export const PremiumTab = () => {
           <h3 className="text-yellow-400 font-semibold mb-2">Debug Info</h3>
           <div className="text-sm space-y-1">
             <div>tipo_assinatura: {profile?.tipo_assinatura || 'loading...'}</div>
-            <div>premium_status: {profile?.premium_status || 'loading...'}</div>
             <div>isPremium: {isPremium ? 'true' : 'false'}</div>
             <div>assinatura_id: {profile?.assinatura_id || 'null'}</div>
           </div>
