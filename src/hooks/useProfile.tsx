@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -61,7 +62,7 @@ export const useProfile = () => {
         // Ensure tipo_assinatura is properly typed
         const tipoAssinatura = (data.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
         
-        // Map data to Profile interface
+        // Map data to Profile interface - safely handle new fields
         const profileData: Profile = {
           id: data.id,
           user_id: data.user_id,
@@ -86,8 +87,8 @@ export const useProfile = () => {
           profile_completed: data.profile_completed || false,
           avatar_url: data.avatar_url,
           tipo_assinatura: tipoAssinatura, // CAMPO PRINCIPAL
-          subscription_expires_at: data.subscription_expires_at, // Novo campo
-          assinatura_id: data.assinatura_id, // Novo campo
+          subscription_expires_at: (data as any).subscription_expires_at, // Safe access to new field
+          assinatura_id: (data as any).assinatura_id, // Safe access to new field
           created_at: data.created_at,
           updated_at: data.updated_at
         };
@@ -133,8 +134,8 @@ export const useProfile = () => {
               ...profile,
               ...payload.new,
               tipo_assinatura: tipoAssinatura,
-              subscription_expires_at: payload.new.subscription_expires_at,
-              assinatura_id: payload.new.assinatura_id,
+              subscription_expires_at: (payload.new as any).subscription_expires_at,
+              assinatura_id: (payload.new as any).assinatura_id,
             } as Profile;
             
             console.log('🔄 Updated profile status:', updatedProfile.tipo_assinatura);
@@ -197,6 +198,8 @@ export const useProfile = () => {
           profile_completed: data.profile_completed || false,
           avatar_url: data.avatar_url,
           tipo_assinatura: tipoAssinatura,
+          subscription_expires_at: (data as any).subscription_expires_at,
+          assinatura_id: (data as any).assinatura_id,
           created_at: data.created_at,
           updated_at: data.updated_at
         };
