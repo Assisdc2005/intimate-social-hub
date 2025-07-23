@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from "@/hooks/use-toast"
-import { Profile } from '@/hooks/useProfile';
+import { type Profile } from '@/hooks/useProfile';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, 
@@ -43,7 +44,7 @@ export default function Profile() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordMatch, setPasswordMatch] = useState(true);
-    const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState('');
   const [isCopied, setIsCopied] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(false);
@@ -113,7 +114,9 @@ export default function Profile() {
     }
 
     try {
-      await updatePassword(newPassword);
+      const { error } = await updatePassword(newPassword);
+      if (error) throw error;
+      
       toast({
         title: "Sucesso",
         description: "Senha alterada com sucesso!",

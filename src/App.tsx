@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import { CompleteProfile } from "./pages/CompleteProfile";
-import { Profile } from "./pages/Profile";
+import Profile from "./pages/Profile";
 import { UserProfile } from "./pages/UserProfile";
 import { Landing } from "./pages/Landing";
 import NotFound from "./pages/NotFound";
