@@ -1,4 +1,3 @@
-
 import { Crown, Check, Star, Zap, Eye, MessageCircle, Heart, Filter, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
@@ -8,7 +7,7 @@ import { useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 export const PremiumTab = () => {
-  const { profile, isPremium } = useProfile();
+  const { profile, isPremium, refreshProfile } = useProfile();
   const { subscription, loading, checkSubscription, createCheckout } = useSubscription();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -21,13 +20,16 @@ export const PremiumTab = () => {
         title: "Pagamento realizado!",
         description: "Sua assinatura Premium foi ativada com sucesso.",
       });
-      // Remove the parameter from URL and redirect to home
-      window.history.replaceState({}, '', '/premium');
-      // Refresh subscription status and redirect to home after verification
+      
+      // Força refresh do perfil para pegar o status atualizado
       setTimeout(async () => {
+        console.log('Refreshing profile after successful payment...');
+        await refreshProfile();
         await checkSubscription();
-        navigate('/home');
       }, 2000);
+      
+      // Remove the parameter from URL
+      window.history.replaceState({}, '', '/premium');
     } else if (searchParams.get('canceled') === 'true') {
       toast({
         title: "Pagamento cancelado",
@@ -37,7 +39,18 @@ export const PremiumTab = () => {
       // Remove the parameter from URL
       window.history.replaceState({}, '', '/premium');
     }
-  }, [searchParams, toast, checkSubscription, navigate]);
+  }, [searchParams, toast, refreshProfile, checkSubscription]);
+
+  // Debug do status premium
+  useEffect(() => {
+    if (profile) {
+      console.log('PremiumTab - Profile loaded:', {
+        tipo_assinatura: profile.tipo_assinatura,
+        premium_status: profile.premium_status,
+        isPremium: isPremium
+      });
+    }
+  }, [profile, isPremium]);
 
   const premiumFeatures = [
     {
@@ -111,6 +124,17 @@ export const PremiumTab = () => {
     }
   };
 
+  const handleRefreshStatus = async () => {
+    console.log('Manually refreshing premium status...');
+    await refreshProfile();
+    await checkSubscription();
+    
+    toast({
+      title: "Status atualizado",
+      description: "O status da sua assinatura foi verificado.",
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -121,6 +145,22 @@ export const PremiumTab = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Debug Panel - Apenas para desenvolvimento */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="glass rounded-2xl p-4 border border-yellow-500/20">
+          <h3 className="text-yellow-400 font-semibold mb-2">Debug Info</h3>
+          <div className="text-sm space-y-1">
+            <div>tipo_assinatura: {profile?.tipo_assinatura || 'loading...'}</div>
+            <div>premium_status: {profile?.premium_status || 'loading...'}</div>
+            <div>isPremium: {isPremium ? 'true' : 'false'}</div>
+            <div>assinatura_id: {profile?.assinatura_id || 'null'}</div>
+          </div>
+          <Button onClick={handleRefreshStatus} size="sm" className="mt-2">
+            Verificar Status
+          </Button>
+        </div>
+      )}
+
       {/* Header Premium */}
       <div className="glass rounded-3xl p-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-primary opacity-20 rounded-3xl" />

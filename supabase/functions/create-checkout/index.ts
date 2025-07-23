@@ -28,40 +28,42 @@ serve(async (req) => {
       throw new Error("User not authenticated or email not available");
     }
 
-    const { priceId } = await req.json();
-    
-    if (!priceId) {
-      throw new Error("Price ID is required");
-    }
+    console.log('Creating checkout for user:', user.id, user.email);
+
+    const { priceId, periodo } = await req.json();
+    console.log('Price ID:', priceId, 'Período:', periodo);
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
 
     // Check if customer exists
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    const customers = await stripe.customers.list({
+      email: user.email,
+      limit: 1,
+    });
+
     let customerId;
-    
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
+      console.log('Existing customer found:', customerId);
+    } else {
+      console.log('Creating new customer for:', user.email);
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: {
+          user_id: user.id,
+        },
+      });
+      customerId = customer.id;
+      console.log('New customer created:', customerId);
     }
 
-    // Get price details to determine period and value
-    const price = await stripe.prices.retrieve(priceId);
-    const valor = (price.unit_amount || 0) / 100;
-    
-    let periodo = 'mensal';
-    if (priceId === 'price_1Rn2ekD3X7OLOCgdTVptrYmK') {
-      periodo = 'semanal';
-    } else if (priceId === 'price_1Rn2hQD3X7OLOCgddzwdYC6X') {
-      periodo = 'quinzenal';
-    } else if (priceId === 'price_1Rn2hZD3X7OLOCgd3HzBOW1i') {
-      periodo = 'mensal';
-    }
+    const origin = req.headers.get("origin") || "https://5d172bad-6d41-43a5-824d-85d7287a6f00.lovableproject.com";
 
+    console.log('Creating checkout session...');
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
       line_items: [
         {
           price: priceId,
@@ -69,15 +71,22 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/premium?success=true`,
-      cancel_url: `${req.headers.get("origin")}/premium?canceled=true`,
+      success_url: `${origin}/premium?success=true`,
+      cancel_url: `${origin}/premium?canceled=true`,
       metadata: {
         user_id: user.id,
-        price_id: priceId,
-        periodo: periodo,
-        valor: valor.toString(),
+        periodo: periodo || 'mensal', // Incluir o período no metadata
+      },
+      subscription_data: {
+        metadata: {
+          user_id: user.id,
+          periodo: periodo || 'mensal',
+        },
       },
     });
+
+    console.log('Checkout session created:', session.id);
+    console.log('Session URL:', session.url);
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
