@@ -9,7 +9,7 @@ import { Auth } from "./pages/Auth";
 import { CompleteProfile } from "./pages/CompleteProfile";
 import Profile from "./pages/Profile";
 import { UserProfile } from "./pages/UserProfile";
-import { Landing } from "./pages/Landing";
+import { LandingPage } from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
 import { useProfile } from "./hooks/useProfile";
@@ -36,10 +36,10 @@ function AuthenticatedApp() {
 
   return (
     <Routes>
-      {/* Rota raiz - SEMPRE redireciona para /auth se não autenticado */}
+      {/* Rota raiz - Landing Page para todos os visitantes */}
       <Route 
         path="/" 
-        element={<Navigate to="/auth" replace />}
+        element={<LandingPage />}
       />
       
       {/* Página de autenticação - sempre acessível */}
@@ -181,11 +181,11 @@ function AuthenticatedApp() {
       />
 
       {/* Rotas institucionais - acessíveis para todos */}
-      <Route path="/sobre" element={<About />} />
-      <Route path="/termos" element={<Terms />} />
-      <Route path="/privacidade" element={<Privacy />} />
-      <Route path="/reembolso" element={<Refund />} />
-      <Route path="/ajuda" element={<Help />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/refund" element={<Refund />} />
+      <Route path="/help" element={<Help />} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
