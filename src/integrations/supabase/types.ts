@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      amigos: {
+        Row: {
+          amigo_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amigo_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amigo_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       assinaturas: {
         Row: {
           cakto_checkout_id: string | null
@@ -243,6 +264,36 @@ export type Database = {
         }
         Relationships: []
       }
+      depoimentos: {
+        Row: {
+          autor_id: string
+          created_at: string
+          destinatario_id: string
+          id: string
+          status: string
+          texto: string
+          updated_at: string
+        }
+        Insert: {
+          autor_id: string
+          created_at?: string
+          destinatario_id: string
+          id?: string
+          status?: string
+          texto: string
+          updated_at?: string
+        }
+        Update: {
+          autor_id?: string
+          created_at?: string
+          destinatario_id?: string
+          id?: string
+          status?: string
+          texto?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string
@@ -409,6 +460,7 @@ export type Database = {
           height: number | null
           id: string
           interests: string[] | null
+          last_seen: string | null
           looking_for: string | null
           objectives: string | null
           profession: string | null
@@ -421,6 +473,7 @@ export type Database = {
             | null
           smokes: boolean | null
           state: string | null
+          status_online: string | null
           tipo_assinatura: string
           updated_at: string
           user_id: string
@@ -440,6 +493,7 @@ export type Database = {
           height?: number | null
           id?: string
           interests?: string[] | null
+          last_seen?: string | null
           looking_for?: string | null
           objectives?: string | null
           profession?: string | null
@@ -452,6 +506,7 @@ export type Database = {
             | null
           smokes?: boolean | null
           state?: string | null
+          status_online?: string | null
           tipo_assinatura?: string
           updated_at?: string
           user_id: string
@@ -471,6 +526,7 @@ export type Database = {
           height?: number | null
           id?: string
           interests?: string[] | null
+          last_seen?: string | null
           looking_for?: string | null
           objectives?: string | null
           profession?: string | null
@@ -483,6 +539,7 @@ export type Database = {
             | null
           smokes?: boolean | null
           state?: string | null
+          status_online?: string | null
           tipo_assinatura?: string
           updated_at?: string
           user_id?: string
@@ -523,6 +580,33 @@ export type Database = {
           tipo_midia?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      solicitacoes_amizade: {
+        Row: {
+          created_at: string
+          destinatario_id: string
+          id: string
+          remetente_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          destinatario_id: string
+          id?: string
+          remetente_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          destinatario_id?: string
+          id?: string
+          remetente_id?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
