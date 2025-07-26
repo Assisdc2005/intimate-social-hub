@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Camera, Heart, MessageCircle, MapPin, Clock, Plus, Play, User, Send, Crown } from "lucide-react";
+import { Camera, Heart, MessageCircle, MapPin, Clock, Plus, Play, User, Send, Crown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,9 @@ import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { PublicFeed } from "@/components/Feed/PublicFeed";
+import { VideoFeed } from "@/components/VideoFeed/VideoFeed";
+import { OnlineProfiles } from "@/components/Profile/OnlineProfiles";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 export const HomeTab = () => {
   const { profile, isPremium } = useProfile();
@@ -18,6 +21,7 @@ export const HomeTab = () => {
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
+  const { isOnline, updateOnlineStatus } = useOnlineStatus();
 
   useEffect(() => {
     if (profile?.user_id) {
@@ -134,6 +138,32 @@ export const HomeTab = () => {
 
   return (
     <div className="space-y-6 pb-4">
+      {/* Hero Banner - Persuasive CTA */}
+      <div className="relative overflow-hidden rounded-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-secondary opacity-90"></div>
+        <div className="relative p-8 text-center">
+          <div className="mb-4">
+            <Sparkles className="w-12 h-12 mx-auto text-white mb-3" />
+            <h1 className="text-2xl font-bold text-white mb-2">
+              Liberte seus desejos!
+            </h1>
+            <p className="text-white/90 text-lg">
+              Assine Premium e marque encontros reais agora.
+            </p>
+          </div>
+          
+          {!isPremium && (
+            <Button
+              onClick={() => navigate('/premium')}
+              className="bg-white text-primary hover:bg-white/90 font-bold px-8 py-3 rounded-xl text-lg"
+            >
+              <Crown className="w-5 h-5 mr-2" />
+              Quero ser Premium Agora
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Welcome Message */}
       <div className="card-premium">
         <div className="flex items-center gap-4">
@@ -149,12 +179,17 @@ export const HomeTab = () => {
           <div className="flex-1">
             <h2 className="text-xl font-bold text-gradient">Olá, {profile?.display_name}!</h2>
             <p className="text-gray-300 text-sm">Bem-vindo(a) de volta ao Sensual Nexus Connect</p>
-            {isPremium && (
-              <Badge className="bg-gradient-primary text-white text-xs mt-1">
-                <Crown className="w-3 h-3 mr-1" />
-                Premium
+            <div className="flex items-center gap-2 mt-1">
+              {isPremium && (
+                <Badge className="bg-gradient-primary text-white text-xs">
+                  <Crown className="w-3 h-3 mr-1" />
+                  Premium
+                </Badge>
+              )}
+              <Badge className="bg-green-500 text-white text-xs">
+                • Online
               </Badge>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -195,62 +230,19 @@ export const HomeTab = () => {
         </div>
       </div>
 
-      {/* Top Users Section */}
-      <div className="card-premium">
-        <h3 className="text-lg font-semibold text-gradient mb-4">Perfis em Destaque</h3>
-        
-        <div className="space-y-4">
-          {topUsers.map((user) => (
-            <div key={user.id} className="flex items-center gap-3 p-3 rounded-xl glass">
-              <div className="w-12 h-12 rounded-full bg-gradient-secondary overflow-hidden">
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white font-bold">
-                    {user.display_name[0]}
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-white">{user.display_name}</h4>
-                <p className="text-sm text-gray-400 flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {user.city}, {user.state}
-                </p>
-                {user.subscription_type === 'premium' && (
-                  <Badge className="bg-gradient-primary text-white text-xs mt-1">
-                    <Crown className="w-3 h-3 mr-1" />
-                    Premium
-                  </Badge>
-                )}
-              </div>
-              <Button
-                size="icon"
-                onClick={() => handleLikeProfile(user.user_id)}
-                disabled={likedProfiles.has(user.user_id)}
-                className={`w-10 h-10 rounded-full ${
-                  likedProfiles.has(user.user_id)
-                    ? 'bg-gray-600 text-gray-400'
-                    : 'bg-gradient-primary hover:opacity-90 text-white'
-                }`}
-              >
-                <Heart className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
-          
-          {topUsers.length === 0 && (
-            <div className="text-center py-4 text-gray-400">
-              <User className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>Nenhum perfil encontrado</p>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Feed de Publicações */}
       <div className="card-premium">
         <PublicFeed />
+      </div>
+
+      {/* Video Feed Section */}
+      <div className="card-premium">
+        <VideoFeed />
+      </div>
+
+      {/* Top Users Section */}
+      <div className="card-premium">
+        <OnlineProfiles />
       </div>
     </div>
   );

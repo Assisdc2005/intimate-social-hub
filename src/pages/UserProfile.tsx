@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { useFriendships } from "@/hooks/useFriendships";
+import { useTestimonials } from "@/hooks/useTestimonials";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 interface UserProfileData {
   user_id: string;
@@ -41,6 +44,9 @@ export const UserProfile = () => {
   const navigate = useNavigate();
   const { profile: currentUser, isPremium } = useProfile();
   const { toast } = useToast();
+  const { sendFriendRequest, isFriend, hasPendingRequest } = useFriendships();
+  const { testimonials, createTestimonial } = useTestimonials(userId);
+  const { getOnlineStatusBadge } = useOnlineStatus();
   
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
