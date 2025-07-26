@@ -5,16 +5,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Github, Mail } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { Github, Mail, Loader2 } from "lucide-react";
 import { InstitutionalFooter } from "@/components/Layout/InstitutionalFooter";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [isLogin, setIsLogin] = useState(true);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetLoading, setIsResetLoading] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +43,40 @@ export const Auth = () => {
       } catch (error: any) {
         alert(error.message);
       }
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+      
+      if (error) {
+        toast({
+          title: "Erro",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Link enviado!",
+          description: "Enviamos um link para redefinir sua senha no seu e-mail.",
+        });
+        setShowResetDialog(false);
+        setResetEmail("");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: "Erro inesperado. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetLoading(false);
     }
   };
 
@@ -101,6 +142,45 @@ export const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            
+            {isLogin && (
+              <div className="flex justify-end">
+                <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="link" className="text-sm px-0 h-auto">
+                      Esqueci minha senha
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="card-premium max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="text-gradient">Redefinir Senha</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handlePasswordReset} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="resetEmail">Email cadastrado</Label>
+                        <Input
+                          id="resetEmail"
+                          type="email"
+                          placeholder="seuemail@exemplo.com"
+                          required
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                        />
+                      </div>
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-gradient-primary hover:opacity-90"
+                        disabled={isResetLoading}
+                      >
+                        {isResetLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Enviar link de redefinição
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+            
             <Button type="submit">{isLogin ? "Entrar" : "Criar conta"}</Button>
           </form>
           <p className="px-8 text-center text-sm text-muted-foreground">

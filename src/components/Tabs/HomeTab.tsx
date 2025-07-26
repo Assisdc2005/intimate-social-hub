@@ -121,11 +121,94 @@ export const HomeTab = () => {
       });
       return;
     }
-    // Implementar criação de post
-    toast({
-      title: "Em desenvolvimento",
-      description: "Funcionalidade de criação de posts em breve!",
-    });
+    
+    // Criar input de arquivo
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,video/*';
+    input.multiple = false;
+    
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      // Verificar tipo de arquivo
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      
+      if (!isImage && !isVideo) {
+        toast({
+          title: "Arquivo inválido",
+          description: "Selecione apenas imagens ou vídeos",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Verificar tamanho (max 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "O arquivo deve ter no máximo 50MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${profile?.user_id}_${Date.now()}.${fileExt}`;
+        const bucket = isImage ? 'publicacoes' : 'videos';
+        
+        // Upload do arquivo
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(bucket)
+          .upload(fileName, file);
+        
+        if (uploadError) {
+          throw uploadError;
+        }
+        
+        // Obter URL pública
+        const { data } = supabase.storage
+          .from(bucket)
+          .getPublicUrl(fileName);
+        
+        // Criar publicação
+        const { error: insertError } = await supabase
+          .from('publicacoes')
+          .insert([
+            {
+              user_id: profile?.user_id,
+              conteudo: `Nova ${isVideo ? 'vídeo' : 'imagem'} postada`,
+              tipo_midia: isVideo ? 'video' : 'imagem',
+              url_midia: data.publicUrl
+            }
+          ]);
+        
+        if (insertError) {
+          throw insertError;
+        }
+        
+        toast({
+          title: "Publicação criada!",
+          description: `Sua ${isVideo ? 'vídeo' : 'imagem'} foi postada com sucesso`,
+        });
+        
+        // Atualizar feed
+        fetchData();
+        
+      } catch (error: any) {
+        console.error('Erro ao criar publicação:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao criar publicação. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    input.click();
   };
 
   if (loading) {
@@ -153,13 +236,15 @@ export const HomeTab = () => {
           </div>
           
           {!isPremium && (
-            <Button
-              onClick={() => navigate('/premium')}
-              className="bg-white text-primary hover:bg-white/90 font-bold px-8 py-3 rounded-xl text-lg"
-            >
-              <Crown className="w-5 h-5 mr-2" />
-              Quero ser Premium Agora
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                onClick={() => navigate('/premium')}
+                className="bg-white text-primary hover:bg-white/90 font-bold px-6 py-3 rounded-xl text-base sm:text-lg"
+              >
+                <Crown className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                Quero ser Premium Agora
+              </Button>
+            </div>
           )}
         </div>
       </div>

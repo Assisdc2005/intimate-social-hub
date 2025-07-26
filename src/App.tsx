@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
+import { ResetPassword } from "./pages/ResetPassword";
 import { CompleteProfile } from "./pages/CompleteProfile";
 import Profile from "./pages/Profile";
 import { UserProfile } from "./pages/UserProfile";
@@ -57,6 +58,9 @@ function AuthenticatedApp() {
           )
         } 
       />
+      
+      {/* Página de reset de senha - sempre acessível */}
+      <Route path="/reset-password" element={<ResetPassword />} />
       
       {/* Página de completar perfil - APENAS para usuários logados com perfil incompleto */}
       <Route 
