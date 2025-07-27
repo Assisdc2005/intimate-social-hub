@@ -10,11 +10,11 @@ export const InstitutionalFooter = () => {
   };
 
   const footerLinks = [
-    { label: "Sobre o Site", path: "/sobre" },
-    { label: "Termos de Uso", path: "/termos" },
-    { label: "Política de Privacidade", path: "/privacidade" },
-    { label: "Política de Reembolso", path: "/reembolso" },
-    { label: "Central de Ajuda", path: "/ajuda" },
+    { label: "Sobre o Site", path: "/about" },
+    { label: "Termos de Uso", path: "/terms" },
+    { label: "Política de Privacidade", path: "/privacy" },
+    { label: "Política de Reembolso", path: "/refund" },
+    { label: "Central de Ajuda", path: "/help" },
   ];
 
   return (

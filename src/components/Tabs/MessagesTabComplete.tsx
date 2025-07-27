@@ -52,13 +52,16 @@ export const MessagesTabComplete = () => {
   const { conversations, loading: conversationsLoading } = useConversations();
   const { messages, sending, sendMessage } = useMessages(selectedConversation?.id || null);
 
-  // Scroll para a última mensagem
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Scroll para o topo das mensagens
+  const scrollToTop = () => {
+    const messagesContainer = document.querySelector('.overflow-y-auto');
+    if (messagesContainer) {
+      messagesContainer.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToTop();
   }, [messages]);
 
   // Enviar mensagem usando o hook

@@ -315,19 +315,14 @@ export const HomeTab = () => {
         </div>
       </div>
 
+      {/* Top Users Section - Moved to top */}
+      <div className="card-premium">
+        <OnlineProfiles />
+      </div>
+
       {/* Feed de Publicações */}
       <div className="card-premium">
         <PublicFeed />
-      </div>
-
-      {/* Video Feed Section */}
-      <div className="card-premium">
-        <VideoFeed />
-      </div>
-
-      {/* Top Users Section */}
-      <div className="card-premium">
-        <OnlineProfiles />
       </div>
     </div>
   );
