@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, BellRing, Check, CheckCheck } from 'lucide-react';
+import { Bell, BellRing, Check, CheckCheck, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -9,8 +9,10 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useFriendships } from '@/hooks/useFriendships';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 export const NotificationBell = () => {
   const { 
@@ -22,12 +24,43 @@ export const NotificationBell = () => {
     getNotificationIcon, 
     getNotificationMessage 
   } = useNotifications();
-
+  
+  const { respondToFriendRequest, friendRequests } = useFriendships();
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleNotificationClick = async (notificationId: string, isRead: boolean) => {
+  const handleNotificationClick = async (notificationId: string, isRead: boolean, notificationType: string, fromUserId?: string) => {
     if (!isRead) {
       await markAsRead(notificationId);
+    }
+    
+    // Handle navigation based on notification type
+    if (notificationType === 'novo_amigo' && fromUserId) {
+      // For friend requests, we can handle them directly in the notification
+      // or navigate to a specific page
+      setIsOpen(false);
+    }
+  };
+
+  const handleFriendRequestAction = async (requestId: string, action: 'aceito' | 'recusado', notificationId: string) => {
+    const result = await respondToFriendRequest(requestId, action);
+    
+    if (result.success) {
+      // Mark notification as read
+      await markAsRead(notificationId);
+      
+      toast({
+        title: action === 'aceito' ? 'Amizade aceita!' : 'Solicitação recusada',
+        description: action === 'aceito' 
+          ? 'Agora vocês são amigos!' 
+          : 'A solicitação foi recusada.',
+      });
+    } else {
+      toast({
+        title: 'Erro',
+        description: result.error || 'Erro ao processar solicitação',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -99,7 +132,7 @@ export const NotificationBell = () => {
                   className={`p-3 rounded-lg mb-2 cursor-pointer transition-all duration-200 hover:bg-white/10 ${
                     !notification.read_at ? 'bg-primary/10 border-l-2 border-l-primary' : 'bg-white/5'
                   }`}
-                  onClick={() => handleNotificationClick(notification.id, !!notification.read_at)}
+                  onClick={() => handleNotificationClick(notification.id, !!notification.read_at, notification.type, notification.from_user_id)}
                 >
                   <div className="flex items-start gap-3">
                     {/* Notification Icon */}
@@ -123,10 +156,48 @@ export const NotificationBell = () => {
                           <div className="w-2 h-2 bg-primary rounded-full"></div>
                         )}
                       </div>
+                      
+                      {/* Friend Request Actions */}
+                      {notification.type === 'novo_amigo' && !notification.read_at && notification.from_user_id && (
+                        <div className="flex gap-2 mt-2">
+                          {(() => {
+                            const friendRequest = friendRequests.find(req => 
+                              req.remetente_id === notification.from_user_id && req.status === 'pendente'
+                            );
+                            return friendRequest ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleFriendRequestAction(friendRequest.id, 'aceito', notification.id);
+                                  }}
+                                  className="h-6 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                  <UserPlus className="w-3 h-3 mr-1" />
+                                  Aceitar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleFriendRequestAction(friendRequest.id, 'recusado', notification.id);
+                                  }}
+                                  className="h-6 px-2 py-1 text-xs border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                                >
+                                  <X className="w-3 h-3 mr-1" />
+                                  Recusar
+                                </Button>
+                              </>
+                            ) : null;
+                          })()}
+                        </div>
+                      )}
                     </div>
 
                     {/* Mark as Read Button */}
-                    {!notification.read_at && (
+                    {!notification.read_at && notification.type !== 'novo_amigo' && (
                       <Button
                         size="sm"
                         variant="ghost"

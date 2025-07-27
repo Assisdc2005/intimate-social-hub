@@ -28,17 +28,16 @@ export const DiscoverTab = () => {
     subscription_type: 'all',
   });
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreUsers, setHasMoreUsers] = useState(true);
+  const USERS_PER_PAGE = 10;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch users
-        const { data: usersData, error: usersError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('profile_completed', true)
-          .neq('user_id', profile?.user_id)
-          .order('updated_at', { ascending: false });
+        // Fetch initial users
+        await loadUsers(1, true);
 
         // Fetch posts with profiles
         const { data: postsData, error: postsError } = await supabase
@@ -49,13 +48,6 @@ export const DiscoverTab = () => {
           `)
           .order('created_at', { ascending: false })
           .limit(10);
-
-        if (usersError) {
-          console.error('Error fetching users:', usersError);
-        } else {
-          setUsers(usersData || []);
-          setFilteredUsers(usersData || []);
-        }
 
         if (postsError) {
           console.error('Error fetching posts:', postsError);
@@ -73,6 +65,45 @@ export const DiscoverTab = () => {
       fetchData();
     }
   }, [profile?.user_id]);
+
+  const loadUsers = async (page: number = 1, isInitialLoad: boolean = false) => {
+    try {
+      if (!isInitialLoad) setLoadingMore(true);
+      
+      const offset = (page - 1) * USERS_PER_PAGE;
+      
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('profile_completed', true)
+        .neq('user_id', profile?.user_id)
+        .order('updated_at', { ascending: false })
+        .range(offset, offset + USERS_PER_PAGE - 1);
+
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        return;
+      }
+
+      const newUsers = usersData || [];
+      
+      if (isInitialLoad || page === 1) {
+        setUsers(newUsers);
+        setFilteredUsers(newUsers);
+        setCurrentPage(1);
+      } else {
+        setUsers(prev => [...prev, ...newUsers]);
+        setFilteredUsers(prev => [...prev, ...newUsers]);
+      }
+      
+      setHasMoreUsers(newUsers.length === USERS_PER_PAGE);
+      setCurrentPage(page);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      if (!isInitialLoad) setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     let filtered = users;
@@ -488,10 +519,22 @@ export const DiscoverTab = () => {
       )}
 
       {/* Load More Button */}
-      {filteredUsers.length > 0 && (
+      {filteredUsers.length > 0 && hasMoreUsers && (
         <div className="text-center pt-4">
-          <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-            Carregar Mais
+          <Button 
+            onClick={() => loadUsers(currentPage + 1)}
+            disabled={loadingMore}
+            variant="outline" 
+            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+          >
+            {loadingMore ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                Carregando...
+              </>
+            ) : (
+              'Carregar Mais Perfis'
+            )}
           </Button>
         </div>
       )}

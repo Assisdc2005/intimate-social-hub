@@ -44,29 +44,54 @@ export const useMessages = (conversationId: string | null) => {
     if (!content.trim() || !conversationId || !profile?.user_id) return false;
 
     setSending(true);
+    
     try {
       const { error } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: profile.user_id,
-          content: content.trim()
+          content,
+          sender_id: profile?.user_id
         });
 
       if (error) throw error;
 
-      // Atualizar última mensagem da conversa
+      // Update conversation's last message timestamp
       await supabase
         .from('conversations')
-        .update({ last_message_at: new Date().toISOString() })
+        .update({ 
+          last_message_at: new Date().toISOString()
+        })
         .eq('id', conversationId);
+
+      // Create notification for message recipient
+      const { data: conversation } = await supabase
+        .from('conversations')
+        .select('participant1_id, participant2_id')
+        .eq('id', conversationId)
+        .single();
+
+      if (conversation) {
+        const recipientId = conversation.participant1_id === profile?.user_id 
+          ? conversation.participant2_id 
+          : conversation.participant1_id;
+
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: recipientId,
+            from_user_id: profile?.user_id,
+            type: 'mensagem',
+            content: 'enviou uma nova mensagem'
+          });
+      }
 
       return true;
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
+      console.error('Error sending message:', error);
       toast({
         title: "Erro",
-        description: "Erro ao enviar mensagem",
+        description: "Erro ao enviar mensagem. Tente novamente.",
         variant: "destructive",
       });
       return false;

@@ -40,7 +40,8 @@ export const useConversations = () => {
             id,
             content,
             sender_id,
-            created_at
+            created_at,
+            read_at
           )
         `)
         .or(`participant1_id.eq.${profile.user_id},participant2_id.eq.${profile.user_id}`)
@@ -61,17 +62,22 @@ export const useConversations = () => {
             .eq('user_id', otherUserId)
             .single();
 
-          // Última mensagem (ordenar por created_at)
-          const lastMessage = conv.messages?.sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          )[0];
+           // Última mensagem (ordenar por created_at)
+           const lastMessage = conv.messages?.sort((a, b) => 
+             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+           )[0];
 
-          return {
-            ...conv,
-            other_user: otherUser,
-            last_message: lastMessage,
-            unread_count: 0 // Implementar contagem de não lidas depois
-          };
+           // Count unread messages (messages from other user that are not read)
+           const unreadMessages = conv.messages?.filter(msg => 
+             msg.sender_id !== profile.user_id && !msg.read_at
+           );
+
+           return {
+             ...conv,
+             other_user: otherUser,
+             last_message: lastMessage,
+             unread_count: unreadMessages?.length || 0
+           };
         })
       );
 

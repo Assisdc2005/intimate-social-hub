@@ -1,0 +1,5 @@
+# Netlify redirects for SPA
+/*    /index.html   200
+
+# Optional: Redirect root domain to www (uncomment if needed)
+# https://sensualconnect.com/*  https://www.sensualconnect.com/:splat  301!

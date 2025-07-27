@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFriendships } from "@/hooks/useFriendships";
 import { useTestimonials } from "@/hooks/useTestimonials";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { TestimonialsSection } from "@/components/Testimonials/TestimonialsSection";
 
 interface UserProfileData {
   user_id: string;
@@ -465,6 +466,9 @@ export const UserProfile = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Testimonials Section */}
+      <TestimonialsSection profileUserId={userId || ''} />
     </div>
   );
 };
