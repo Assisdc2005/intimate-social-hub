@@ -172,9 +172,9 @@ export const NotificationBell = () => {
                                     e.stopPropagation();
                                     handleFriendRequestAction(friendRequest.id, 'aceito', notification.id);
                                   }}
-                                  className="h-6 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white"
+                                  className="h-7 px-3 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded-full"
                                 >
-                                  <UserPlus className="w-3 h-3 mr-1" />
+                                  <Check className="w-3 h-3 mr-1" />
                                   Aceitar
                                 </Button>
                                 <Button
@@ -184,7 +184,7 @@ export const NotificationBell = () => {
                                     e.stopPropagation();
                                     handleFriendRequestAction(friendRequest.id, 'recusado', notification.id);
                                   }}
-                                  className="h-6 px-2 py-1 text-xs border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                                  className="h-7 px-3 py-1 text-xs border-red-500 text-red-500 hover:bg-red-500 hover:text-white rounded-full"
                                 >
                                   <X className="w-3 h-3 mr-1" />
                                   Recusar
@@ -192,6 +192,37 @@ export const NotificationBell = () => {
                               </>
                             ) : null;
                           })()}
+                        </div>
+                      )}
+
+                      {/* Testimonial Actions */}
+                      {notification.type === 'mensagem' && !notification.read_at && (
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Handle testimonial approval
+                              markAsRead(notification.id);
+                            }}
+                            className="h-7 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                          >
+                            <Check className="w-3 h-3 mr-1" />
+                            Aprovar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Handle testimonial rejection
+                              markAsRead(notification.id);
+                            }}
+                            className="h-7 px-3 py-1 text-xs border-red-500 text-red-500 hover:bg-red-500 hover:text-white rounded-full"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Recusar
+                          </Button>
                         </div>
                       )}
                     </div>

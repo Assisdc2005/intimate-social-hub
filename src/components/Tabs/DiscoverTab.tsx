@@ -465,24 +465,39 @@ export const DiscoverTab = () => {
                 <p className="text-gray-300 mb-4">{user.bio}</p>
               )}
 
-              {/* Sample Photos/Videos */}
+              {/* User Photos from Posts */}
               <div className="grid grid-cols-3 gap-2 mb-4">
-                {[1, 2, 3].map((index) => (
-                  <div key={index} className="aspect-square bg-gradient-secondary rounded-lg overflow-hidden relative">
-                    {user.avatar_url && index === 1 ? (
-                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-purple-400/20 to-pink-400/20 flex items-center justify-center">
-                        <Camera className="w-6 h-6 text-white/50" />
-                      </div>
-                    )}
-                    {index === 3 && (
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                        <Play className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {[1, 2, 3].map((index) => {
+                  // Get posts for this user
+                  const userPosts = posts.filter(post => post.user_id === user.user_id && post.media_url);
+                  const postForIndex = userPosts[index - 1];
+                  
+                  return (
+                    <div key={index} className="aspect-square bg-gradient-secondary rounded-lg overflow-hidden relative hover:scale-105 transition-transform duration-300">
+                      {postForIndex?.media_url ? (
+                        <img 
+                          src={postForIndex.media_url} 
+                          alt="" 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = user.avatar_url || '';
+                          }}
+                        />
+                      ) : user.avatar_url && index === 1 ? (
+                        <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-purple-400/20 to-pink-400/20 flex items-center justify-center">
+                          <Camera className="w-6 h-6 text-white/50" />
+                        </div>
+                      )}
+                      {postForIndex?.media_type === 'video' && (
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <Play className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Action Buttons */}
@@ -522,18 +537,20 @@ export const DiscoverTab = () => {
       {filteredUsers.length > 0 && hasMoreUsers && (
         <div className="text-center pt-4">
           <Button 
-            onClick={() => loadUsers(currentPage + 1)}
+            onClick={() => {
+              const nextPage = currentPage + 1;
+              loadUsers(nextPage);
+            }}
             disabled={loadingMore}
-            variant="outline" 
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+            className="w-full btn-secondary hover:scale-105 transition-transform duration-300"
           >
             {loadingMore ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                Carregando...
-              </>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Carregando mais perfis...
+              </div>
             ) : (
-              'Carregar Mais Perfis'
+              "Ver mais perfis"
             )}
           </Button>
         </div>

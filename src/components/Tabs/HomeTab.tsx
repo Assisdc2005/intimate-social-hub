@@ -1,17 +1,15 @@
-
 import { useState, useEffect } from "react";
-import { Camera, Heart, MessageCircle, MapPin, Clock, Plus, Play, User, Send, Crown, Sparkles } from "lucide-react";
+import { Plus, Heart, MessageCircle, Share2, TrendingUp, Zap, Crown, Play, Filter, MapPin, Clock, Camera, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { PublicFeed } from "@/components/Feed/PublicFeed";
-import { VideoFeed } from "@/components/VideoFeed/VideoFeed";
+import { supabase } from "@/integrations/supabase/client";
 import { OnlineProfiles } from "@/components/Profile/OnlineProfiles";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { PublicFeed } from "@/components/Feed/PublicFeed";
+import { CreatePostModal } from "@/components/Modals/CreatePostModal";
+import { useNavigate } from "react-router-dom";
 
 export const HomeTab = () => {
   const { profile, isPremium } = useProfile();
@@ -21,7 +19,7 @@ export const HomeTab = () => {
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
-  const { isOnline, updateOnlineStatus } = useOnlineStatus();
+  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
 
   useEffect(() => {
     if (profile?.user_id) {
@@ -113,102 +111,12 @@ export const HomeTab = () => {
   };
 
   const handleCreatePost = () => {
-    if (!isPremium) {
-      toast({
-        title: "Recurso Premium",
-        description: "Assine o plano premium para criar publicações",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Criar input de arquivo
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,video/*';
-    input.multiple = false;
-    
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      
-      // Verificar tipo de arquivo
-      const isImage = file.type.startsWith('image/');
-      const isVideo = file.type.startsWith('video/');
-      
-      if (!isImage && !isVideo) {
-        toast({
-          title: "Arquivo inválido",
-          description: "Selecione apenas imagens ou vídeos",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Verificar tamanho (max 50MB)
-      if (file.size > 50 * 1024 * 1024) {
-        toast({
-          title: "Arquivo muito grande",
-          description: "O arquivo deve ter no máximo 50MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${profile?.user_id}_${Date.now()}.${fileExt}`;
-        const bucket = isImage ? 'publicacoes' : 'videos';
-        
-        // Upload do arquivo
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(fileName, file);
-        
-        if (uploadError) {
-          throw uploadError;
-        }
-        
-        // Obter URL pública
-        const { data } = supabase.storage
-          .from(bucket)
-          .getPublicUrl(fileName);
-        
-        // Criar publicação
-        const { error: insertError } = await supabase
-          .from('publicacoes')
-          .insert([
-            {
-              user_id: profile?.user_id,
-              conteudo: `Nova ${isVideo ? 'vídeo' : 'imagem'} postada`,
-              tipo_midia: isVideo ? 'video' : 'imagem',
-              url_midia: data.publicUrl
-            }
-          ]);
-        
-        if (insertError) {
-          throw insertError;
-        }
-        
-        toast({
-          title: "Publicação criada!",
-          description: `Sua ${isVideo ? 'vídeo' : 'imagem'} foi postada com sucesso`,
-        });
-        
-        // Atualizar feed
-        fetchData();
-        
-      } catch (error: any) {
-        console.error('Erro ao criar publicação:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao criar publicação. Tente novamente.",
-          variant: "destructive",
-        });
-      }
-    };
-    
-    input.click();
+    setShowCreatePostModal(true);
+  };
+
+  const handlePostCreated = () => {
+    // Refresh posts after creation
+    fetchData();
   };
 
   if (loading) {
@@ -220,13 +128,13 @@ export const HomeTab = () => {
   }
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="space-y-6 pb-4 animate-fade-in">
       {/* Hero Banner - Persuasive CTA */}
       <div className="relative overflow-hidden rounded-2xl">
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-secondary opacity-90"></div>
         <div className="relative p-8 text-center">
           <div className="mb-4">
-            <Sparkles className="w-12 h-12 mx-auto text-white mb-3" />
+            <Crown className="w-12 h-12 mx-auto text-white mb-3" />
             <h1 className="text-2xl font-bold text-white mb-2">
               Liberte seus desejos!
             </h1>
@@ -239,9 +147,9 @@ export const HomeTab = () => {
             <div className="flex justify-center">
               <Button
                 onClick={() => navigate('/premium')}
-                className="bg-white text-primary hover:bg-white/90 font-bold px-6 py-3 rounded-xl text-base sm:text-lg"
+                className="bg-white text-primary hover:bg-white/90 font-bold px-6 py-3 rounded-xl text-base"
               >
-                <Crown className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <Crown className="w-5 h-5 mr-2" />
                 Quero ser Premium Agora
               </Button>
             </div>
@@ -279,7 +187,7 @@ export const HomeTab = () => {
         </div>
       </div>
 
-      {/* Action Buttons - Centralizados */}
+      {/* Action Buttons */}
       <div className="space-y-3">
         <Button
           onClick={() => navigate('/discover')}
@@ -294,7 +202,7 @@ export const HomeTab = () => {
           className="w-full bg-gradient-secondary hover:opacity-90 text-white font-semibold h-12 rounded-xl"
         >
           <Plus className="w-5 h-5 mr-2" />
-          Criar Publicação
+          {posts.length === 0 ? 'Fazer minha primeira publicação' : 'Criar Publicação'}
           {!isPremium && <Crown className="w-4 h-4 ml-2" />}
         </Button>
       </div>
@@ -324,6 +232,13 @@ export const HomeTab = () => {
       <div className="card-premium">
         <PublicFeed />
       </div>
+
+      {/* Create Post Modal */}
+      <CreatePostModal 
+        isOpen={showCreatePostModal}
+        onOpenChange={setShowCreatePostModal}
+        onPostCreated={handlePostCreated}
+      />
     </div>
   );
 };

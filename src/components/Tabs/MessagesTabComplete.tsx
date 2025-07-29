@@ -52,17 +52,7 @@ export const MessagesTabComplete = () => {
   const { conversations, loading: conversationsLoading } = useConversations();
   const { messages, sending, sendMessage } = useMessages(selectedConversation?.id || null);
 
-  // Scroll para o topo das mensagens
-  const scrollToTop = () => {
-    const messagesContainer = document.querySelector('.overflow-y-auto');
-    if (messagesContainer) {
-      messagesContainer.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
-
-  useEffect(() => {
-    scrollToTop();
-  }, [messages]);
+  // Remove auto-scroll behavior to maintain user position
 
   // Enviar mensagem usando o hook
   const handleSendMessage = async () => {
@@ -216,7 +206,8 @@ export const MessagesTabComplete = () => {
                             conversation.other_user?.display_name?.[0]?.toUpperCase()
                           )}
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
+                         {/* Online status indicator */}
+                         <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse" />
                       </div>
 
                       {/* Info */}
@@ -309,14 +300,17 @@ export const MessagesTabComplete = () => {
               >
                 {selectedConversation.other_user?.display_name}
               </h3>
-              <p className="text-xs text-green-400">Online</p>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <p className="text-xs text-green-400 font-medium">Online</p>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Mensagens */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
         {Object.entries(messageGroups).map(([date, dayMessages]) => (
           <div key={date}>
             {/* Separador de data */}
@@ -339,11 +333,11 @@ export const MessagesTabComplete = () => {
                   key={message.id}
                   className={`flex ${message.sender_id === profile?.user_id ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[70%] ${
+                  <div className={`max-w-[70%] animate-scale-in ${
                     message.sender_id === profile?.user_id
-                      ? 'bg-gradient-primary text-white rounded-l-2xl rounded-tr-2xl'
-                      : 'glass border-primary/20 text-foreground rounded-r-2xl rounded-tl-2xl'
-                  } p-3 shadow-[var(--shadow-soft)]`}>
+                      ? 'bg-gradient-to-r from-primary to-accent text-white rounded-l-2xl rounded-tr-2xl shadow-[0_4px_15px_rgba(139,69,255,0.3)]'
+                      : 'bg-white/10 backdrop-blur-sm border border-white/20 text-foreground rounded-r-2xl rounded-tl-2xl shadow-[0_4px_15px_rgba(255,255,255,0.1)]'
+                  } p-4 hover:shadow-lg transition-all duration-300`}>
                     <p className="text-sm leading-relaxed">{message.content}</p>
                     <p className={`text-xs mt-1 ${
                       message.sender_id === profile?.user_id 
@@ -367,9 +361,9 @@ export const MessagesTabComplete = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input de mensagem */}
-      <Card className="glass backdrop-blur-xl border-primary/20 flex-shrink-0">
-        <CardContent className="p-4">
+      {/* Input de mensagem fixo */}
+      <div className="fixed bottom-[60px] left-0 right-0 z-10 bg-background/95 backdrop-blur-xl border-t border-primary/20 p-4">
+        <div className="max-w-md mx-auto">
           {!isPremium ? (
             <div className="flex items-center justify-center p-4 text-center">
               <div className="flex items-center gap-3">
@@ -406,8 +400,8 @@ export const MessagesTabComplete = () => {
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

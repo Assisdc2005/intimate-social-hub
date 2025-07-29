@@ -365,6 +365,30 @@ export const PremiumTab = () => {
         </div>
       </div>
 
+      {/* Mensagem de Suporte Premium */}
+      <div className="card-premium border-accent/30">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto shadow-glow">
+            <Crown className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-gradient">Processamento de Pagamento</h2>
+          <div className="bg-primary/10 border border-primary/30 rounded-xl p-6">
+            <p className="text-lg font-medium text-white mb-2">
+              ⚡ Após pagamento do Premium, o acesso será concedido em minutos.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Se não for liberado, mande mensagem para:{" "}
+              <a 
+                href="mailto:suporte@sensualconnect.com.br" 
+                className="text-accent hover:text-accent/80 font-semibold underline"
+              >
+                suporte@sensualconnect.com.br
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Call to Action Final - Only show for non-premium users */}
       {!isPremium && (
         <div className="glass rounded-2xl p-6 text-center border border-accent/20">
