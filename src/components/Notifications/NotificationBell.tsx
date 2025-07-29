@@ -35,9 +35,11 @@ export const NotificationBell = () => {
     }
     
     // Handle navigation based on notification type
-    if (notificationType === 'novo_amigo' && fromUserId) {
-      // For friend requests, we can handle them directly in the notification
-      // or navigate to a specific page
+    if (notificationType === 'novo_amigo' || notificationType === 'mensagem') {
+      // Open new tab for managing pending requests/testimonials
+      const currentUrl = window.location.origin;
+      const targetTab = notificationType === 'novo_amigo' ? 'pendentes' : 'depoimentos';
+      window.open(`${currentUrl}?tab=${targetTab}`, '_blank');
       setIsOpen(false);
     }
   };
@@ -195,14 +197,14 @@ export const NotificationBell = () => {
                         </div>
                       )}
 
-                      {/* Testimonial Actions */}
-                      {notification.type === 'mensagem' && !notification.read_at && (
+                      {/* Testimonial Actions - Note: 'depoimento' notifications need to be implemented */}
+                      {notification.type === 'comentario' && !notification.read_at && (
                         <div className="flex gap-2 mt-2">
                           <Button
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Handle testimonial approval
+                              // Handle testimonial approval - TODO: Implement testimonial moderation
                               markAsRead(notification.id);
                             }}
                             className="h-7 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-full"
@@ -215,7 +217,7 @@ export const NotificationBell = () => {
                             variant="outline"
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Handle testimonial rejection
+                              // Handle testimonial rejection - TODO: Implement testimonial moderation
                               markAsRead(notification.id);
                             }}
                             className="h-7 px-3 py-1 text-xs border-red-500 text-red-500 hover:bg-red-500 hover:text-white rounded-full"

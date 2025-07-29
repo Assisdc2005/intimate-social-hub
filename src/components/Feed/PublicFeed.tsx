@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Plus, Send, User, Clock, Crown } from "lucide-react";
+import { PhotoGrid } from "@/components/Profile/PhotoGrid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -424,6 +425,11 @@ export const PublicFeed = () => {
                   <Clock className="w-3 h-3" />
                   {new Date(publicacao.created_at).toLocaleString('pt-BR')}
                 </p>
+              </div>
+              
+              {/* Photo Grid */}
+              <div className="ml-2">
+                <PhotoGrid userId={publicacao.user_id} className="w-20" />
               </div>
             </div>
 

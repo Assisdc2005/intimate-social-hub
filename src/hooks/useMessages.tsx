@@ -100,6 +100,25 @@ export const useMessages = (conversationId: string | null) => {
     }
   };
 
+  const markMessagesAsRead = async () => {
+    if (!profile?.user_id || !conversationId) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', profile.user_id)
+        .is('read_at', null);
+
+      if (error) {
+        console.error('Error marking messages as read:', error);
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
   // Carregar mensagens quando conversationId muda
   useEffect(() => {
     if (conversationId) {
@@ -152,6 +171,7 @@ export const useMessages = (conversationId: string | null) => {
     loading,
     sending,
     sendMessage,
-    loadMessages
+    loadMessages,
+    markMessagesAsRead
   };
 };

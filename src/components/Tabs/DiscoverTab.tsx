@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search, Filter, MapPin, Heart, MessageCircle, UserPlus, Plus, Play, Clock, User, Camera } from "lucide-react";
+import { PhotoGrid } from "@/components/Profile/PhotoGrid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -465,39 +466,9 @@ export const DiscoverTab = () => {
                 <p className="text-gray-300 mb-4">{user.bio}</p>
               )}
 
-              {/* User Photos from Posts */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {[1, 2, 3].map((index) => {
-                  // Get posts for this user
-                  const userPosts = posts.filter(post => post.user_id === user.user_id && post.media_url);
-                  const postForIndex = userPosts[index - 1];
-                  
-                  return (
-                    <div key={index} className="aspect-square bg-gradient-secondary rounded-lg overflow-hidden relative hover:scale-105 transition-transform duration-300">
-                      {postForIndex?.media_url ? (
-                        <img 
-                          src={postForIndex.media_url} 
-                          alt="" 
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = user.avatar_url || '';
-                          }}
-                        />
-                      ) : user.avatar_url && index === 1 ? (
-                        <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-purple-400/20 to-pink-400/20 flex items-center justify-center">
-                          <Camera className="w-6 h-6 text-white/50" />
-                        </div>
-                      )}
-                      {postForIndex?.media_type === 'video' && (
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                          <Play className="w-4 h-4 text-white" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              {/* User Photos */}
+              <div className="mb-4">
+                <PhotoGrid userId={user.user_id} />
               </div>
 
               {/* Action Buttons */}

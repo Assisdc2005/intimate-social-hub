@@ -50,7 +50,7 @@ export const MessagesTabComplete = () => {
   
   // Usar os hooks customizados
   const { conversations, loading: conversationsLoading } = useConversations();
-  const { messages, sending, sendMessage } = useMessages(selectedConversation?.id || null);
+  const { messages, sending, sendMessage, markMessagesAsRead } = useMessages(selectedConversation?.id || null);
 
   // Remove auto-scroll behavior to maintain user position
 
@@ -77,6 +77,8 @@ export const MessagesTabComplete = () => {
   // Selecionar conversa
   const selectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
+    // Mark messages as read when opening conversation
+    setTimeout(() => markMessagesAsRead(), 100);
   };
 
   // Formatar data

@@ -1,5 +1,6 @@
 import { Home, Search, MessageCircle, Crown, User } from "lucide-react";
 import { useState } from "react";
+import { useConversations } from "@/hooks/useConversations";
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -7,10 +8,15 @@ interface BottomNavigationProps {
 }
 
 export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationProps) => {
+  const { conversations } = useConversations();
+  
+  // Calculate total unread messages
+  const totalUnreadMessages = conversations.reduce((total, conv) => total + (conv.unread_count || 0), 0);
+
   const tabs = [
     { id: 'home', icon: Home, label: 'Início' },
     { id: 'discover', icon: Search, label: 'Descobrir' },
-    { id: 'messages', icon: MessageCircle, label: 'Mensagens', badge: 5 },
+    { id: 'messages', icon: MessageCircle, label: 'Mensagens', badge: totalUnreadMessages > 0 ? totalUnreadMessages : undefined },
     { id: 'premium', icon: Crown, label: 'Premium' },
     { id: 'profile', icon: User, label: 'Perfil' },
   ];
@@ -43,7 +49,7 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
                 {/* Badge para mensagens */}
                 {tab.badge && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent rounded-full text-xs font-bold text-white flex items-center justify-center shadow-glow">
-                    {tab.badge}
+                    {tab.badge > 99 ? '99+' : tab.badge}
                   </span>
                 )}
                 
