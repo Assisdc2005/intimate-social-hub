@@ -30,60 +30,57 @@ export const useConversations = () => {
   const loadConversations = async () => {
     if (!profile?.user_id) return;
 
-    setLoading(true);
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      const { data: conversationsData, error } = await supabase
         .from('conversations')
         .select(`
           *,
-          messages:messages(
-            id,
-            content,
-            sender_id,
-            created_at,
-            read_at
-          )
+          participant1:profiles!conversations_participant1_id_fkey(user_id, display_name, avatar_url, city, state),
+          participant2:profiles!conversations_participant2_id_fkey(user_id, display_name, avatar_url, city, state)
         `)
         .or(`participant1_id.eq.${profile.user_id},participant2_id.eq.${profile.user_id}`)
         .order('last_message_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading conversations:', error);
+        return;
+      }
 
-      // Buscar informações dos outros usuários
-      const conversationsWithUsers = await Promise.all(
-        (data || []).map(async (conv) => {
-          const otherUserId = conv.participant1_id === profile.user_id 
-            ? conv.participant2_id 
-            : conv.participant1_id;
+      // Process conversations to add other user info and last message
+      const processedConversations = await Promise.all(
+        (conversationsData || []).map(async (conv: any) => {
+          const otherUser = conv.participant1.user_id === profile.user_id 
+            ? conv.participant2 
+            : conv.participant1;
 
-          const { data: otherUser } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url, city, state')
-            .eq('user_id', otherUserId)
+          // Get last message
+          const { data: lastMessage } = await supabase
+            .from('messages')
+            .select('content, created_at, sender_id')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
             .single();
 
-           // Última mensagem (ordenar por created_at)
-           const lastMessage = conv.messages?.sort((a, b) => 
-             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-           )[0];
+          // Get unread count from conversation table
+          const unreadCount = conv.participant1_id === profile.user_id 
+            ? conv.participant1_unread_count || 0
+            : conv.participant2_unread_count || 0;
 
-           // Count unread messages (messages from other user that are not read)
-           const unreadMessages = conv.messages?.filter(msg => 
-             msg.sender_id !== profile.user_id && !msg.read_at
-           );
-
-           return {
-             ...conv,
-             other_user: otherUser,
-             last_message: lastMessage,
-             unread_count: unreadMessages?.length || 0
-           };
+          return {
+            ...conv,
+            other_user: otherUser,
+            last_message: lastMessage,
+            unread_count: unreadCount
+          };
         })
       );
 
-      setConversations(conversationsWithUsers);
+      setConversations(processedConversations);
     } catch (error) {
-      console.error('Erro ao carregar conversas:', error);
+      console.error('Error in loadConversations:', error);
     } finally {
       setLoading(false);
     }
