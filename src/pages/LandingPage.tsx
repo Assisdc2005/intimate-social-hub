@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import landingHeroBg from '@/assets/landing-hero-bg.jpg';
-import coupleCozy from '@/assets/couple-cozy.jpg';
+import coupleSensual from '@/assets/couple-sensual.jpg';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
@@ -189,8 +189,8 @@ export const LandingPage = () => {
                   
                   <div className="lg:hidden mb-8">
                     <img
-                      src={coupleCozy}
-                      alt="Casal sorridente em ambiente aconchegante"
+                      src={coupleSensual}
+                      alt="Casal sensual abraçado"
                       className="w-4/5 mx-auto rounded-2xl shadow-lg"
                     />
                   </div>
@@ -222,8 +222,8 @@ export const LandingPage = () => {
                 {/* Image Side - Desktop Only */}
                 <div className="hidden lg:block order-1 lg:order-2">
                   <img
-                    src={coupleCozy}
-                    alt="Casal sorridente em ambiente aconchegante"
+                    src={coupleSensual}
+                    alt="Casal sensual abraçado"
                     className="w-full rounded-2xl shadow-2xl"
                   />
                 </div>
