@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import landingHeroBg from '@/assets/landing-hero-bg.jpg';
+import coupleCozy from '@/assets/couple-cozy.jpg';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
@@ -168,6 +169,65 @@ export const LandingPage = () => {
             <div className="text-center">
               <div className="text-3xl md:text-4xl font-bold text-gradient mb-2">24/7</div>
               <div className="text-sm text-muted-foreground">Suporte</div>
+            </div>
+          </div>
+
+          {/* Para quem é o Sensual Nexus Connect Section */}
+          <div className="mb-16">
+            <div className="bg-gradient-to-br from-primary via-primary/80 to-accent rounded-3xl p-8 md:p-12">
+              <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+                {/* Content Side */}
+                <div className="text-center lg:text-left order-2 lg:order-1">
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+                    Para quem é o Sensual Nexus Connect
+                  </h2>
+                  
+                  <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">
+                    O Sensual Nexus Connect é o lugar ideal para quem quer conhecer pessoas de mente aberta, 
+                    dispostas a criar conexões reais e seguras. Sem julgamentos!
+                  </p>
+                  
+                  <div className="lg:hidden mb-8">
+                    <img
+                      src={coupleCozy}
+                      alt="Casal sorridente em ambiente aconchegante"
+                      className="w-4/5 mx-auto rounded-2xl shadow-lg"
+                    />
+                  </div>
+                  
+                  <h3 className="text-xl md:text-2xl font-bold text-white mb-6">
+                    Na comunidade do Sensual Nexus Connect não há espaço para:
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-white/95 rounded-full px-4 py-3 flex items-center gap-3 backdrop-blur-sm">
+                      <span className="text-red-500 text-lg">❌</span>
+                      <span className="text-primary font-semibold">Comércio</span>
+                    </div>
+                    <div className="bg-white/95 rounded-full px-4 py-3 flex items-center gap-3 backdrop-blur-sm">
+                      <span className="text-red-500 text-lg">❌</span>
+                      <span className="text-primary font-semibold">Assédio</span>
+                    </div>
+                    <div className="bg-white/95 rounded-full px-4 py-3 flex items-center gap-3 backdrop-blur-sm">
+                      <span className="text-red-500 text-lg">❌</span>
+                      <span className="text-primary font-semibold">Perfis falsos</span>
+                    </div>
+                    <div className="bg-white/95 rounded-full px-4 py-3 flex items-center gap-3 backdrop-blur-sm">
+                      <span className="text-red-500 text-lg">❌</span>
+                      <span className="text-primary font-semibold">Conteúdo de terceiros</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Image Side - Desktop Only */}
+                <div className="hidden lg:block order-1 lg:order-2">
+                  <img
+                    src={coupleCozy}
+                    alt="Casal sorridente em ambiente aconchegante"
+                    className="w-full rounded-2xl shadow-2xl"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
