@@ -207,21 +207,6 @@ export const HomeTab = () => {
         </Button>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="card-premium text-center">
-          <div className="text-2xl font-bold text-gradient">{posts.length}</div>
-          <div className="text-xs text-gray-400">Publicações</div>
-        </div>
-        <div className="card-premium text-center">
-          <div className="text-2xl font-bold text-gradient">{topUsers.length}</div>
-          <div className="text-xs text-gray-400">Perfis Ativos</div>
-        </div>
-        <div className="card-premium text-center">
-          <div className="text-2xl font-bold text-gradient">{likedProfiles.size}</div>
-          <div className="text-xs text-gray-400">Curtidas</div>
-        </div>
-      </div>
 
       {/* Top Users Section - Moved to top */}
       <div className="card-premium">
