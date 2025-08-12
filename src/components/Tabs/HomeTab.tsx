@@ -139,7 +139,7 @@ export const HomeTab = () => {
               Liberte seus desejos!
             </h1>
             <p className="text-white/90 text-lg">
-              Assine Premium e marque encontros reais agora.
+              Desbloqueie e descubra quem quer se encontrar com você hoje.
             </p>
           </div>
           
