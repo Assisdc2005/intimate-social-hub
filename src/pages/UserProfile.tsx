@@ -4,6 +4,7 @@ import { ArrowLeft, MapPin, Heart, MessageCircle, UserPlus, Calendar, Camera, Cr
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { BlurredMedia } from "@/components/ui/blurred-media";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -32,12 +33,12 @@ interface UserProfileData {
 
 interface UserPost {
   id: string;
-  content: string;
-  media_url?: string;
-  media_type: string;
+  descricao?: string;
+  midia_url?: string;
+  tipo_midia: string;
   created_at: string;
-  likes_count: number;
-  comments_count: number;
+  curtidas_count: number;
+  comentarios_count: number;
 }
 
 export const UserProfile = () => {
@@ -68,9 +69,9 @@ export const UserProfile = () => {
 
         if (profileError) throw profileError;
 
-        // Fetch user posts
+        // Fetch user posts from publicacoes table
         const { data: postsData, error: postsError } = await supabase
-          .from('posts')
+          .from('publicacoes')
           .select('*')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
@@ -231,8 +232,8 @@ export const UserProfile = () => {
 
     try {
       const { error } = await supabase
-        .from('likes')
-        .insert({ post_id: postId, user_id: currentUser?.user_id });
+        .from('curtidas_publicacoes')
+        .insert({ publicacao_id: postId, user_id: currentUser?.user_id });
 
       if (!error) {
         toast({
@@ -243,7 +244,7 @@ export const UserProfile = () => {
         // Update local state
         setUserPosts(prev => prev.map(post => 
           post.id === postId 
-            ? { ...post, likes_count: post.likes_count + 1 }
+            ? { ...post, curtidas_count: post.curtidas_count + 1 }
             : post
         ));
 
@@ -427,18 +428,20 @@ export const UserProfile = () => {
               {userPosts.map((post) => (
                 <Card key={post.id} className="bg-white/5 border-white/10">
                   <CardContent className="p-4">
-                    {post.media_url && (
+                    {post.midia_url && (
                       <div className="aspect-square rounded-lg overflow-hidden mb-3">
-                        <img 
-                          src={post.media_url} 
+                        <BlurredMedia
+                          src={post.midia_url}
                           alt="Post"
-                          className="w-full h-full object-cover"
+                          type={post.tipo_midia === 'video' ? 'video' : 'image'}
+                          isPremium={isPremium}
+                          className="w-full h-full"
                         />
                       </div>
                     )}
                     
-                    {post.content && (
-                      <p className="text-foreground mb-3">{post.content}</p>
+                    {post.descricao && (
+                      <p className="text-foreground mb-3">{post.descricao}</p>
                     )}
                     
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -448,11 +451,11 @@ export const UserProfile = () => {
                           className="flex items-center gap-1 hover:text-red-400 transition-colors"
                         >
                           <Heart className="w-4 h-4" />
-                          {post.likes_count}
+                          {post.curtidas_count}
                         </button>
                         <div className="flex items-center gap-1">
                           <MessageCircle className="w-4 h-4" />
-                          {post.comments_count}
+                          {post.comentarios_count}
                         </div>
                       </div>
                       <span>

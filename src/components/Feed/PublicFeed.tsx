@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { BlurredMedia } from "@/components/ui/blurred-media";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -81,11 +82,12 @@ export const PublicFeed = () => {
 
   const fetchPublicacoes = async () => {
     try {
-      // First get publicacoes
+      // First get publicacoes - limit to 5 for recent posts
       const { data: publicacoesData, error: publicacoesError } = await supabase
         .from('publicacoes')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(5);
 
       if (publicacoesError) throw publicacoesError;
 
@@ -443,19 +445,14 @@ export const PublicFeed = () => {
             {/* Mídia */}
             {publicacao.midia_url && (
               <div className="w-full">
-                {publicacao.tipo_midia === 'video' ? (
-                  <video 
-                    src={publicacao.midia_url} 
-                    controls 
-                    className="w-full max-h-96 object-cover"
-                  />
-                ) : (
-                  <img 
-                    src={publicacao.midia_url} 
-                    alt="Publicação" 
-                    className="w-full max-h-96 object-cover"
-                  />
-                )}
+                <BlurredMedia
+                  src={publicacao.midia_url}
+                  alt="Publicação"
+                  type={publicacao.tipo_midia === 'video' ? 'video' : 'image'}
+                  isPremium={isPremium}
+                  controls={true}
+                  className="w-full max-h-96"
+                />
               </div>
             )}
 
