@@ -104,20 +104,16 @@ export const useMessages = (conversationId: string | null) => {
     if (!profile?.user_id || !conversationId) return;
 
     try {
-      // Mark individual messages as read
-      const { error: messageError } = await supabase
+      const { error } = await supabase
         .from('messages')
         .update({ read_at: new Date().toISOString() })
         .eq('conversation_id', conversationId)
         .neq('sender_id', profile.user_id)
         .is('read_at', null);
 
-      if (messageError) {
-        console.error('Error marking individual messages as read:', messageError);
-        return;
+      if (error) {
+        console.error('Error marking messages as read:', error);
       }
-
-      // Note: Unread count management will be handled by triggers in the database
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }

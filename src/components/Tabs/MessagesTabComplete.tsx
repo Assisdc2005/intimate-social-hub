@@ -256,42 +256,22 @@ export const MessagesTabComplete = () => {
   const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] animate-fade-in">
-      {/* Header do Chat estilo Instagram */}
-      <div className="flex-shrink-0 border-b border-primary/20 bg-background/95 backdrop-blur-xl p-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSelectedConversation(null)}
-            className="w-10 h-10 rounded-full hover:bg-primary/10"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          
-          <div 
-            className="w-10 h-10 rounded-full bg-gradient-secondary flex items-center justify-center text-white font-bold shadow-[var(--shadow-glow)] cursor-pointer"
-            onClick={() => {
-              const otherUserId = selectedConversation.participant1_id === profile?.user_id 
-                ? selectedConversation.participant2_id 
-                : selectedConversation.participant1_id;
-              navigate(`/profile/${otherUserId}`);
-            }}
-          >
-            {selectedConversation.other_user?.avatar_url ? (
-              <img 
-                src={selectedConversation.other_user.avatar_url} 
-                alt="Avatar" 
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              selectedConversation.other_user?.display_name?.[0]?.toUpperCase()
-            )}
-          </div>
-          
-          <div className="flex-1">
-            <h3 
-              className="font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
+    <div className="flex flex-col h-[calc(100vh-140px)] animate-fade-in">
+      {/* Header do Chat */}
+      <Card className="glass backdrop-blur-xl border-primary/20 flex-shrink-0">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSelectedConversation(null)}
+              className="w-10 h-10 rounded-full hover:bg-primary/10"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            
+            <div 
+              className="w-10 h-10 rounded-full bg-gradient-secondary flex items-center justify-center text-white font-bold shadow-[var(--shadow-glow)] cursor-pointer"
               onClick={() => {
                 const otherUserId = selectedConversation.participant1_id === profile?.user_id 
                   ? selectedConversation.participant2_id 
@@ -299,18 +279,40 @@ export const MessagesTabComplete = () => {
                 navigate(`/profile/${otherUserId}`);
               }}
             >
-              {selectedConversation.other_user?.display_name}
-            </h3>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <p className="text-xs text-green-400 font-medium">Online</p>
+              {selectedConversation.other_user?.avatar_url ? (
+                <img 
+                  src={selectedConversation.other_user.avatar_url} 
+                  alt="Avatar" 
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                selectedConversation.other_user?.display_name?.[0]?.toUpperCase()
+              )}
+            </div>
+            
+            <div className="flex-1">
+              <h3 
+                className="font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
+                onClick={() => {
+                  const otherUserId = selectedConversation.participant1_id === profile?.user_id 
+                    ? selectedConversation.participant2_id 
+                    : selectedConversation.participant1_id;
+                  navigate(`/profile/${otherUserId}`);
+                }}
+              >
+                {selectedConversation.other_user?.display_name}
+              </h3>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <p className="text-xs text-green-400 font-medium">Online</p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Mensagens */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-background/50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
         {Object.entries(messageGroups).map(([date, dayMessages]) => (
           <div key={date}>
             {/* Separador de data */}
@@ -361,47 +363,46 @@ export const MessagesTabComplete = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input de mensagem fixo estilo Instagram */}
-      <div className="flex-shrink-0 border-t border-primary/20 bg-background/95 backdrop-blur-xl p-4">
-        {!isPremium ? (
-          <div className="flex items-center justify-center p-4 text-center">
-            <div className="flex items-center gap-3">
-              <Lock className="w-5 h-5 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Upgrade para Premium para enviar mensagens
-              </span>
-              <Button size="sm" className="bg-gradient-primary hover:opacity-90 text-white">
-                <Crown className="w-3 h-3 mr-1" />
-                Premium
-              </Button>
+      {/* Input de mensagem fixo */}
+      <div className="fixed bottom-[60px] left-0 right-0 z-10 bg-background/95 backdrop-blur-xl border-t border-primary/20 p-4">
+        <div className="max-w-md mx-auto">
+          {!isPremium ? (
+            <div className="flex items-center justify-center p-4 text-center">
+              <div className="flex items-center gap-3">
+                <Lock className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  Upgrade para Premium para enviar mensagens
+                </span>
+                <Button size="sm" className="bg-gradient-primary hover:opacity-90 text-white">
+                  <Crown className="w-3 h-3 mr-1" />
+                  Premium
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex gap-3 items-end">
-            <div className="flex-1 relative">
+          ) : (
+            <div className="flex gap-3">
               <Input
-                placeholder="Mensagem..."
+                placeholder="Digite uma mensagem..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
-                className="glass border-primary/30 h-10 rounded-full pl-4 pr-12 resize-none"
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                className="flex-1 glass border-primary/30 h-12 rounded-xl"
                 disabled={sending}
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={!newMessage.trim() || sending}
-                size="sm"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 w-8 h-8 rounded-full bg-primary hover:bg-primary/90 p-0"
+                className="w-12 h-12 rounded-xl bg-gradient-primary hover:opacity-90 text-white p-0"
               >
                 {sending ? (
-                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <Send className="w-3 h-3" />
+                  <Send className="w-5 h-5" />
                 )}
               </Button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

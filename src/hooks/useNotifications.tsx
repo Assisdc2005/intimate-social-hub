@@ -6,12 +6,10 @@ interface Notification {
   id: string;
   user_id: string;
   from_user_id?: string;
-  type: 'curtida' | 'novo_amigo' | 'visita' | 'comentario' | 'mensagem' | 'depoimento';
+  type: 'curtida' | 'novo_amigo' | 'visita' | 'comentario' | 'mensagem';
   content?: string;
   read_at?: string;
   created_at: string;
-  reference_id?: string;
-  reference_type?: string;
   from_user_profile?: {
     display_name: string;
     avatar_url?: string;
@@ -41,7 +39,7 @@ export const useNotifications = () => {
         .from('notifications')
         .select(`
           *,
-          from_user_profile:profiles!notifications_from_user_id_fkey(display_name, avatar_url)
+          profiles!notifications_from_user_id_fkey(display_name, avatar_url)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -141,39 +139,8 @@ export const useNotifications = () => {
         return '💭';
       case 'mensagem':
         return '💌';
-      case 'depoimento':
-        return '📝';
       default:
         return '🔔';
-    }
-  };
-
-  const processNotificationAction = async (notificationId: string, action: 'aceitar' | 'recusar') => {
-    if (!user?.id) return { success: false, error: 'Usuário não autenticado' };
-
-    try {
-      // Get notification details first
-      const { data: notification, error: fetchError } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('id', notificationId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // For now, just mark as read since the specific implementation depends on the notification content
-      // In the future, this can be expanded to handle different notification types
-
-      // Mark notification as read
-      await markAsRead(notificationId);
-
-      // Refresh notifications after processing
-      await fetchNotifications();
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error processing notification action:', error);
-      return { success: false, error: (error as any).message };
     }
   };
 
@@ -191,8 +158,6 @@ export const useNotifications = () => {
         return `${name} comentou em sua publicação`;
       case 'mensagem':
         return `${name} enviou uma mensagem`;
-      case 'depoimento':
-        return `${name} deixou um depoimento para você`;
       default:
         return notification.content || 'Nova notificação';
     }
@@ -206,7 +171,6 @@ export const useNotifications = () => {
     markAllAsRead,
     getNotificationIcon,
     getNotificationMessage,
-    processNotificationAction,
     refreshNotifications: fetchNotifications
   };
 };
