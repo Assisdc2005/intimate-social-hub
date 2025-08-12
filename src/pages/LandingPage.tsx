@@ -53,7 +53,7 @@ export const LandingPage = () => {
                 Encontros Casuais,
               </span>
               <span className="text-white">
-                Onde o Tesão Encontra o Real!
+                Onde o Tesão te Encontra!
               </span>
             </h1>
 
