@@ -90,7 +90,7 @@ export const PremiumTab = () => {
     {
       id: 'semanal',
       name: 'Semanal',
-      price: 'R$ 15,00',
+      price: 'R$ 14,90',
       period: '/semana',
       description: 'Ideal para experimentar',
       highlight: false,
@@ -99,7 +99,7 @@ export const PremiumTab = () => {
     {
       id: 'quinzenal',
       name: 'Quinzenal',
-      price: 'R$ 20,00',
+      price: 'R$ 19,90',
       period: '/15 dias',
       description: 'Boa relação custo-benefício',
       highlight: true,
@@ -108,7 +108,7 @@ export const PremiumTab = () => {
     {
       id: 'mensal',
       name: 'Mensal',
-      price: 'R$ 30,00',
+      price: 'R$ 29,90',
       period: '/mês',
       description: 'Máximo aproveitamento',
       highlight: false,
