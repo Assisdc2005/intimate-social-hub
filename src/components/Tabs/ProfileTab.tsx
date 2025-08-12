@@ -221,7 +221,10 @@ export const ProfileTab = () => {
               <p className="text-gray-300 mb-4">
                 Acesse chat ilimitado, filtros avançados e muito mais!
               </p>
-              <Button className="bg-gradient-primary hover:opacity-90 text-white">
+              <Button 
+                onClick={() => navigate('/premium')}
+                className="bg-gradient-primary hover:opacity-90 text-white"
+              >
                 Assinar Premium
               </Button>
             </div>

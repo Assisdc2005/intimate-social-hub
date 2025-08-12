@@ -36,6 +36,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
+import { BlurredMedia } from "@/components/ui/blurred-media";
 import { useTheme } from "@/components/ThemeProvider"
 import {
   AlertDialog,
@@ -51,12 +52,12 @@ import {
 
 interface UserPost {
   id: string;
-  content: string;
-  media_url?: string;
-  media_type: string;
+  descricao?: string;
+  midia_url?: string;
+  tipo_midia: string;
   created_at: string;
-  likes_count: number;
-  comments_count: number;
+  curtidas_count: number;
+  comentarios_count: number;
 }
 
 export default function Profile() {
@@ -79,8 +80,9 @@ export default function Profile() {
       if (!user) return;
       
       try {
+        // Fetch from publicacoes table instead of posts
         const { data, error } = await supabase
-          .from('posts')
+          .from('publicacoes')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
@@ -241,7 +243,7 @@ export default function Profile() {
   const age = profile?.birth_date ? calculateAge(profile.birth_date) : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">      
       {/* Back Button */}
       <div className="fixed top-4 left-4 z-50">
         <Button 
@@ -250,20 +252,20 @@ export default function Profile() {
           size="sm"
           className="text-gray-300 hover:text-white hover:bg-white/10 p-2 rounded-full"
         >
-          <ArrowLeft className="h-5 w-5 mr-1" />
-          <span className="hidden sm:inline">Voltar</span>
+          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-1" />
+          <span className="hidden sm:inline text-sm">Voltar</span>
         </Button>
       </div>
 
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto space-y-8">
+      <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-12">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-8">
           
           {/* Profile Header */}
           <Card className="bg-glass backdrop-blur-md border-primary/20">
-            <CardContent className="p-8">
-              <div className="flex items-start gap-6">
+            <CardContent className="p-4 sm:p-8">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                 <div className="relative">
-                  <div className="w-32 h-32 rounded-full bg-gradient-primary overflow-hidden">
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-primary overflow-hidden">
                     {profile?.avatar_url ? (
                       <img 
                         src={profile.avatar_url} 
@@ -271,29 +273,29 @@ export default function Profile() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-4xl">
+                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-2xl sm:text-4xl">
                         {profile?.display_name?.[0]?.toUpperCase() || 'U'}
                       </div>
                     )}
                   </div>
                   {isPremium && (
-                    <div className="absolute -top-2 -right-2 w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center">
-                      <Crown className="h-5 w-5 text-white" />
+                    <div className="absolute -top-2 -right-2 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-full flex items-center justify-center">
+                      <Crown className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
                   )}
                 </div>
 
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-4">
-                    <h1 className="text-3xl font-bold text-white">{profile?.display_name}</h1>
+                <div className="flex-1 text-center sm:text-left">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 mb-4">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white">{profile?.display_name}</h1>
                     {isPremium && (
-                      <Badge className="bg-gradient-primary text-white px-3 py-1">
+                      <Badge className="bg-gradient-primary text-white px-3 py-1 text-xs sm:text-sm">
                         PREMIUM
                       </Badge>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-gray-300 text-sm">
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-primary" />
                       <span>{user?.email}</span>
@@ -350,13 +352,13 @@ export default function Profile() {
                   </div>
 
                   {profile?.bio && (
-                    <p className="text-gray-300 mt-4 leading-relaxed">{profile.bio}</p>
+                    <p className="text-gray-300 mt-4 leading-relaxed text-sm sm:text-base text-center sm:text-left">{profile.bio}</p>
                   )}
 
-                  <div className="flex gap-3 mt-6">
+                  <div className="flex flex-col sm:flex-row gap-3 mt-6 items-center">
                     <Button 
                       onClick={() => navigate('/profile/edit')}
-                      className="bg-gradient-primary hover:opacity-90 text-white"
+                      className="bg-gradient-primary hover:opacity-90 text-white w-full sm:w-auto"
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Editar Perfil
@@ -368,19 +370,19 @@ export default function Profile() {
           </Card>
 
           {/* Additional Profile Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             
             {/* Physical Info */}
             {(profile?.height || profile?.weight || profile?.body_type || profile?.ethnicity) && (
               <Card className="bg-glass backdrop-blur-md border-primary/20">
-                <CardHeader>
-                  <CardTitle className="text-white">Informações Físicas</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-lg">Informações Físicas</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 p-4 sm:p-6">
                   {profile?.height && (
                     <div>
-                      <p className="text-sm text-gray-400">Altura</p>
-                      <p className="text-white">{profile.height} cm</p>
+                      <p className="text-xs sm:text-sm text-gray-400">Altura</p>
+                      <p className="text-white text-sm sm:text-base">{profile.height} cm</p>
                     </div>
                   )}
                   {profile?.weight && (
@@ -408,8 +410,8 @@ export default function Profile() {
             {/* Lifestyle Info */}
             {(profile?.smokes !== undefined || profile?.drinks !== undefined) && (
               <Card className="bg-glass backdrop-blur-md border-primary/20">
-                <CardHeader>
-                  <CardTitle className="text-white">Estilo de Vida</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-lg">Estilo de Vida</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {profile?.smokes !== undefined && (
@@ -475,36 +477,38 @@ export default function Profile() {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {userPosts.map((post) => (
                     <Card key={post.id} className="bg-white/5 border-white/10">
-                      <CardContent className="p-4">
-                        {post.media_url && (
+                      <CardContent className="p-3 sm:p-4">
+                        {post.midia_url && (
                           <div className="aspect-square rounded-lg overflow-hidden mb-3">
-                            <img 
-                              src={post.media_url} 
+                            <BlurredMedia
+                              src={post.midia_url}
                               alt="Post"
-                              className="w-full h-full object-cover"
+                              type={post.tipo_midia === 'video' ? 'video' : 'image'}
+                              isPremium={isPremium}
+                              className="w-full h-full"
                             />
                           </div>
                         )}
                         
-                        {post.content && (
-                          <p className="text-white mb-3 text-sm">{post.content}</p>
+                        {post.descricao && (
+                          <p className="text-white mb-3 text-xs sm:text-sm line-clamp-3">{post.descricao}</p>
                         )}
                         
-                        <div className="flex items-center justify-between text-xs text-gray-400">
-                          <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
+                          <div className="flex items-center gap-3 sm:gap-4">
                             <div className="flex items-center gap-1">
-                              <Heart className="w-3 h-3" />
-                              {post.likes_count}
+                              <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
+                              {post.curtidas_count}
                             </div>
                             <div className="flex items-center gap-1">
-                              <MessageCircle className="w-3 h-3" />
-                              {post.comments_count}
+                              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                              {post.comentarios_count}
                             </div>
                           </div>
-                          <span>
+                          <span className="text-xs">
                             {new Date(post.created_at).toLocaleDateString('pt-BR')}
                           </span>
                         </div>

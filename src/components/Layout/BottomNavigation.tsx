@@ -36,7 +36,9 @@ export const BottomNavigation = ({ activeTab, onTabChange }: BottomNavigationPro
                 className={`
                   relative flex flex-col items-center justify-center p-2 rounded-2xl min-w-[60px] h-14 transition-all duration-300
                   ${isActive 
-                    ? 'bg-white/20 text-white shadow-glow scale-105' 
+                    ? (tab.id === 'profile' 
+                        ? 'bg-gradient-primary text-white shadow-glow scale-105' 
+                        : 'bg-white/20 text-white shadow-glow scale-105')
                     : 'text-white/70 hover:text-white hover:bg-white/10'
                   }
                 `}
