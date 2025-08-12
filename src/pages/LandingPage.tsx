@@ -53,13 +53,13 @@ export const LandingPage = () => {
                 Encontros Casuais,
               </span>
               <span className="text-white">
-                Desejos Reais
+                Onde o Tesão Encontra o Real!
               </span>
             </h1>
 
             {/* Subtitle */}
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Conecte-se com pessoas dispostas a viver
+              Quer gozar de verdade? Conheça gente que não tá pra brincadeira.
               <span className="text-accent font-semibold"> experiências intensas</span>.
             </p>
 
@@ -68,7 +68,7 @@ export const LandingPage = () => {
               onClick={handleGetStarted}
               className="btn-premium text-lg px-8 py-4 h-auto mb-6 group"
             >
-              Quero Conhecer Agora
+              Quero me Cadastrar agora!
               <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
             </Button>
 
@@ -80,7 +80,7 @@ export const LandingPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-green-400" />
-                <span>50k+ usuários ativos</span>
+                <span>Mais de 100 usuários ativos agora!</span>
               </div>
             </div>
           </div>
@@ -155,11 +155,11 @@ export const LandingPage = () => {
           {/* Stats Section */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-gradient mb-2">50k+</div>
+              <div className="text-3xl md:text-4xl font-bold text-gradient mb-2">100+</div>
               <div className="text-sm text-muted-foreground">Usuários Ativos</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-gradient mb-2">1.2k+</div>
+              <div className="text-3xl md:text-4xl font-bold text-gradient mb-2">290k+</div>
               <div className="text-sm text-muted-foreground">Encontros Hoje</div>
             </div>
             <div className="text-center">
