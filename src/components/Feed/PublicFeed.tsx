@@ -459,6 +459,27 @@ export const PublicFeed = () => {
               </div>
             </div>
 
+            {/* Conteúdo da publicação */}
+            {publicacao.descricao && (
+              <div className="px-4 pb-3">
+                <p className="text-white">{publicacao.descricao}</p>
+              </div>
+            )}
+
+            {/* Mídia */}
+            {publicacao.midia_url && (
+              <div className="w-full">
+                <BlurredMedia
+                  src={publicacao.midia_url}
+                  alt="Publicação"
+                  type={publicacao.tipo_midia === 'video' ? 'video' : 'image'}
+                  isPremium={isPremium || index < 3}
+                  controls={true}
+                  className="w-full max-h-96"
+                />
+              </div>
+            )}
+
             {/* Actions */}
             <div className="px-4 pb-3">
               <div className="flex items-center gap-4 mb-3">
@@ -493,27 +514,6 @@ export const PublicFeed = () => {
                 </Button>
               </div>
             </div>
-
-            {/* Conteúdo da publicação */}
-            {publicacao.descricao && (
-              <div className="px-4 pb-3">
-                <p className="text-white">{publicacao.descricao}</p>
-              </div>
-            )}
-
-            {/* Mídia */}
-            {publicacao.midia_url && (
-              <div className="w-full">
-                <BlurredMedia
-                  src={publicacao.midia_url}
-                  alt="Publicação"
-                  type={publicacao.tipo_midia === 'video' ? 'video' : 'image'}
-                  isPremium={isPremium || index < 3}
-                  controls={true}
-                  className="w-full max-h-96"
-                />
-              </div>
-            )}
 
             {/* Comentários */}
             {showComments[publicacao.id] && (
