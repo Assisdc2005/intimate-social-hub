@@ -51,6 +51,8 @@ export const PublicFeed = () => {
   const [comentarios, setComentarios] = useState<{ [key: string]: Comentario[] }>({});
   const [newComment, setNewComment] = useState('');
   const [showComments, setShowComments] = useState<{ [key: string]: boolean }>({});
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     fetchPublicacoes();
@@ -80,14 +82,14 @@ export const PublicFeed = () => {
     };
   }, [profile?.user_id]);
 
-  const fetchPublicacoes = async () => {
+  const fetchPublicacoes = async (offset = 0) => {
     try {
-      // First get publicacoes - limit to 5 for recent posts
+      // Get publicacoes - 20 per page
       const { data: publicacoesData, error: publicacoesError } = await supabase
         .from('publicacoes')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(5);
+        .range(offset, offset + 19);
 
       if (publicacoesError) throw publicacoesError;
 
@@ -109,7 +111,16 @@ export const PublicFeed = () => {
         profiles: profilesData?.find(profile => profile.user_id === pub.user_id)
       }));
 
-      setPublicacoes(publicacoesWithProfiles);
+      if (offset === 0) {
+        setPublicacoes(publicacoesWithProfiles);
+      } else {
+        setPublicacoes(prev => [...prev, ...publicacoesWithProfiles]);
+      }
+
+      // Check if there are more posts
+      if (publicacoesWithProfiles.length < 20) {
+        setHasMore(false);
+      }
     } catch (error) {
       console.error('Erro ao buscar publicações:', error);
     } finally {
@@ -330,6 +341,19 @@ export const PublicFeed = () => {
     navigate(`/profile/${userId}`);
   };
 
+  const loadMorePosts = async () => {
+    if (!hasMore || loadingMore) return;
+    
+    setLoadingMore(true);
+    try {
+      await fetchPublicacoes(publicacoes.length);
+    } catch (error) {
+      console.error('Erro ao carregar mais publicações:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -395,7 +419,7 @@ export const PublicFeed = () => {
 
       {/* Feed de publicações */}
       <div className="space-y-6">
-        {publicacoes.map((publicacao) => (
+        {publicacoes.map((publicacao, index) => (
           <div key={publicacao.id} className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
             {/* Header da publicação */}
             <div className="flex items-center gap-3 p-4">
@@ -435,29 +459,8 @@ export const PublicFeed = () => {
               </div>
             </div>
 
-            {/* Conteúdo da publicação */}
-            {publicacao.descricao && (
-              <div className="px-4 pb-3">
-                <p className="text-white">{publicacao.descricao}</p>
-              </div>
-            )}
-
-            {/* Mídia */}
-            {publicacao.midia_url && (
-              <div className="w-full">
-                <BlurredMedia
-                  src={publicacao.midia_url}
-                  alt="Publicação"
-                  type={publicacao.tipo_midia === 'video' ? 'video' : 'image'}
-                  isPremium={isPremium}
-                  controls={true}
-                  className="w-full max-h-96"
-                />
-              </div>
-            )}
-
             {/* Actions */}
-            <div className="p-4">
+            <div className="px-4 pb-3">
               <div className="flex items-center gap-4 mb-3">
                 <Button
                   size="sm"
@@ -489,9 +492,32 @@ export const PublicFeed = () => {
                   Ver Perfil
                 </Button>
               </div>
+            </div>
 
-              {/* Comentários */}
-              {showComments[publicacao.id] && (
+            {/* Conteúdo da publicação */}
+            {publicacao.descricao && (
+              <div className="px-4 pb-3">
+                <p className="text-white">{publicacao.descricao}</p>
+              </div>
+            )}
+
+            {/* Mídia */}
+            {publicacao.midia_url && (
+              <div className="w-full">
+                <BlurredMedia
+                  src={publicacao.midia_url}
+                  alt="Publicação"
+                  type={publicacao.tipo_midia === 'video' ? 'video' : 'image'}
+                  isPremium={isPremium || index < 3}
+                  controls={true}
+                  className="w-full max-h-96"
+                />
+              </div>
+            )}
+
+            {/* Comentários */}
+            {showComments[publicacao.id] && (
+              <div className="px-4 pb-4">
                 <div className="space-y-3 mt-4">
                   {comentarios[publicacao.id]?.map((comentario) => (
                     <div key={comentario.id} className="flex gap-3">
@@ -517,57 +543,70 @@ export const PublicFeed = () => {
                     </div>
                   ))}
                 </div>
-              )}
 
-              {/* Adicionar comentário */}
-              <div className="flex items-center gap-3 mt-4">
-                <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                      {profile?.display_name?.[0] || 'U'}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 flex gap-2">
-                  <Input
-                    placeholder={isPremium ? "Adicione um comentário..." : "Seja Premium para comentar"}
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    disabled={!isPremium}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                    onKeyPress={(e) => e.key === 'Enter' && handleComment(publicacao.id)}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => handleComment(publicacao.id)}
-                    disabled={!isPremium || !newComment.trim()}
-                    className="bg-gradient-primary hover:opacity-90"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {!isPremium && (
-                <div className="mt-3 p-3 bg-gradient-primary/20 rounded-lg border border-primary/30">
-                  <p className="text-sm text-primary">
-                    ⭐ Seja Premium para curtir e comentar publicações! 
-                    <Button 
-                      variant="link" 
-                      className="text-primary underline p-0 ml-1 h-auto"
-                      onClick={() => navigate('/premium')}
+                {/* Adicionar comentário */}
+                <div className="flex items-center gap-3 mt-4">
+                  <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                        {profile?.display_name?.[0] || 'U'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 flex gap-2">
+                    <Input
+                      placeholder={isPremium ? "Adicione um comentário..." : "Seja Premium para comentar"}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      disabled={!isPremium}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                      onKeyPress={(e) => e.key === 'Enter' && handleComment(publicacao.id)}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleComment(publicacao.id)}
+                      disabled={!isPremium || !newComment.trim()}
+                      className="bg-gradient-primary hover:opacity-90"
                     >
-                      Faça upgrade
+                      <Send className="w-4 h-4" />
                     </Button>
-                  </p>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {!isPremium && (
+                  <div className="mt-3 p-3 bg-gradient-primary/20 rounded-lg border border-primary/30">
+                    <p className="text-sm text-primary">
+                      ⭐ Seja Premium para curtir e comentar publicações! 
+                      <Button 
+                        variant="link" 
+                        className="text-primary underline p-0 ml-1 h-auto"
+                        onClick={() => navigate('/premium')}
+                      >
+                        Faça upgrade
+                      </Button>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
+
+      {/* Ver mais button */}
+      {hasMore && (
+        <div className="flex justify-center py-6">
+          <Button
+            onClick={loadMorePosts}
+            disabled={loadingMore}
+            className="bg-gradient-primary hover:opacity-90 text-white px-8 py-3 rounded-xl"
+          >
+            {loadingMore ? 'Carregando...' : 'Ver mais publicações'}
+          </Button>
+        </div>
+      )}
 
       {publicacoes.length === 0 && (
         <div className="text-center py-8 text-gray-400">

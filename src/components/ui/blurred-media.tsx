@@ -49,8 +49,7 @@ export const BlurredMedia: React.FC<BlurredMediaProps> = ({
             <div className="absolute inset-0 bg-black/30 flex items-center justify-center cursor-pointer">
               <div className="text-center text-white">
                 <Crown className="w-8 h-8 mx-auto mb-2" />
-                <p className="text-sm font-semibold">Conteúdo Premium</p>
-                <p className="text-xs opacity-75">Clique para ver</p>
+               <p className="text-sm font-semibold">Conteúdo Premium – Clique para ver</p>
               </div>
             </div>
           )}
@@ -106,8 +105,7 @@ export const BlurredMedia: React.FC<BlurredMediaProps> = ({
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center cursor-pointer">
             <div className="text-center text-white">
               <Crown className="w-8 h-8 mx-auto mb-2" />
-              <p className="text-sm font-semibold">Conteúdo Premium</p>
-              <p className="text-xs opacity-75">Clique para ver</p>
+               <p className="text-sm font-semibold">Conteúdo Premium – Clique para ver</p>
             </div>
           </div>
         )}
