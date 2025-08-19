@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -546,6 +546,41 @@ export type Database = {
           weight?: number | null
         }
         Relationships: []
+      }
+      publicacao_midias: {
+        Row: {
+          created_at: string
+          id: string
+          midia_url: string
+          ordem: number
+          publicacao_id: string
+          tipo_midia: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          midia_url: string
+          ordem?: number
+          publicacao_id: string
+          tipo_midia?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          midia_url?: string
+          ordem?: number
+          publicacao_id?: string
+          tipo_midia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "publicacao_midias_publicacao_id_fkey"
+            columns: ["publicacao_id"]
+            isOneToOne: false
+            referencedRelation: "publicacoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       publicacoes: {
         Row: {

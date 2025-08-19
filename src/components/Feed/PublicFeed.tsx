@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { PublicacaoCarrossel } from "./PublicacaoCarrossel";
 
 interface Publicacao {
   id: string;
@@ -480,6 +481,11 @@ export const PublicFeed = () => {
                   />
                 </div>
               </div>
+            )}
+
+            {/* Múltiplas Mídias - buscar da nova tabela */}
+            {publicacao.tipo_midia === 'multipla' && (
+              <PublicacaoCarrossel publicacaoId={publicacao.id} isPremium={isPremium || index < 3} />
             )}
 
             {/* Actions */}

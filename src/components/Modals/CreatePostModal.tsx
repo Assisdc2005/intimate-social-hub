@@ -17,51 +17,73 @@ interface CreatePostModalProps {
 
 export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreatePostModalProps) => {
   const [content, setContent] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaPreviews, setMediaPreviews] = useState<string[]>([]);
   const { profile } = useProfile();
   const { toast } = useToast();
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
 
-    // Validate file type
+    // Validate file count (max 5 files)
+    if (selectedFiles.length + files.length > 5) {
+      toast({
+        title: "Muitos arquivos",
+        description: "Você pode selecionar no máximo 5 mídias por publicação",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate files
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'video/mp4', 'video/webm'];
-    if (!allowedTypes.includes(file.type)) {
-      toast({
-        title: "Tipo de arquivo inválido",
-        description: "Apenas imagens (JPG, PNG, GIF) e vídeos (MP4, WebM) são permitidos",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      toast({
-        title: "Arquivo muito grande",
-        description: "O arquivo deve ter no máximo 10MB",
-        variant: "destructive",
-      });
-      return;
+    
+    const validFiles: File[] = [];
+    const previews: string[] = [];
+
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Tipo de arquivo inválido",
+          description: `${file.name}: Apenas imagens e vídeos são permitidos`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      if (file.size > maxSize) {
+        toast({
+          title: "Arquivo muito grande",
+          description: `${file.name}: O arquivo deve ter no máximo 10MB`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      validFiles.push(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previews.push(e.target?.result as string);
+        if (previews.length === validFiles.length) {
+          setMediaPreviews([...mediaPreviews, ...previews]);
+        }
+      };
+      reader.readAsDataURL(file);
     }
 
-    setSelectedFile(file);
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setMediaPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    setSelectedFiles([...selectedFiles, ...validFiles]);
   };
 
-  const removeFile = () => {
-    setSelectedFile(null);
-    setMediaPreview(null);
+  const removeFile = (index: number) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    const newPreviews = mediaPreviews.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
+    setMediaPreviews(newPreviews);
   };
 
   const uploadFile = async (file: File): Promise<string | null> => {
@@ -88,7 +110,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() && !selectedFile) {
+    if (!content.trim() && selectedFiles.length === 0) {
       toast({
         title: "Conteúdo obrigatório",
         description: "Adicione um texto ou uma mídia para publicar",
@@ -100,28 +122,43 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
     setUploading(true);
 
     try {
-      let mediaUrl = '';
-      let mediaType = 'texto';
-
-      if (selectedFile) {
-        const uploadedUrl = await uploadFile(selectedFile);
-        if (!uploadedUrl) {
-          throw new Error('Erro no upload da mídia');
-        }
-        mediaUrl = uploadedUrl;
-        mediaType = selectedFile.type.startsWith('video/') ? 'video' : 'imagem';
-      }
-
-      const { error } = await supabase
-        .from('posts')
+      // Criar a publicação primeiro
+      const { data: publicacao, error: publicacaoError } = await supabase
+        .from('publicacoes')
         .insert({
           user_id: profile?.user_id,
-          content: content.trim(),
-          media_type: mediaType as any,
-          media_url: mediaUrl
+          descricao: content.trim(),
+          tipo_midia: selectedFiles.length > 0 ? 'multipla' : 'texto'
+        })
+        .select('id')
+        .single();
+
+      if (publicacaoError) throw publicacaoError;
+
+      // Upload e inserir mídias se existirem
+      if (selectedFiles.length > 0) {
+        const mediaUploads = selectedFiles.map(async (file, index) => {
+          const uploadedUrl = await uploadFile(file);
+          if (!uploadedUrl) {
+            throw new Error(`Erro no upload da mídia ${index + 1}`);
+          }
+
+          return supabase
+            .from('publicacao_midias')
+            .insert({
+              publicacao_id: publicacao.id,
+              midia_url: uploadedUrl,
+              tipo_midia: file.type.startsWith('video/') ? 'video' : 'imagem',
+              ordem: index
+            });
         });
 
-      if (error) throw error;
+        const results = await Promise.all(mediaUploads);
+        
+        for (const result of results) {
+          if (result.error) throw result.error;
+        }
+      }
 
       toast({
         title: "Publicação criada!",
@@ -130,8 +167,8 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
 
       // Reset form
       setContent('');
-      setSelectedFile(null);
-      setMediaPreview(null);
+      setSelectedFiles([]);
+      setMediaPreviews([]);
       onOpenChange(false);
       onPostCreated?.();
 
@@ -171,31 +208,40 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
             </div>
           </div>
 
-          {/* Media Preview */}
-          {mediaPreview && (
-            <div className="relative">
-              {selectedFile?.type.startsWith('video/') ? (
-                <video 
-                  src={mediaPreview} 
-                  controls 
-                  className="w-full rounded-lg max-h-80 object-cover"
-                />
-              ) : (
-                <img 
-                  src={mediaPreview} 
-                  alt="Preview" 
-                  className="w-full rounded-lg max-h-80 object-cover"
-                />
-              )}
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute top-2 right-2 h-8 w-8"
-                onClick={removeFile}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+          {/* Media Previews */}
+          {mediaPreviews.length > 0 && (
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground">
+                Mídias selecionadas ({mediaPreviews.length}/5)
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {mediaPreviews.map((preview, index) => (
+                  <div key={index} className="relative">
+                    {selectedFiles[index]?.type.startsWith('video/') ? (
+                      <video 
+                        src={preview} 
+                        controls 
+                        className="w-full rounded-lg h-32 object-cover"
+                      />
+                    ) : (
+                      <img 
+                        src={preview} 
+                        alt={`Preview ${index + 1}`} 
+                        className="w-full rounded-lg h-32 object-cover"
+                      />
+                    )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6"
+                      onClick={() => removeFile(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -205,6 +251,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
               <Input
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleFileSelect}
                 className="hidden"
                 id="image-upload"
@@ -222,6 +269,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
               <Input
                 type="file"
                 accept="video/*"
+                multiple
                 onChange={handleFileSelect}
                 className="hidden"
                 id="video-upload"
@@ -239,7 +287,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
           {/* Submit Button */}
           <Button
             onClick={handleSubmit}
-            disabled={uploading || (!content.trim() && !selectedFile)}
+            disabled={uploading || (!content.trim() && selectedFiles.length === 0)}
             className="w-full bg-gradient-primary hover:opacity-90 text-white"
           >
             {uploading ? (

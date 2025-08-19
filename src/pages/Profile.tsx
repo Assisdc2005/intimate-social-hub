@@ -38,6 +38,7 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { BlurredMedia } from "@/components/ui/blurred-media";
 import { useTheme } from "@/components/ThemeProvider"
+import { TestimonialsManagement } from "@/components/Profile/TestimonialsManagement";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -451,6 +452,9 @@ export default function Profile() {
               </CardContent>
             </Card>
           )}
+
+          {/* Testimonials Management */}
+          <TestimonialsManagement />
 
           {/* Posts Section */}
           <Card className="bg-glass backdrop-blur-md border-primary/20">
