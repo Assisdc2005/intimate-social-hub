@@ -468,15 +468,17 @@ export const PublicFeed = () => {
 
             {/* Mídia */}
             {publicacao.midia_url && (
-              <div className="w-full">
-                <BlurredMedia
-                  src={publicacao.midia_url}
-                  alt="Publicação"
-                  type={publicacao.tipo_midia === 'video' ? 'video' : 'image'}
-                  isPremium={isPremium || index < 3}
-                  controls={true}
-                  className="w-full max-h-96"
-                />
+              <div className="w-full px-4 mb-4">
+                <div className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20">
+                  <BlurredMedia
+                    src={publicacao.midia_url}
+                    alt="Publicação"
+                    type={publicacao.tipo_midia === 'video' ? 'video' : 'image'}
+                    isPremium={isPremium || index < 3}
+                    controls={true}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </div>
             )}
 
