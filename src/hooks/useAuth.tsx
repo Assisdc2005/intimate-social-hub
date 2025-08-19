@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, displayName: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -69,6 +69,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
     });
+    
+    // Se não há erro e o usuário foi criado, redirecionar para /home
+    if (!error && data.user) {
+      window.location.href = '/home';
+    }
+    
     return { error };
   };
 
