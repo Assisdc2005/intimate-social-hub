@@ -27,7 +27,8 @@ import {
   Camera,
   MessageCircle,
   Settings,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ import { Switch } from "@/components/ui/switch"
 import { BlurredMedia } from "@/components/ui/blurred-media";
 import { useTheme } from "@/components/ThemeProvider"
 import { TestimonialsManagement } from "@/components/Profile/TestimonialsManagement";
+import { PublicacaoCarrossel } from "@/components/Feed/PublicacaoCarrossel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -228,6 +230,44 @@ export default function Profile() {
       toast({
         title: "Erro",
         description: "Não foi possível abrir o portal de assinatura",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteUserPost = async (postId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta publicação?')) {
+      return;
+    }
+
+    try {
+      // First delete associated media from publicacao_midias
+      await supabase
+        .from('publicacao_midias')
+        .delete()
+        .eq('publicacao_id', postId);
+
+      // Then delete the publication
+      const { error } = await supabase
+        .from('publicacoes')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setUserPosts(prev => prev.filter(pub => pub.id !== postId));
+
+      toast({
+        title: "Publicação excluída",
+        description: "Sua publicação foi excluída com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir publicação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir publicação",
         variant: "destructive",
       });
     }
@@ -484,8 +524,20 @@ export default function Profile() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {userPosts.map((post) => (
                     <Card key={post.id} className="bg-white/5 border-white/10">
-                      <CardContent className="p-3 sm:p-4">
-                        {post.midia_url && (
+                      <CardContent className="p-3 sm:p-4 relative">
+                        {/* Botão de excluir */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteUserPost(post.id)}
+                          className="absolute top-2 right-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 p-1 h-6 w-6"
+                          title="Excluir publicação"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+
+                        {/* Mídia única */}
+                        {post.midia_url && post.tipo_midia !== 'multipla' && (
                           <div className="aspect-square rounded-lg overflow-hidden mb-3">
                             <BlurredMedia
                               src={post.midia_url}
@@ -494,6 +546,13 @@ export default function Profile() {
                               isPremium={isPremium}
                               className="w-full h-full"
                             />
+                          </div>
+                        )}
+
+                        {/* Múltiplas mídias */}
+                        {post.tipo_midia === 'multipla' && (
+                          <div className="mb-3">
+                            <PublicacaoCarrossel publicacaoId={post.id} isPremium={isPremium} />
                           </div>
                         )}
                         

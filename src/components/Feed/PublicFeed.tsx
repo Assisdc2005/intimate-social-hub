@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Plus, Send, User, Clock, Crown } from "lucide-react";
+import { Heart, MessageCircle, Plus, Send, User, Clock, Crown, X } from "lucide-react";
 import { PhotoGrid } from "@/components/Profile/PhotoGrid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -355,6 +355,44 @@ export const PublicFeed = () => {
     }
   };
 
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta publicação?')) {
+      return;
+    }
+
+    try {
+      // First delete associated media from publicacao_midias
+      await supabase
+        .from('publicacao_midias')
+        .delete()
+        .eq('publicacao_id', postId);
+
+      // Then delete the publication
+      const { error } = await supabase
+        .from('publicacoes')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', profile?.user_id);
+
+      if (error) throw error;
+
+      // Update local state
+      setPublicacoes(prev => prev.filter(pub => pub.id !== postId));
+
+      toast({
+        title: "Publicação excluída",
+        description: "Sua publicação foi excluída com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir publicação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir publicação",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -453,6 +491,19 @@ export const PublicFeed = () => {
                   {new Date(publicacao.created_at).toLocaleString('pt-BR')}
                 </p>
               </div>
+              
+              {/* Botão de deletar para publicações próprias */}
+              {publicacao.user_id === profile?.user_id && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleDeletePost(publicacao.id)}
+                  className="text-red-400 hover:text-red-500 hover:bg-red-500/10 p-2"
+                  title="Excluir publicação"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
               
               {/* Photo Grid */}
               <div className="ml-2">
