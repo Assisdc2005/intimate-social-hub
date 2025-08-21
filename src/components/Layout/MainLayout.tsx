@@ -10,6 +10,7 @@ import { MessagesTabComplete } from "../Tabs/MessagesTabComplete";
 import { PremiumTab } from "../Tabs/PremiumTab";
 import { ProfileTab } from "../Tabs/ProfileTab";
 import { EditProfileTab } from "../Tabs/EditProfileTab";
+import { PromotionalPopup } from "../Modals/PromotionalPopup";
 
 export const MainLayout = () => {
   const location = useLocation();
@@ -80,6 +81,9 @@ export const MainLayout = () => {
       <InstitutionalFooter />
       
       <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+      
+      {/* Popup promocional */}
+      <PromotionalPopup />
     </div>
   );
 };

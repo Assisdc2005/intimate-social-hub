@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { OnlineProfiles } from "@/components/Profile/OnlineProfiles";
 import { PublicFeed } from "@/components/Feed/PublicFeed";
 import { CreatePostModal } from "@/components/Modals/CreatePostModal";
+import { PremiumBlockModal } from "@/components/Modals/PremiumBlockModal";
 import { useNavigate } from "react-router-dom";
 
 export const HomeTab = () => {
@@ -20,6 +21,7 @@ export const HomeTab = () => {
   const [loading, setLoading] = useState(true);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+  const [showPremiumBlockModal, setShowPremiumBlockModal] = useState(false);
 
   useEffect(() => {
     if (profile?.user_id) {
@@ -111,7 +113,11 @@ export const HomeTab = () => {
   };
 
   const handleCreatePost = () => {
-    setShowCreatePostModal(true);
+    if (!isPremium) {
+      setShowPremiumBlockModal(true);
+    } else {
+      setShowCreatePostModal(true);
+    }
   };
 
   const handlePostCreated = () => {
@@ -202,7 +208,7 @@ export const HomeTab = () => {
           className="w-full bg-gradient-secondary hover:opacity-90 text-white font-semibold h-12 rounded-xl"
         >
           <Plus className="w-5 h-5 mr-2" />
-          {posts.length === 0 ? 'Fazer minha primeira publicação' : 'Criar Publicação'}
+          Quero ser visto agora 🔥
           {!isPremium && <Crown className="w-4 h-4 ml-2" />}
         </Button>
       </div>
@@ -223,6 +229,12 @@ export const HomeTab = () => {
         isOpen={showCreatePostModal}
         onOpenChange={setShowCreatePostModal}
         onPostCreated={handlePostCreated}
+      />
+
+      {/* Premium Block Modal */}
+      <PremiumBlockModal 
+        isOpen={showPremiumBlockModal}
+        onOpenChange={setShowPremiumBlockModal}
       />
     </div>
   );

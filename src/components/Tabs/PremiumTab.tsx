@@ -91,27 +91,33 @@ export const PremiumTab = () => {
       id: 'semanal',
       name: 'Semanal',
       price: 'R$ 14,90',
+      originalPrice: null,
       period: '/semana',
-      description: 'Ideal para experimentar',
+      description: 'Experimente a plataforma por menos de R$ 15,00.',
       highlight: false,
+      badge: null,
       caktoLink: 'https://pay.cakto.com.br/3a9q7wi_492897'
     },
     {
       id: 'quinzenal',
       name: 'Quinzenal',
       price: 'R$ 19,90',
+      originalPrice: 'R$ 40,00',
       period: '/15 dias',
-      description: 'Boa relação custo-benefício',
-      highlight: true,
+      description: 'Metade do preço por tempo limitado!',
+      highlight: false,
+      badge: null,
       caktoLink: 'https://pay.cakto.com.br/333ki7u_492920'
     },
     {
       id: 'mensal',
       name: 'Mensal',
       price: 'R$ 29,90',
+      originalPrice: 'R$ 50,00',
       period: '/mês',
-      description: 'Máximo aproveitamento',
-      highlight: false,
+      description: 'Aproveite o desconto de R$ 20,00 e tenha acesso ilimitado o mês inteiro.',
+      highlight: true,
+      badge: 'Mais Assinado',
       caktoLink: 'https://pay.cakto.com.br/uh3imfg_492928'
     }
   ];
@@ -158,6 +164,14 @@ export const PremiumTab = () => {
           <Button onClick={handleRefreshStatus} size="sm" className="mt-2">
             Verificar Status
           </Button>
+        </div>
+      )}
+
+      {/* Aviso de Escassez */}
+      {!isPremium && (
+        <div className="bg-red-600/20 border border-red-500/50 rounded-xl p-4 text-center animate-pulse">
+          <div className="text-red-400 font-bold text-lg mb-1">⚠️ Quantidade limitada (50 primeiros)</div>
+          <p className="text-red-300 text-sm">Aproveite enquanto há vagas disponíveis!</p>
         </div>
       )}
 
@@ -268,10 +282,10 @@ export const PremiumTab = () => {
                   }
                 `}
               >
-                {plan.highlight && (
+                {plan.badge && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <span className="bg-gradient-primary px-4 py-1 rounded-full text-sm font-bold text-white shadow-glow">
-                      Mais Popular
+                      {plan.badge}
                     </span>
                   </div>
                 )}
@@ -282,7 +296,12 @@ export const PremiumTab = () => {
                     <p className="text-sm text-muted-foreground">{plan.description}</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-gradient">{plan.price}</div>
+                    {plan.originalPrice && (
+                      <div className="text-sm text-muted-foreground line-through mb-1">{plan.originalPrice}</div>
+                    )}
+                    <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-white bg-clip-text text-transparent animate-pulse">
+                      {plan.price}
+                    </div>
                     <div className="text-sm text-muted-foreground">{plan.period}</div>
                   </div>
                 </div>
