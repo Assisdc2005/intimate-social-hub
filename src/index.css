@@ -8,48 +8,48 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Sensual & Modern - Casual Sexy Aesthetic */
-    --background: 340 100% 98%;            /* Soft ice white/pink */
-    --foreground: 0 0% 10%;                /* Deep charcoal text */
+    /* Sensual & Modern - Casual Sexy Aesthetic - Light Mode */
+    --background: 0 0% 100%;               /* Pure white background */
+    --foreground: 0 0% 10%;                /* Deep charcoal text - WCAG AAA */
 
     --card: 0 0% 100%;                     /* Pure white cards */
-    --card-foreground: 0 0% 10%;           /* Card text */
+    --card-foreground: 0 0% 10%;           /* Dark text - high contrast */
 
     --popover: 0 0% 100%;                  /* Popover background */
-    --popover-foreground: 0 0% 10%;        /* Popover text */
+    --popover-foreground: 0 0% 10%;        /* Popover text - high contrast */
 
-    --primary: 6 100% 69%;                 /* Coral pink (#FF6F61) */
+    --primary: 6 85% 58%;                  /* Coral pink - adjusted for contrast */
     --primary-foreground: 0 0% 100%;       /* White text on primary */
 
-    --secondary: 270 70% 74%;              /* Soft lilac (#C084FC) */
+    --secondary: 270 60% 60%;              /* Soft lilac - adjusted */
     --secondary-foreground: 0 0% 100%;     /* White text on secondary */
 
     --muted: 0 0% 96%;                     /* Light gray muted */
-    --muted-foreground: 220 9% 46%;        /* Gray muted text (#6B7280) */
+    --muted-foreground: 0 0% 35%;          /* Dark gray - WCAG AA contrast */
 
-    --accent: 345 100% 68%;                /* Warm pink accent (#E75480) */
+    --accent: 345 90% 55%;                 /* Warm pink accent - adjusted */
     --accent-foreground: 0 0% 100%;        /* White text on accent */
 
-    --destructive: 0 84% 60%;              /* Red destructive */
+    --destructive: 0 72% 51%;              /* Red destructive - WCAG AA */
     --destructive-foreground: 0 0% 100%;   /* White text on destructive */
 
-    --border: 0 0% 90%;                    /* Light border */
-    --input: 0 0% 96%;                     /* Input background */
-    --ring: 6 100% 69%;                    /* Focus ring coral */
+    --border: 0 0% 89%;                    /* Light border */
+    --input: 0 0% 100%;                    /* White input background */
+    --ring: 6 85% 58%;                     /* Focus ring coral */
 
     /* Vibrant gradient system */
-    --gradient-primary: linear-gradient(135deg, hsl(6, 100%, 69%) 0%, hsl(345, 100%, 68%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(270, 70%, 74%), hsl(280, 80%, 80%));
-    --gradient-hero: linear-gradient(180deg, hsl(340, 100%, 98%), hsl(0, 0%, 100%));
-    --gradient-glass: linear-gradient(135deg, hsla(6, 100%, 69%, 0.1), hsla(345, 100%, 68%, 0.05));
-    --gradient-card: linear-gradient(145deg, hsla(0, 0%, 100%, 0.95), hsla(340, 100%, 98%, 0.9));
+    --gradient-primary: linear-gradient(135deg, hsl(6, 85%, 58%) 0%, hsl(345, 90%, 55%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(270, 60%, 60%), hsl(280, 70%, 70%));
+    --gradient-hero: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(340, 100%, 99%));
+    --gradient-glass: linear-gradient(135deg, hsla(6, 85%, 58%, 0.08), hsla(345, 90%, 55%, 0.04));
+    --gradient-card: linear-gradient(145deg, hsla(0, 0%, 100%, 0.98), hsla(340, 100%, 99%, 0.95));
     
     /* Soft shadows */
-    --shadow-glow: 0 0 40px hsla(6, 100%, 69%, 0.3);
-    --shadow-glow-hover: 0 0 60px hsla(6, 100%, 69%, 0.5);
-    --shadow-premium: 0 20px 60px hsla(6, 100%, 69%, 0.2);
-    --shadow-glass: 0 8px 32px hsla(0, 0%, 0%, 0.08);
-    --shadow-soft: 0 4px 20px hsla(0, 0%, 0%, 0.06);
+    --shadow-glow: 0 0 40px hsla(6, 85%, 58%, 0.25);
+    --shadow-glow-hover: 0 0 60px hsla(6, 85%, 58%, 0.4);
+    --shadow-premium: 0 20px 60px hsla(6, 85%, 58%, 0.15);
+    --shadow-glass: 0 8px 32px hsla(0, 0%, 0%, 0.06);
+    --shadow-soft: 0 4px 20px hsla(0, 0%, 0%, 0.04);
     
     /* Smooth animations */
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -75,42 +75,43 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Dark mode with warm sensual tones */
-    --background: 0 0% 6%;                 /* Very dark charcoal */
-    --foreground: 0 0% 98%;                /* Near white */
+    /* Dark mode with warm sensual tones - High Contrast */
+    --background: 0 0% 7%;                 /* Very dark charcoal */
+    --foreground: 0 0% 98%;                /* Near white - WCAG AAA */
 
-    --card: 0 0% 10%;                      /* Dark card */
-    --card-foreground: 0 0% 98%;           /* Card text */
+    --card: 0 0% 11%;                      /* Dark card */
+    --card-foreground: 0 0% 98%;           /* Light text - high contrast */
 
-    --popover: 0 0% 10%;                   /* Popover background */
-    --popover-foreground: 0 0% 98%;        /* Popover text */
+    --popover: 0 0% 11%;                   /* Popover background */
+    --popover-foreground: 0 0% 98%;        /* Popover text - high contrast */
 
-    --primary: 6 100% 69%;                 /* Coral pink */
-    --primary-foreground: 0 0% 100%;       /* White */
+    --primary: 6 95% 70%;                  /* Brighter coral for dark mode */
+    --primary-foreground: 0 0% 10%;        /* Dark text on bright coral */
 
-    --secondary: 270 70% 74%;              /* Soft lilac */
-    --secondary-foreground: 0 0% 100%;     /* White */
+    --secondary: 270 75% 75%;              /* Brighter lilac for dark mode */
+    --secondary-foreground: 0 0% 10%;      /* Dark text on bright lilac */
 
-    --muted: 0 0% 15%;                     /* Dark muted */
-    --muted-foreground: 220 9% 65%;        /* Gray text */
+    --muted: 0 0% 16%;                     /* Dark muted */
+    --muted-foreground: 0 0% 70%;          /* Light gray - WCAG AA */
 
-    --accent: 345 100% 68%;                /* Warm pink */
-    --accent-foreground: 0 0% 100%;        /* White */
+    --accent: 345 95% 70%;                 /* Brighter warm pink for dark */
+    --accent-foreground: 0 0% 10%;         /* Dark text on bright pink */
 
-    --destructive: 0 84% 60%;              /* Red */
-    --destructive-foreground: 0 0% 100%;   /* White */
+    --destructive: 0 72% 62%;              /* Brighter red for dark mode */
+    --destructive-foreground: 0 0% 100%;   /* White text */
 
-    --border: 0 0% 18%;                    /* Dark border */
-    --input: 0 0% 12%;                     /* Dark input */
-    --ring: 6 100% 69%;                    /* Coral ring */
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 6 100% 69%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 6 100% 69%;
+    --border: 0 0% 20%;                    /* Lighter dark border */
+    --input: 0 0% 13%;                     /* Dark input */
+    --ring: 6 95% 70%;                     /* Bright coral ring */
+    
+    --sidebar-background: 0 0% 9%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 6 95% 70%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 6 95% 70%;
   }
 }
 
@@ -120,35 +121,70 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
     background: var(--gradient-hero);
     min-height: 100vh;
+  }
+  
+  /* Ensure high contrast text elements */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-foreground font-heading;
+  }
+  
+  p, span, div {
+    @apply text-foreground;
+  }
+  
+  a {
+    @apply text-foreground transition-colors;
+  }
+  
+  a:hover {
+    @apply text-primary;
+  }
+  
+  /* Ensure form elements have proper contrast */
+  input, textarea, select {
+    @apply text-foreground bg-input border-border;
+  }
+  
+  input::placeholder, textarea::placeholder {
+    @apply text-muted-foreground;
+  }
+  
+  /* Ensure labels are readable */
+  label {
+    @apply text-foreground font-medium;
   }
 }
 
 @layer components {
-  /* Premium button variants */
+  /* Premium button variants with high contrast */
   .btn-premium {
-    @apply bg-gradient-to-r from-primary to-accent text-primary-foreground font-medium px-6 py-3 rounded-xl shadow-[var(--shadow-premium)] transition-all duration-300 hover:scale-105 hover:shadow-[var(--shadow-glow)];
+    @apply bg-gradient-to-r from-primary to-accent text-white font-semibold px-6 py-3 rounded-2xl shadow-[var(--shadow-premium)] transition-all duration-300 hover:scale-105 hover:shadow-[var(--shadow-glow)];
   }
   
   .btn-secondary {
-    @apply bg-gradient-to-r from-secondary to-purple-600 text-secondary-foreground font-medium px-6 py-3 rounded-xl shadow-lg transition-all duration-300 hover:scale-105;
+    @apply bg-gradient-to-r from-secondary to-secondary/90 text-white font-semibold px-6 py-3 rounded-2xl shadow-lg transition-all duration-300 hover:scale-105;
   }
   
-  /* Glass morphism effect */
+  /* Glass morphism effect - dark mode aware */
   .glass {
-    @apply backdrop-blur-lg bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-[var(--shadow-glass)];
+    @apply backdrop-blur-lg bg-card/50 border border-border shadow-[var(--shadow-glass)];
   }
   
-  /* Premium card with glow */
+  .dark .glass {
+    @apply backdrop-blur-lg bg-card/40 border border-border/50 shadow-[var(--shadow-glass)];
+  }
+  
+  /* Premium card with glow - high contrast */
   .card-premium {
-    @apply bg-card/80 backdrop-blur-md border border-primary/20 rounded-2xl p-6 shadow-[var(--shadow-premium)] transition-all duration-300 hover:border-primary/40 hover:shadow-[var(--shadow-glow)];
+    @apply bg-card text-card-foreground border border-primary/20 rounded-2xl p-6 shadow-[var(--shadow-premium)] transition-all duration-300 hover:border-primary/40 hover:shadow-[var(--shadow-glow)];
   }
   
   /* Navigation active state */
   .nav-active {
-    @apply text-primary bg-primary/10 border-primary/30;
+    @apply text-primary bg-primary/10 border-primary/30 font-medium;
   }
   
   /* Smooth animations */
@@ -160,12 +196,17 @@ All colors MUST be HSL.
     @apply animate-in slide-in-from-bottom-4 duration-500;
   }
   
-  /* Text gradients */
+  /* Text gradients - ensure readability */
   .text-gradient {
-    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-bold;
   }
   
   .text-gradient-secondary {
-    @apply bg-gradient-to-r from-secondary to-purple-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-secondary to-secondary/80 bg-clip-text text-transparent font-bold;
+  }
+  
+  /* High contrast text utilities */
+  .text-high-contrast {
+    @apply text-foreground font-medium;
   }
 }
