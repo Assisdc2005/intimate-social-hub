@@ -121,40 +121,57 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background font-sans antialiased;
     background: var(--gradient-hero);
     min-height: 100vh;
+    color: #111 !important;
   }
   
-  /* Ensure high contrast text elements */
+  /* Force dark text on all elements */
   h1, h2, h3, h4, h5, h6 {
-    @apply text-foreground font-heading;
+    @apply font-heading;
+    color: #111 !important;
   }
   
-  p, span, div {
-    @apply text-foreground;
+  p, span, div, li, td, th {
+    color: #111 !important;
   }
   
   a {
-    @apply text-foreground transition-colors;
+    color: #111 !important;
+    @apply transition-colors;
   }
   
   a:hover {
     @apply text-primary;
   }
   
-  /* Ensure form elements have proper contrast */
+  /* Form elements with dark text */
   input, textarea, select {
-    @apply text-foreground bg-input border-border;
+    @apply bg-input border-border;
+    color: #111 !important;
   }
   
   input::placeholder, textarea::placeholder {
-    @apply text-muted-foreground;
+    color: #666 !important;
   }
   
-  /* Ensure labels are readable */
+  /* Labels with dark text */
   label {
-    @apply text-foreground font-medium;
+    @apply font-medium;
+    color: #111 !important;
+  }
+  
+  /* Buttons should keep their designed colors */
+  button {
+    color: inherit;
+  }
+  
+  button.text-white,
+  button[class*="text-primary-foreground"],
+  button[class*="text-secondary-foreground"],
+  button[class*="text-accent-foreground"] {
+    color: white !important;
   }
 }
 
