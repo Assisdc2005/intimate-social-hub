@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BlurredMedia } from "@/components/ui/blurred-media";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -361,7 +362,7 @@ export const UserProfile = () => {
               </div>
 
               {userProfile.bio && (
-                <p className="text-foreground mt-4 leading-relaxed">{userProfile.bio}</p>
+                <TruncatedText text={userProfile.bio} maxLength={190} className="mt-4" />
               )}
             </div>
           </div>

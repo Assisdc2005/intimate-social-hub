@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -463,7 +464,7 @@ export const DiscoverTab = () => {
 
               {/* Bio */}
               {user.bio && (
-                <p className="text-gray-300 mb-4">{user.bio}</p>
+                <TruncatedText text={user.bio} maxLength={190} className="mb-4" />
               )}
 
               {/* User Photos */}

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
@@ -113,9 +114,9 @@ export const ProfileTab = () => {
 
             {/* Bio */}
             {profile.bio && (
-              <p className="text-gray-300 text-center max-w-md mx-auto mb-4">
-                {profile.bio}
-              </p>
+              <div className="text-center max-w-md mx-auto mb-4">
+                <TruncatedText text={profile.bio} maxLength={190} />
+              </div>
             )}
 
             {/* Quick Actions */}

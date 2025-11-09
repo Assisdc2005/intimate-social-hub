@@ -1,6 +1,7 @@
 import { Search, Filter, MapPin, Heart, MessageCircle, UserPlus, Sliders } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
@@ -346,7 +347,7 @@ export const DiscoverTab = () => {
                       {user.city || 'Brasil'}
                     </p>
                     {user.bio && (
-                      <p className="text-sm text-foreground/80 mt-1 line-clamp-2">{user.bio}</p>
+                      <TruncatedText text={user.bio} maxLength={190} className="mt-1" />
                     )}
                   </div>
                   

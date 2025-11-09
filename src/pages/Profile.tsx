@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from "@/hooks/use-toast"
 import { useNavigate } from 'react-router-dom';
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { 
   User, 
   Mail, 
@@ -353,7 +354,7 @@ export default function Profile() {
                   </div>
 
                   {profile?.bio && (
-                    <p className="text-gray-300 mt-4 leading-relaxed text-sm sm:text-base text-center sm:text-left">{profile.bio}</p>
+                    <TruncatedText text={profile.bio} maxLength={190} className="mt-4 text-center sm:text-left" />
                   )}
 
                   <div className="flex flex-col sm:flex-row gap-3 mt-6 items-center">
