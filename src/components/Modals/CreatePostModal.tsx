@@ -8,6 +8,7 @@ import { Camera, Video, Upload, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
+import { PremiumBlockModal } from './PremiumBlockModal';
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -20,7 +21,8 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [mediaPreviews, setMediaPreviews] = useState<string[]>([]);
-  const { profile } = useProfile();
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const { profile, isPremium } = useProfile();
   const { toast } = useToast();
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,6 +112,12 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
   };
 
   const handleSubmit = async () => {
+    // Verificar se é premium
+    if (!isPremium) {
+      setShowPremiumModal(true);
+      return;
+    }
+
     if (!content.trim() && selectedFiles.length === 0) {
       toast({
         title: "Conteúdo obrigatório",
@@ -185,11 +193,17 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="glass backdrop-blur-xl border-primary/20 max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-gradient">Criar Publicação</DialogTitle>
-        </DialogHeader>
+    <>
+      <PremiumBlockModal 
+        isOpen={showPremiumModal} 
+        onOpenChange={setShowPremiumModal}
+      />
+      
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="glass backdrop-blur-xl border-primary/20 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-gradient">Criar Publicação</DialogTitle>
+          </DialogHeader>
 
         <div className="space-y-4">
           {/* Text Content */}
@@ -305,5 +319,6 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 };

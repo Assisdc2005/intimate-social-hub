@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Plus, Send, User, Clock, Crown } from "lucide-react";
+import { Heart, MessageCircle, Plus, Send, User, Clock, Crown, Trash2, Edit2 } from "lucide-react";
 import { PhotoGrid } from "@/components/Profile/PhotoGrid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { BlurredMedia } from "@/components/ui/blurred-media";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
@@ -54,6 +55,9 @@ export const PublicFeed = () => {
   const [showComments, setShowComments] = useState<{ [key: string]: boolean }>({});
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [editingPost, setEditingPost] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [deletePostId, setDeletePostId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPublicacoes();
@@ -355,6 +359,91 @@ export const PublicFeed = () => {
     }
   };
 
+  const handleEditPost = (publicacaoId: string, descricao: string) => {
+    setEditingPost(publicacaoId);
+    setEditContent(descricao || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingPost) return;
+
+    try {
+      const { error } = await supabase
+        .from('publicacoes')
+        .update({ descricao: editContent })
+        .eq('id', editingPost);
+
+      if (error) throw error;
+
+      setPublicacoes(prev => prev.map(pub => 
+        pub.id === editingPost ? { ...pub, descricao: editContent } : pub
+      ));
+
+      toast({
+        title: "Publicação atualizada!",
+        description: "Sua publicação foi atualizada com sucesso",
+      });
+
+      setEditingPost(null);
+      setEditContent('');
+    } catch (error) {
+      console.error('Erro ao editar publicação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao editar publicação",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!deletePostId) return;
+
+    try {
+      // Deletar mídias relacionadas primeiro
+      await supabase
+        .from('publicacao_midias')
+        .delete()
+        .eq('publicacao_id', deletePostId);
+
+      // Deletar curtidas
+      await supabase
+        .from('curtidas_publicacoes')
+        .delete()
+        .eq('publicacao_id', deletePostId);
+
+      // Deletar comentários
+      await supabase
+        .from('comentarios_publicacoes')
+        .delete()
+        .eq('publicacao_id', deletePostId);
+
+      // Deletar publicação
+      const { error } = await supabase
+        .from('publicacoes')
+        .delete()
+        .eq('id', deletePostId);
+
+      if (error) throw error;
+
+      setPublicacoes(prev => prev.filter(pub => pub.id !== deletePostId));
+
+      toast({
+        title: "Publicação excluída!",
+        description: "Sua publicação foi excluída com sucesso",
+      });
+
+      setDeletePostId(null);
+    } catch (error) {
+      console.error('Erro ao deletar publicação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao deletar publicação",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -453,6 +542,28 @@ export const PublicFeed = () => {
                   {new Date(publicacao.created_at).toLocaleString('pt-BR')}
                 </p>
               </div>
+
+              {/* Botões de editar e deletar (só aparecem para o dono) */}
+              {profile?.user_id === publicacao.user_id && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleEditPost(publicacao.id, publicacao.descricao || '')}
+                    className="text-gray-400 hover:text-white hover:bg-white/10"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDeletePostId(publicacao.id)}
+                    className="text-gray-400 hover:text-red-500 hover:bg-white/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
               
               {/* Photo Grid */}
               <div className="ml-2">
@@ -623,6 +734,63 @@ export const PublicFeed = () => {
           <p className="text-sm">Seja o primeiro a publicar algo!</p>
         </div>
       )}
+
+      {/* Modal de Edição */}
+      <Dialog open={!!editingPost} onOpenChange={() => setEditingPost(null)}>
+        <DialogContent className="bg-background/95 backdrop-blur border-white/20">
+          <DialogHeader>
+            <DialogTitle className="text-gradient">Editar Publicação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              placeholder="Atualize sua publicação..."
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
+              rows={4}
+              maxLength={500}
+            />
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setEditingPost(null)}
+                className="border-white/20 text-white hover:bg-white/10"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveEdit}
+                className="bg-gradient-primary hover:opacity-90"
+              >
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <AlertDialog open={!!deletePostId} onOpenChange={() => setDeletePostId(null)}>
+        <AlertDialogContent className="bg-background/95 backdrop-blur border-white/20">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Excluir Publicação</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Tem certeza que deseja excluir esta publicação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeletePost}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
