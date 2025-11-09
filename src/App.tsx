@@ -1,9 +1,10 @@
-
+  
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import { ResetPassword } from "./pages/ResetPassword";
@@ -26,6 +27,13 @@ const queryClient = new QueryClient();
 function AuthenticatedApp() {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
+  const location = useLocation();
+
+  // Ensure scroll resets to top on every route change
+  // This addresses UX requirement without altering layout or theme
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, [location.pathname]);
 
   if (authLoading || profileLoading) {
     return (

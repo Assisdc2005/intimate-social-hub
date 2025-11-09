@@ -186,7 +186,7 @@ export const HomeTab = () => {
                 </Badge>
               )}
               <Badge className="bg-green-500 text-white text-xs">
-                • Online
+                Você está online!
               </Badge>
             </div>
           </div>
