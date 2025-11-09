@@ -57,11 +57,7 @@ function AuthenticatedApp() {
         path="/auth" 
         element={
           user ? (
-            profile?.profile_completed ? (
-              <Navigate to="/home" replace />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
+            <Navigate to="/home" replace />
           ) : (
             <Auth />
           )
@@ -92,11 +88,7 @@ function AuthenticatedApp() {
         path="/home" 
         element={
           user ? (
-            profile?.profile_completed ? (
-              <Index />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
+            <Index />
           ) : (
             <Navigate to="/auth" replace />
           )
@@ -107,11 +99,7 @@ function AuthenticatedApp() {
         path="/profile" 
         element={
           user ? (
-            profile?.profile_completed ? (
-              <Profile />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
+            <Profile />
           ) : (
             <Navigate to="/auth" replace />
           )
@@ -182,11 +170,7 @@ function AuthenticatedApp() {
         path="/profile/:userId" 
         element={
           user ? (
-            profile?.profile_completed ? (
-              <UserProfile />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
+            <UserProfile />
           ) : (
             <Navigate to="/auth" replace />
           )

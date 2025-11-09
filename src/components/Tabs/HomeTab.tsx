@@ -10,24 +10,41 @@ import { OnlineProfiles } from "@/components/Profile/OnlineProfiles";
 import { PublicFeed } from "@/components/Feed/PublicFeed";
 import { CreatePostModal } from "@/components/Modals/CreatePostModal";
 import { PremiumBlockModal } from "@/components/Modals/PremiumBlockModal";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { CompleteProfileModal } from "@/components/Modals/CompleteProfileModal";
 
 export const HomeTab = () => {
-  const { profile, isPremium } = useProfile();
+  const { profile, isPremium, refreshProfile } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const afterComplete = (location.state as any)?.afterComplete as string | undefined;
   const [posts, setPosts] = useState<any[]>([]);
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showPremiumBlockModal, setShowPremiumBlockModal] = useState(false);
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
 
   useEffect(() => {
     if (profile?.user_id) {
       fetchData();
     }
   }, [profile]);
+
+  // If redirected from /profile, open immediately; otherwise use 7s delay
+  useEffect(() => {
+    if (!profile || profile.profile_completed) return;
+    if (afterComplete) {
+      setShowCompleteProfile(true);
+      // clear state to avoid reopening on subsequent renders
+      navigate('/home', { replace: true, state: undefined });
+      return;
+    }
+    const timer = setTimeout(() => setShowCompleteProfile(true), 7000);
+    return () => clearTimeout(timer);
+  }, [profile?.profile_completed, afterComplete]);
 
   const fetchData = async () => {
     try {
@@ -276,6 +293,19 @@ export const HomeTab = () => {
       <PremiumBlockModal 
         isOpen={showPremiumBlockModal}
         onOpenChange={setShowPremiumBlockModal}
+      />
+
+      {/* Complete Profile Modal */}
+      <CompleteProfileModal
+        isOpen={showCompleteProfile}
+        onOpenChange={setShowCompleteProfile}
+        onCompleted={() => {
+          setShowCompleteProfile(false);
+          refreshProfile();
+          if (afterComplete) {
+            navigate(afterComplete, { replace: true, state: undefined });
+          }
+        }}
       />
     </div>
   );

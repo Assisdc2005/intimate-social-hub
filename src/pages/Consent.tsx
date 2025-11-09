@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export const Consent = () => {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col">
       <header className="sticky top-0 z-40 bg-background/70 backdrop-blur-md">
@@ -11,6 +13,9 @@ export const Consent = () => {
             </div>
             <h1 className="text-xl font-bold text-gradient">Sensual</h1>
           </div>
+          <Button variant="ghost" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))}>
+            Voltar
+          </Button>
         </div>
       </header>
 

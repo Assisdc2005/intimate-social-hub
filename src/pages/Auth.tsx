@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,10 +31,18 @@ export const Auth = () => {
       try {
         const { error } = await signIn(email, password);
         if (error) {
-          alert(error.message);
+          toast({
+            title: "Erro ao entrar",
+            description: error.message,
+            variant: "destructive",
+          });
         }
       } catch (error: any) {
-        alert(error.message);
+        toast({
+          title: "Erro ao entrar",
+          description: error.message || String(error),
+          variant: "destructive",
+        });
       }
     } else {
       try {
@@ -48,10 +56,20 @@ export const Auth = () => {
         }
         const { error } = await signUp(email, password, displayName);
         if (error) {
-          alert(error.message);
+          toast({
+            title: "Erro ao criar conta",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          navigate('/home');
         }
       } catch (error: any) {
-        alert(error.message);
+        toast({
+          title: "Erro ao criar conta",
+          description: error.message || String(error),
+          variant: "destructive",
+        });
       }
     }
   };
@@ -59,30 +77,16 @@ export const Auth = () => {
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsResetLoading(true);
-    
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/reset-password`
+      const { data, error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
-      
-      if (error) {
-        toast({
-          title: "Erro",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Link enviado!",
-          description: "Enviamos um link para redefinir sua senha no seu e-mail.",
-        });
-        setShowResetDialog(false);
-        setResetEmail("");
-      }
+      if (error) throw error;
+      toast({ title: "Email enviado", description: "Verifique sua caixa de entrada para redefinir a senha." });
     } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Erro inesperado. Tente novamente.",
+        title: "Erro ao enviar email",
+        description: error.message || "Erro inesperado. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -158,9 +162,9 @@ export const Auth = () => {
                 <Checkbox id="consent" checked={acceptedConsent} onCheckedChange={(v) => setAcceptedConsent(!!v)} />
                 <label htmlFor="consent" className="leading-snug">
                   Li e aceito os {" "}
-                  <a href="/consent" target="_blank" className="underline underline-offset-4 hover:text-primary">
+                  <Link to="/consent" className="underline underline-offset-4 hover:text-primary">
                     Termos de Uso e Consentimento – Sensual Nexus Connect
-                  </a>
+                  </Link>
                 </label>
               </div>
             )}
