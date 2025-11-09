@@ -136,92 +136,140 @@ export const HomeTab = () => {
   return (
     <div className="space-y-6 pb-4 animate-fade-in">
       {/* Hero Banner - Persuasive CTA */}
-      <div className="relative overflow-hidden rounded-2xl">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-secondary opacity-90"></div>
-        <div className="relative p-8 text-center">
-          <div className="mb-4">
-            <Crown className="w-12 h-12 mx-auto text-white mb-3" />
-            <h1 className="text-2xl font-bold text-white mb-2">
-              Liberte seus desejos!
-            </h1>
-            <p className="text-white/90 text-lg">
-              Desbloqueie e descubra quem quer se encontrar com você hoje.
-            </p>
-          </div>
+      <div className="relative overflow-hidden rounded-2xl glass">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-secondary opacity-20"></div>
+        <div className="relative p-6 text-center">
+          <Crown className="w-10 h-10 mx-auto text-primary mb-2" />
+          <h1 className="text-xl font-bold text-gradient mb-1">
+            Liberte seus desejos!
+          </h1>
+          <p className="text-foreground/80 text-sm mb-3">
+            Descubra quem quer se encontrar com você hoje
+          </p>
           
           {!isPremium && (
-            <div className="flex justify-center">
-              <Button
-                onClick={() => navigate('/premium')}
-                className="bg-white text-primary hover:bg-white/90 font-bold px-6 py-3 rounded-xl text-base"
-              >
-                <Crown className="w-5 h-5 mr-2" />
-                Quero ser Premium Agora
-              </Button>
-            </div>
+            <Button
+              onClick={() => navigate('/premium')}
+              className="bg-gradient-primary hover:opacity-90 text-white font-semibold px-5 py-2 rounded-xl text-sm shadow-[var(--shadow-glow)] transition-all duration-300 hover:scale-105"
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              Seja Premium
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Welcome Message */}
-      <div className="card-premium">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-secondary overflow-hidden">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-white font-bold text-xl">
-                {profile?.display_name?.[0]}
-              </div>
-            )}
+      {/* Online Now Section - Horizontal Scroll */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-bold text-foreground">Online Agora</h2>
+            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+              {topUsers.length} pessoas
+            </Badge>
           </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-gradient">Olá, {profile?.display_name}!</h2>
-            <p className="text-gray-300 text-sm">Bem-vindo(a) de volta ao Sensual Nexus Connect</p>
-            <div className="flex items-center gap-2 mt-1">
-              {isPremium && (
-                <Badge className="bg-gradient-primary text-white text-xs">
-                  <Crown className="w-3 h-3 mr-1" />
-                  Premium
-                </Badge>
-              )}
-              <Badge className="bg-green-500 text-white text-xs">
-                Você está online!
-              </Badge>
+        </div>
+
+        {/* Horizontal Scrollable Cards */}
+        <div className="relative -mx-4 px-4">
+          <div 
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {topUsers.map((user) => (
+              <div
+                key={user.user_id}
+                onClick={() => navigate(`/profile/${user.user_id}`)}
+                className="flex-shrink-0 w-[160px] snap-start cursor-pointer group"
+              >
+                <div className="relative rounded-2xl overflow-hidden bg-gradient-card border border-primary/20 transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:shadow-[var(--shadow-glow)]">
+                  {/* Avatar/Image */}
+                  <div className="relative h-[200px] overflow-hidden bg-gradient-secondary">
+                    {user.avatar_url ? (
+                      <img 
+                        src={user.avatar_url} 
+                        alt={user.display_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-4xl">
+                        {user.display_name[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    
+                    {/* Online Badge */}
+                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-green-500/90 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                      <span className="text-white text-xs font-semibold">LIVE</span>
+                    </div>
+
+                    {/* Premium Crown */}
+                    {user.tipo_assinatura === 'premium' && (
+                      <div className="absolute top-2 right-2 bg-accent/90 backdrop-blur-sm p-1.5 rounded-full">
+                        <Crown className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-3 space-y-1">
+                    <h3 className="font-semibold text-foreground text-sm truncate">
+                      {user.display_name}
+                    </h3>
+                    {(user.city || user.state) && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="w-3 h-3" />
+                        <span className="truncate">
+                          {user.city}{user.city && user.state && ', '}{user.state}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Ver Mais Card */}
+            <div
+              onClick={() => navigate('/discover')}
+              className="flex-shrink-0 w-[160px] snap-start cursor-pointer group"
+            >
+              <div className="h-full rounded-2xl overflow-hidden bg-gradient-card border-2 border-dashed border-primary/40 transition-all duration-300 hover:scale-105 hover:border-primary hover:shadow-[var(--shadow-glow)] flex flex-col items-center justify-center p-6 min-h-[250px]">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-3">
+                  <TrendingUp className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-bold text-foreground text-center mb-1">Ver Mais</h3>
+                <p className="text-xs text-muted-foreground text-center">
+                  Descubra outros perfis
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="space-y-3">
-        <Button
-          onClick={() => navigate('/discover')}
-          className="w-full bg-gradient-primary hover:opacity-90 text-white font-semibold h-12 rounded-xl"
-        >
-          <Heart className="w-5 h-5 mr-2" />
-          Descobrir Perfis
-        </Button>
-        
-        <Button
-          onClick={handleCreatePost}
-          className="w-full bg-gradient-secondary hover:opacity-90 text-white font-semibold h-12 rounded-xl"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Quero ser visto agora 🔥
-          {!isPremium && <Crown className="w-4 h-4 ml-2" />}
-        </Button>
-      </div>
+      {/* Recommended Posts Section - Vertical Feed */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-2">
+            <Heart className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-bold text-foreground">Publicações Recomendadas</h2>
+          </div>
+          <Button
+            onClick={handleCreatePost}
+            size="sm"
+            className="bg-gradient-secondary hover:opacity-90 text-white rounded-xl"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Postar
+          </Button>
+        </div>
 
-
-      {/* Top Users Section - Moved to top */}
-      <div className="card-premium">
-        <OnlineProfiles />
-      </div>
-
-      {/* Feed de Publicações */}
-      <div className="card-premium">
-        <PublicFeed />
+        {/* Vertical Feed */}
+        <div className="space-y-4">
+          <PublicFeed />
+        </div>
       </div>
 
       {/* Create Post Modal */}

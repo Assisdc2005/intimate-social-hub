@@ -167,4 +167,14 @@ All colors MUST be HSL.
   .text-gradient-secondary {
     @apply bg-gradient-to-r from-secondary to-purple-400 bg-clip-text text-transparent;
   }
+  
+  /* Hide scrollbar for horizontal scroll */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
