@@ -141,10 +141,10 @@ export const HomeTab = () => {
         <div className="relative p-6 text-center">
           <Crown className="w-10 h-10 mx-auto text-primary mb-2" />
           <h1 className="text-xl font-bold text-gradient mb-1">
-            Liberte seus desejos!
+            Encontre quem te quer!
           </h1>
           <p className="text-foreground/80 text-sm mb-3">
-            Descubra quem quer se encontrar com você hoje
+            Veja quem já mandou convite — mas só membros Premium podem responder.
           </p>
           
           {!isPremium && (
@@ -153,7 +153,7 @@ export const HomeTab = () => {
               className="bg-gradient-primary hover:opacity-90 text-white font-semibold px-5 py-2 rounded-xl text-sm shadow-[var(--shadow-glow)] transition-all duration-300 hover:scale-105"
             >
               <Crown className="w-4 h-4 mr-2" />
-              Seja Premium
+              Ser premium!
             </Button>
           )}
         </div>
@@ -254,16 +254,9 @@ export const HomeTab = () => {
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
             <Heart className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-bold text-foreground">Publicações Recomendadas</h2>
+            
           </div>
-          <Button
-            onClick={handleCreatePost}
-            size="sm"
-            className="bg-gradient-secondary hover:opacity-90 text-white rounded-xl"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Postar
-          </Button>
+          
         </div>
 
         {/* Vertical Feed */}

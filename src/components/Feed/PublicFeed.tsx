@@ -87,6 +87,44 @@ export const PublicFeed = () => {
     };
   }, [profile?.user_id]);
 
+  // Check if the current user can create a new post.
+  // Premium: unlimited. Non-premium: allow at most 1 post.
+  const canCreatePost = async (): Promise<boolean> => {
+    if (isPremium) return true;
+    if (!profile?.user_id) return false;
+
+    const { count, error } = await supabase
+      .from('publicacoes')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.user_id);
+
+    if (error) {
+      console.error('Erro ao verificar limite de publicações:', error);
+      return false;
+    }
+
+    // Non-premium users may create 1 post total
+    return (count || 0) < 1;
+  };
+
+  // Intercept dialog open to enforce gating
+  const handleOpenCreateDialog = async (open: boolean) => {
+    if (open) {
+      const allowed = await canCreatePost();
+      if (!allowed) {
+        toast({
+          title: 'Recurso Premium',
+          description: 'Usuários gratuitos podem criar apenas 1 publicação. Torne-se Premium para liberar publicações ilimitadas.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setShowCreatePost(true);
+    } else {
+      setShowCreatePost(false);
+    }
+  };
+
   const fetchPublicacoes = async (offset = 0) => {
     try {
       // Get publicacoes - 20 per page
@@ -182,6 +220,17 @@ export const PublicFeed = () => {
   };
 
   const handleCreatePost = async () => {
+    // Double-check gating on submit
+    const allowed = await canCreatePost();
+    if (!allowed) {
+      toast({
+        title: 'Recurso Premium',
+        description: 'Usuários gratuitos podem criar apenas 1 publicação. Torne-se Premium para liberar publicações ilimitadas.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!newPost.descricao.trim() && !newPost.midia_url) {
       toast({
         title: "Erro",
@@ -458,7 +507,7 @@ export const PublicFeed = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gradient">Publicações Recentes</h2>
         
-        <Dialog open={showCreatePost} onOpenChange={setShowCreatePost}>
+        <Dialog open={showCreatePost} onOpenChange={handleOpenCreateDialog}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-primary hover:opacity-90 text-white rounded-full px-6 py-2">
               <Plus className="h-5 w-5 mr-2" />

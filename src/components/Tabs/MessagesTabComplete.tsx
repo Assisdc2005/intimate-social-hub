@@ -156,7 +156,7 @@ export const MessagesTabComplete = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 Upgrade para Premium para enviar mensagens ilimitadas
               </p>
-              <Button className="bg-gradient-primary hover:opacity-90 text-white">
+              <Button className="bg-gradient-primary hover:opacity-90 text-white" onClick={() => navigate('/premium')}>
                 <Crown className="w-4 h-4 mr-2" />
                 Tornar-se Premium
               </Button>
@@ -373,7 +373,7 @@ export const MessagesTabComplete = () => {
                 <span className="text-sm text-muted-foreground">
                   Upgrade para Premium para enviar mensagens
                 </span>
-                <Button size="sm" className="bg-gradient-primary hover:opacity-90 text-white">
+                <Button size="sm" className="bg-gradient-primary hover:opacity-90 text-white" onClick={() => navigate('/premium')}>
                   <Crown className="w-3 h-3 mr-1" />
                   Premium
                 </Button>

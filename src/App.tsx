@@ -21,6 +21,7 @@ import { Terms } from "./pages/Terms";
 import { Privacy } from "./pages/Privacy";
 import { Refund } from "./pages/Refund";
 import { Help } from "./pages/Help";
+import Consent from "./pages/Consent";
 
 const queryClient = new QueryClient();
 
@@ -198,6 +199,7 @@ function AuthenticatedApp() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/refund" element={<Refund />} />
       <Route path="/help" element={<Help />} />
+      <Route path="/consent" element={<Consent />} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>

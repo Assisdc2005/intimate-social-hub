@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Github, Mail, Loader2 } from "lucide-react";
 import { InstitutionalFooter } from "@/components/Layout/InstitutionalFooter";
 import { supabase } from "@/integrations/supabase/client";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Auth = () => {
   const [email, setEmail] = useState("");
@@ -22,6 +23,7 @@ export const Auth = () => {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [acceptedConsent, setAcceptedConsent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +38,14 @@ export const Auth = () => {
       }
     } else {
       try {
+        if (!acceptedConsent) {
+          toast({
+            title: "Aceite necessário",
+            description: "Você deve aceitar os Termos de Uso e Consentimento para criar a conta.",
+            variant: "destructive",
+          });
+          return;
+        }
         const { error } = await signUp(email, password, displayName);
         if (error) {
           alert(error.message);
@@ -142,6 +152,18 @@ export const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+
+            {!isLogin && (
+              <div className="flex items-start gap-3 text-sm text-muted-foreground">
+                <Checkbox id="consent" checked={acceptedConsent} onCheckedChange={(v) => setAcceptedConsent(!!v)} />
+                <label htmlFor="consent" className="leading-snug">
+                  Li e aceito os {" "}
+                  <a href="/consent" target="_blank" className="underline underline-offset-4 hover:text-primary">
+                    Termos de Uso e Consentimento – Sensual Nexus Connect
+                  </a>
+                </label>
+              </div>
+            )}
             
             {isLogin && (
               <div className="flex justify-end">
