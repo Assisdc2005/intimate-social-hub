@@ -152,9 +152,6 @@ export const NotificationBell = () => {
                           {formatDistanceToNow(new Date(notification.created_at), {
                             addSuffix: true,
                             locale: ptBR
-                          })} – {new Date(notification.created_at).toLocaleTimeString('pt-BR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
                           })}
                         </span>
                         {!notification.read_at && (

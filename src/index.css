@@ -8,54 +8,54 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Sensual & Modern - Casual Sexy Aesthetic - Light Mode */
-    --background: 0 0% 100%;               /* Pure white background */
-    --foreground: 0 0% 10%;                /* Deep charcoal text - WCAG AAA */
+    /* Modern Purple Aesthetic - Softer & Elegant */
+    --background: 270 25% 4%;              /* Deep soft purple */
+    --foreground: 270 8% 92%;              /* Warm light text */
 
-    --card: 0 0% 100%;                     /* Pure white cards */
-    --card-foreground: 0 0% 10%;           /* Dark text - high contrast */
+    --card: 270 20% 8%;                    /* Soft dark purple cards */
+    --card-foreground: 270 8% 88%;         /* Card text */
 
-    --popover: 0 0% 100%;                  /* Popover background */
-    --popover-foreground: 0 0% 10%;        /* Popover text - high contrast */
+    --popover: 270 18% 12%;                /* Popover background */
+    --popover-foreground: 270 8% 92%;      /* Popover text */
 
-    --primary: 6 85% 58%;                  /* Coral pink - adjusted for contrast */
+    --primary: 280 100% 70%;               /* Vibrant purple primary */
     --primary-foreground: 0 0% 100%;       /* White text on primary */
 
-    --secondary: 270 60% 60%;              /* Soft lilac - adjusted */
+    --secondary: 260 80% 65%;              /* Soft lavender secondary */
     --secondary-foreground: 0 0% 100%;     /* White text on secondary */
 
-    --muted: 0 0% 96%;                     /* Light gray muted */
-    --muted-foreground: 0 0% 35%;          /* Dark gray - WCAG AA contrast */
+    --muted: 270 15% 15%;                  /* Subtle muted purple */
+    --muted-foreground: 270 8% 65%;        /* Muted text */
 
-    --accent: 345 90% 55%;                 /* Warm pink accent - adjusted */
+    --accent: 290 100% 75%;                /* Bright magenta accent */
     --accent-foreground: 0 0% 100%;        /* White text on accent */
 
-    --destructive: 0 72% 51%;              /* Red destructive - WCAG AA */
+    --destructive: 0 84% 60%;              /* Red destructive */
     --destructive-foreground: 0 0% 100%;   /* White text on destructive */
 
-    --border: 0 0% 89%;                    /* Light border */
-    --input: 0 0% 100%;                    /* White input background */
-    --ring: 6 85% 58%;                     /* Focus ring coral */
+    --border: 270 20% 18%;                 /* Subtle purple border */
+    --input: 270 15% 12%;                  /* Input background */
+    --ring: 280 100% 70%;                  /* Focus ring */
 
-    /* Vibrant gradient system */
-    --gradient-primary: linear-gradient(135deg, hsl(6, 85%, 58%) 0%, hsl(345, 90%, 55%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(270, 60%, 60%), hsl(280, 70%, 70%));
-    --gradient-hero: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(340, 100%, 99%));
-    --gradient-glass: linear-gradient(135deg, hsla(6, 85%, 58%, 0.08), hsla(345, 90%, 55%, 0.04));
-    --gradient-card: linear-gradient(145deg, hsla(0, 0%, 100%, 0.98), hsla(340, 100%, 99%, 0.95));
+    /* Elegant gradient system */
+    --gradient-primary: linear-gradient(135deg, hsl(280, 100%, 70%), hsl(290, 100%, 75%));
+    --gradient-secondary: linear-gradient(135deg, hsl(260, 80%, 65%), hsl(270, 60%, 60%));
+    --gradient-hero: linear-gradient(180deg, hsl(270, 25%, 4%), hsl(260, 30%, 8%));
+    --gradient-glass: linear-gradient(135deg, hsla(280, 100%, 70%, 0.1), hsla(290, 100%, 75%, 0.05));
+    --gradient-card: linear-gradient(145deg, hsla(270, 20%, 8%, 0.9), hsla(280, 25%, 12%, 0.7));
     
-    /* Soft shadows */
-    --shadow-glow: 0 0 40px hsla(6, 85%, 58%, 0.25);
-    --shadow-glow-hover: 0 0 60px hsla(6, 85%, 58%, 0.4);
-    --shadow-premium: 0 20px 60px hsla(6, 85%, 58%, 0.15);
-    --shadow-glass: 0 8px 32px hsla(0, 0%, 0%, 0.06);
-    --shadow-soft: 0 4px 20px hsla(0, 0%, 0%, 0.04);
+    /* Sophisticated shadows */
+    --shadow-glow: 0 0 40px hsla(280, 100%, 70%, 0.25);
+    --shadow-glow-hover: 0 0 60px hsla(280, 100%, 70%, 0.4);
+    --shadow-premium: 0 20px 60px hsla(280, 100%, 70%, 0.15);
+    --shadow-glass: 0 8px 32px hsla(270, 25%, 4%, 0.4);
+    --shadow-soft: 0 4px 20px hsla(270, 20%, 8%, 0.3);
     
     /* Smooth animations */
     --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     
-    --radius: 1rem;
+    --radius: 1.25rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -75,43 +75,41 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Dark mode with warm sensual tones - High Contrast */
-    --background: 0 0% 7%;                 /* Very dark charcoal */
-    --foreground: 0 0% 98%;                /* Near white - WCAG AAA */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 11%;                      /* Dark card */
-    --card-foreground: 0 0% 98%;           /* Light text - high contrast */
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 11%;                   /* Popover background */
-    --popover-foreground: 0 0% 98%;        /* Popover text - high contrast */
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 6 95% 70%;                  /* Brighter coral for dark mode */
-    --primary-foreground: 0 0% 10%;        /* Dark text on bright coral */
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 270 75% 75%;              /* Brighter lilac for dark mode */
-    --secondary-foreground: 0 0% 10%;      /* Dark text on bright lilac */
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 0 0% 16%;                     /* Dark muted */
-    --muted-foreground: 0 0% 70%;          /* Light gray - WCAG AA */
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 345 95% 70%;                 /* Brighter warm pink for dark */
-    --accent-foreground: 0 0% 10%;         /* Dark text on bright pink */
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 72% 62%;              /* Brighter red for dark mode */
-    --destructive-foreground: 0 0% 100%;   /* White text */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 0 0% 20%;                    /* Lighter dark border */
-    --input: 0 0% 13%;                     /* Dark input */
-    --ring: 6 95% 70%;                     /* Bright coral ring */
-    
-    --sidebar-background: 0 0% 9%;
-    --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 6 95% 70%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 16%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 6 95% 70%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -121,87 +119,35 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background font-sans antialiased;
+    @apply bg-background text-foreground font-sans;
     background: var(--gradient-hero);
     min-height: 100vh;
-    color: #111 !important;
-  }
-  
-  /* Force dark text on all elements */
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
-    color: #111 !important;
-  }
-  
-  p, span, div, li, td, th {
-    color: #111 !important;
-  }
-  
-  a {
-    color: #111 !important;
-    @apply transition-colors;
-  }
-  
-  a:hover {
-    @apply text-primary;
-  }
-  
-  /* Form elements with dark text */
-  input, textarea, select {
-    @apply bg-input border-border;
-    color: #111 !important;
-  }
-  
-  input::placeholder, textarea::placeholder {
-    color: #666 !important;
-  }
-  
-  /* Labels with dark text */
-  label {
-    @apply font-medium;
-    color: #111 !important;
-  }
-  
-  /* Buttons should keep their designed colors */
-  button {
-    color: inherit;
-  }
-  
-  button.text-white,
-  button[class*="text-primary-foreground"],
-  button[class*="text-secondary-foreground"],
-  button[class*="text-accent-foreground"] {
-    color: white !important;
   }
 }
 
 @layer components {
-  /* Premium button variants with high contrast */
+  /* Premium button variants */
   .btn-premium {
-    @apply bg-gradient-to-r from-primary to-accent text-white font-semibold px-6 py-3 rounded-2xl shadow-[var(--shadow-premium)] transition-all duration-300 hover:scale-105 hover:shadow-[var(--shadow-glow)];
+    @apply bg-gradient-to-r from-primary to-accent text-primary-foreground font-medium px-6 py-3 rounded-xl shadow-[var(--shadow-premium)] transition-all duration-300 hover:scale-105 hover:shadow-[var(--shadow-glow)];
   }
   
   .btn-secondary {
-    @apply bg-gradient-to-r from-secondary to-secondary/90 text-white font-semibold px-6 py-3 rounded-2xl shadow-lg transition-all duration-300 hover:scale-105;
+    @apply bg-gradient-to-r from-secondary to-purple-600 text-secondary-foreground font-medium px-6 py-3 rounded-xl shadow-lg transition-all duration-300 hover:scale-105;
   }
   
-  /* Glass morphism effect - dark mode aware */
+  /* Glass morphism effect */
   .glass {
-    @apply backdrop-blur-lg bg-card/50 border border-border shadow-[var(--shadow-glass)];
+    @apply backdrop-blur-lg bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-[var(--shadow-glass)];
   }
   
-  .dark .glass {
-    @apply backdrop-blur-lg bg-card/40 border border-border/50 shadow-[var(--shadow-glass)];
-  }
-  
-  /* Premium card with glow - high contrast */
+  /* Premium card with glow */
   .card-premium {
-    @apply bg-card text-card-foreground border border-primary/20 rounded-2xl p-6 shadow-[var(--shadow-premium)] transition-all duration-300 hover:border-primary/40 hover:shadow-[var(--shadow-glow)];
+    @apply bg-card/80 backdrop-blur-md border border-primary/20 rounded-2xl p-6 shadow-[var(--shadow-premium)] transition-all duration-300 hover:border-primary/40 hover:shadow-[var(--shadow-glow)];
   }
   
   /* Navigation active state */
   .nav-active {
-    @apply text-primary bg-primary/10 border-primary/30 font-medium;
+    @apply text-primary bg-primary/10 border-primary/30;
   }
   
   /* Smooth animations */
@@ -213,17 +159,12 @@ All colors MUST be HSL.
     @apply animate-in slide-in-from-bottom-4 duration-500;
   }
   
-  /* Text gradients - ensure readability */
+  /* Text gradients */
   .text-gradient {
-    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-bold;
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
   }
   
   .text-gradient-secondary {
-    @apply bg-gradient-to-r from-secondary to-secondary/80 bg-clip-text text-transparent font-bold;
-  }
-  
-  /* High contrast text utilities */
-  .text-high-contrast {
-    @apply text-foreground font-medium;
+    @apply bg-gradient-to-r from-secondary to-purple-400 bg-clip-text text-transparent;
   }
 }

@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Heart, ArrowLeft } from 'lucide-react';
-import { RedirectPopup } from '@/components/Profile/RedirectPopup';
 
 export const CompleteProfile = () => {
   const { user, signOut } = useAuth();
@@ -39,7 +38,6 @@ export const CompleteProfile = () => {
   
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: boolean}>({});
-  const [showRedirectPopup, setShowRedirectPopup] = useState(false);
 
   // Campos obrigatórios
   const requiredFields = ['birth_date', 'gender', 'sexual_orientation', 'state', 'city', 'profession', 'relationship_status', 'bio'];
@@ -130,12 +128,11 @@ export const CompleteProfile = () => {
           variant: "destructive",
         });
       } else {
-        setShowRedirectPopup(true);
-        
-        // Navegar após o popup
-        setTimeout(() => {
-          navigate('/home');
-        }, 2500);
+        toast({
+          title: "Perfil completado!",
+          description: "Bem-vindo(a) ao Sensual Nexus Connect",
+        });
+        navigate('/home');
       }
     } catch (error) {
       console.error('Profile update error:', error);
@@ -387,11 +384,6 @@ export const CompleteProfile = () => {
           </CardContent>
         </Card>
       </div>
-      
-      <RedirectPopup
-        isOpen={showRedirectPopup}
-        onClose={() => setShowRedirectPopup(false)}
-      />
     </div>
   );
 };

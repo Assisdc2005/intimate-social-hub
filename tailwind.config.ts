@@ -63,11 +63,10 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
-		fontFamily: {
-			sans: ['Inter', 'system-ui', 'sans-serif'],
-			display: ['Poppins', 'system-ui', 'sans-serif'],
-			heading: ['Poppins', 'system-ui', 'sans-serif'],
-		},
+			fontFamily: {
+				sans: ['Montserrat', 'system-ui', 'sans-serif'],
+				display: ['Poppins', 'system-ui', 'sans-serif'],
+			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-secondary': 'var(--gradient-secondary)',
