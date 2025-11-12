@@ -135,12 +135,15 @@ export const EditProfileTab = () => {
         .from(bucket)
         .getPublicUrl(filePath);
 
-      // Update profile with new avatar URL
+      // Update profile with new avatar URL (include display_name to avoid null constraint error)
       const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
-      const result = await updateProfile({ avatar_url: cacheBustedUrl });
+      const result = await updateProfile({ 
+        avatar_url: cacheBustedUrl,
+        display_name: profile.display_name // Garantir que display_name não seja null
+      });
       
       if (result.error) {
-        throw new Error(result.error);
+        throw result.error;
       }
 
       // Force refresh do perfil para atualizar em todos os componentes
@@ -153,9 +156,13 @@ export const EditProfileTab = () => {
 
     } catch (error) {
       console.error('Error uploading avatar:', error);
+      const errorMessage = error instanceof Error ? error.message : 
+                          typeof error === 'object' && error !== null ? JSON.stringify(error) :
+                          "Erro ao atualizar foto de perfil";
+      
       toast({
-        title: "Erro",
-        description: typeof error === 'string' ? error : ((error as any)?.message || JSON.stringify(error) || "Erro ao atualizar foto de perfil"),
+        title: "Erro ao atualizar foto",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

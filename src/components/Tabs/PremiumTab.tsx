@@ -27,8 +27,7 @@ export const PremiumTab = () => {
       setTimeout(async () => {
         console.log('Refreshing profile after successful payment...');
         await refreshProfile();
-        await checkSubscription();
-      }, 2000);
+      }, 1000);
       
       // Remove the parameter from URL
       window.history.replaceState({}, '', '/premium');
@@ -41,7 +40,7 @@ export const PremiumTab = () => {
       // Remove the parameter from URL
       window.history.replaceState({}, '', '/premium');
     }
-  }, [searchParams, toast, refreshProfile, checkSubscription]);
+  }, [searchParams, toast, refreshProfile]);
 
   // Debug do status premium
   useEffect(() => {
@@ -135,7 +134,6 @@ export const PremiumTab = () => {
   const handleRefreshStatus = async () => {
     console.log('Manually refreshing premium status...');
     await refreshProfile();
-    await checkSubscription();
     
     toast({
       title: "Status atualizado",
@@ -145,8 +143,13 @@ export const PremiumTab = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-white text-lg">Carregando...</div>
+      <div className="space-y-4 animate-fade-in">
+        <div className="glass rounded-3xl p-6 h-48 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+        </div>
       </div>
     );
   }
