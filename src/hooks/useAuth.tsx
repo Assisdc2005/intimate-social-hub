@@ -80,8 +80,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    // Redirect to auth page instead of forcing page reload
-    window.location.href = '/auth';
+    // Redirect to Landing Page
+    window.location.href = '/';
   };
 
   const updatePassword = async (newPassword: string) => {

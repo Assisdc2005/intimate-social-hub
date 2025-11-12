@@ -50,17 +50,10 @@ export const DiscoverTab = () => {
         .neq('user_id', profile?.user_id)
         .limit(20);
 
-      // Fetch posts with profile data
+      // Fetch posts first (no embedded join)
       const { data: postsData } = await supabase
         .from('posts')
-        .select(`
-          *,
-          profiles:user_id (
-            display_name,
-            avatar_url,
-            city
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
 

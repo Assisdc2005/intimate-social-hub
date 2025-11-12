@@ -41,20 +41,31 @@ export const DiscoverTab = () => {
         // Fetch initial users
         await loadUsers(1, true);
 
-        // Fetch posts with profiles
+        // Fetch posts
         const { data: postsData, error: postsError } = await supabase
           .from('posts')
-          .select(`
-            *,
-            profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
-          `)
+          .select('*')
           .order('created_at', { ascending: false })
           .limit(10);
+
+        // Merge profiles manually to avoid FK alias issues
+        const postUserIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
+        let postsWithProfiles = postsData || [];
+        if (postUserIds.length) {
+          const { data: profs } = await supabase
+            .from('profiles')
+            .select('user_id, display_name, avatar_url, city, state')
+            .in('user_id', postUserIds);
+          postsWithProfiles = (postsData || []).map((p: any) => ({
+            ...p,
+            profiles: profs?.find((pr: any) => pr.user_id === p.user_id)
+          }));
+        }
 
         if (postsError) {
           console.error('Error fetching posts:', postsError);
         } else {
-          setPosts(postsData || []);
+          setPosts(postsWithProfiles);
         }
       } catch (error) {
         console.error('Error:', error);
@@ -259,14 +270,25 @@ export const DiscoverTab = () => {
       // Refresh posts
       const { data: postsData } = await supabase
         .from('posts')
-        .select(`
-          *,
-          profiles!posts_user_id_fkey (display_name, avatar_url, city, state)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
+
+      // Merge profiles for the second query
+      const postUserIds2 = [...new Set((postsData || []).map((p: any) => p.user_id))];
+      let postsWithProfiles2 = postsData || [];
+      if (postUserIds2.length) {
+        const { data: profs2 } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url, city, state')
+          .in('user_id', postUserIds2);
+        postsWithProfiles2 = (postsData || []).map((p: any) => ({
+          ...p,
+          profiles: profs2?.find((pr: any) => pr.user_id === p.user_id)
+        }));
+      }
       
-      setPosts(postsData || []);
+      setPosts(postsWithProfiles2);
     } catch (error) {
       console.error('Error creating post:', error);
       toast({
@@ -324,7 +346,7 @@ export const DiscoverTab = () => {
         });
 
       // Navigate to user profile
-      navigate(`/profile/${userId}`);
+      navigate(`/profile/view/${userId}`);
     } catch (error) {
       console.error('Error recording visit:', error);
     }

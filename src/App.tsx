@@ -4,17 +4,21 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
 import { Auth } from "./pages/Auth";
 import { ResetPassword } from "./pages/ResetPassword";
 import { CompleteProfile } from "./pages/CompleteProfile";
 import Profile from "./pages/Profile";
+import AboutTab from "./pages/profile-tabs/AboutTab";
+import TestimonialsTab from "./pages/profile-tabs/TestimonialsTab";
+import PostsTab from "./pages/profile-tabs/PostsTab";
+import SettingsTab from "./pages/profile-tabs/SettingsTab";
 import { UserProfile } from "./pages/UserProfile";
 import { LandingPage } from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "./hooks/useAuth";
-import { useProfile } from "./hooks/useProfile";
+import { useProfile, ProfileProvider } from "./hooks/useProfile";
 import { AuthProvider } from "./hooks/useAuth";
 import { About } from "./pages/About";
 import { Terms } from "./pages/Terms";
@@ -35,6 +39,20 @@ function AuthenticatedApp() {
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
   }, [location.pathname]);
+
+  // Home wrapper: shows Home immediately, then redirects to Complete Profile after 10s if needed
+  const HomeWithDelay = () => {
+    const navigate = useNavigate();
+    React.useEffect(() => {
+      if (user && !profile?.profile_completed) {
+        const t = window.setTimeout(() => {
+          navigate("/complete-profile", { replace: true });
+        }, 10000);
+        return () => window.clearTimeout(t);
+      }
+    }, [user, profile?.profile_completed, navigate]);
+    return <Index />;
+  };
 
   if (authLoading || profileLoading) {
     return (
@@ -88,7 +106,7 @@ function AuthenticatedApp() {
         path="/home" 
         element={
           user ? (
-            <Index />
+            <HomeWithDelay />
           ) : (
             <Navigate to="/auth" replace />
           )
@@ -99,12 +117,22 @@ function AuthenticatedApp() {
         path="/profile" 
         element={
           user ? (
-            <Profile />
+            profile?.profile_completed ? (
+              <Profile />
+            ) : (
+              <Navigate to="/complete-profile" replace />
+            )
           ) : (
             <Navigate to="/auth" replace />
           )
-        } 
-      />
+        }
+      >
+        <Route index element={<Navigate to="about" replace />} />
+        <Route path="about" element={<AboutTab />} />
+        <Route path="testimonials" element={<TestimonialsTab />} />
+        <Route path="posts" element={<PostsTab />} />
+        <Route path="settings" element={<SettingsTab />} />
+      </Route>
       
       <Route 
         path="/discover" 
@@ -167,10 +195,14 @@ function AuthenticatedApp() {
       />
       
       <Route 
-        path="/profile/:userId" 
+        path="/profile/view/:userId" 
         element={
           user ? (
-            <UserProfile />
+            profile?.profile_completed ? (
+              <UserProfile />
+            ) : (
+              <Navigate to="/complete-profile" replace />
+            )
           ) : (
             <Navigate to="/auth" replace />
           )
@@ -197,7 +229,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AuthenticatedApp />
+          <ProfileProvider>
+            <AuthenticatedApp />
+          </ProfileProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

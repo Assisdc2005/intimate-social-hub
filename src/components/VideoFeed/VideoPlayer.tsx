@@ -124,7 +124,7 @@ export const VideoPlayer = ({ video }: VideoPlayerProps) => {
   };
 
   const handleProfileClick = () => {
-    navigate(`/profile/${video.user_id}`);
+    navigate(`/profile/view/${video.user_id}`);
   };
 
   return (

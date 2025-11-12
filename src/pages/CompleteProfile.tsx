@@ -1,18 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Removed Radix Select in this page to avoid StrictMode/portal errors
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { Heart, ArrowLeft } from 'lucide-react';
+import { Heart, ArrowLeft, ChevronDown } from 'lucide-react';
 
 export const CompleteProfile = () => {
   const { user, signOut } = useAuth();
-  const { updateProfile } = useProfile();
+  const { profile, updateProfile, refreshProfile } = useProfile();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -38,6 +38,119 @@ export const CompleteProfile = () => {
   
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: boolean}>({});
+
+  // IBGE dependent selects state
+  type UF = { id: number; sigla: string; nome: string };
+  type Municipio = { id: number; nome: string };
+  const [ufs, setUfs] = useState<UF[]>([]);
+  const [ufsLoading, setUfsLoading] = useState(false);
+  const [municipios, setMunicipios] = useState<Municipio[]>([]);
+  const [municipiosLoading, setMunicipiosLoading] = useState(false);
+  const [municipiosError, setMunicipiosError] = useState(false);
+  const [manualCity, setManualCity] = useState('');
+
+  // Se o perfil já estiver completo por qualquer motivo, redireciona imediatamente
+  useEffect(() => {
+    if (profile?.profile_completed) {
+      navigate('/profile', { replace: true });
+    }
+  }, [profile?.profile_completed, navigate]);
+
+  // Fallback local UFs (27 unidades federativas)
+  const localUFs: UF[] = [
+    { id: 11, sigla: 'RO', nome: 'Rondônia' },
+    { id: 12, sigla: 'AC', nome: 'Acre' },
+    { id: 13, sigla: 'AM', nome: 'Amazonas' },
+    { id: 14, sigla: 'RR', nome: 'Roraima' },
+    { id: 15, sigla: 'PA', nome: 'Pará' },
+    { id: 16, sigla: 'AP', nome: 'Amapá' },
+    { id: 17, sigla: 'TO', nome: 'Tocantins' },
+    { id: 21, sigla: 'MA', nome: 'Maranhão' },
+    { id: 22, sigla: 'PI', nome: 'Piauí' },
+    { id: 23, sigla: 'CE', nome: 'Ceará' },
+    { id: 24, sigla: 'RN', nome: 'Rio Grande do Norte' },
+    { id: 25, sigla: 'PB', nome: 'Paraíba' },
+    { id: 26, sigla: 'PE', nome: 'Pernambuco' },
+    { id: 27, sigla: 'AL', nome: 'Alagoas' },
+    { id: 28, sigla: 'SE', nome: 'Sergipe' },
+    { id: 29, sigla: 'BA', nome: 'Bahia' },
+    { id: 31, sigla: 'MG', nome: 'Minas Gerais' },
+    { id: 32, sigla: 'ES', nome: 'Espírito Santo' },
+    { id: 33, sigla: 'RJ', nome: 'Rio de Janeiro' },
+    { id: 35, sigla: 'SP', nome: 'São Paulo' },
+    { id: 41, sigla: 'PR', nome: 'Paraná' },
+    { id: 42, sigla: 'SC', nome: 'Santa Catarina' },
+    { id: 43, sigla: 'RS', nome: 'Rio Grande do Sul' },
+    { id: 50, sigla: 'MS', nome: 'Mato Grosso do Sul' },
+    { id: 51, sigla: 'MT', nome: 'Mato Grosso' },
+    { id: 52, sigla: 'GO', nome: 'Goiás' },
+    { id: 53, sigla: 'DF', nome: 'Distrito Federal' },
+  ];
+
+  // Fetch UFs from IBGE with fallback to BrasilAPI then local
+  useEffect(() => {
+    const loadUFs = async () => {
+      setUfsLoading(true);
+      try {
+        const res = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome');
+        if (!res.ok) throw new Error('IBGE UFs failed');
+        const data = await res.json();
+        const mapped: UF[] = data.map((d: any) => ({ id: d.id, sigla: d.sigla, nome: d.nome }));
+        setUfs(mapped);
+      } catch (e) {
+        try {
+          const res2 = await fetch('https://brasilapi.com.br/api/ibge/uf/v1');
+          if (!res2.ok) throw new Error('BrasilAPI UFs failed');
+          const data2 = await res2.json();
+          const mapped2: UF[] = data2
+            .sort((a: any, b: any) => a.nome.localeCompare(b.nome))
+            .map((d: any) => ({ id: d.id, sigla: d.sigla, nome: d.nome }));
+          setUfs(mapped2);
+        } catch (e2) {
+          setUfs(localUFs);
+        }
+      } finally {
+        setUfsLoading(false);
+      }
+    };
+    loadUFs();
+  }, []);
+
+  // Fetch Municipios when state changes
+  useEffect(() => {
+    const uf = formData.state; // expecting UF sigla
+    setMunicipios([]);
+    setMunicipiosError(false);
+    setManualCity('');
+    if (!uf) return;
+
+    const loadCities = async () => {
+      setMunicipiosLoading(true);
+      try {
+        // Try IBGE by UF sigla
+        const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`);
+        if (!res.ok) throw new Error('IBGE cities failed');
+        const data = await res.json();
+        const mapped: Municipio[] = data.map((m: any) => ({ id: m.id, nome: m.nome }));
+        setMunicipios(mapped);
+      } catch (e) {
+        try {
+          const res2 = await fetch(`https://brasilapi.com.br/api/ibge/municipios/v1/${uf}?providers=dados-abertos-br,gov,wikipedia`);
+          if (!res2.ok) throw new Error('BrasilAPI cities failed');
+          const data2 = await res2.json();
+          const mapped2: Municipio[] = data2
+            .sort((a: any, b: any) => a.nome.localeCompare(b.nome))
+            .map((m: any) => ({ id: m.codigo_ibge || m.codigo, nome: m.nome }));
+          setMunicipios(mapped2);
+        } catch (e2) {
+          setMunicipiosError(true);
+        }
+      } finally {
+        setMunicipiosLoading(false);
+      }
+    };
+    loadCities();
+  }, [formData.state]);
 
   // Campos obrigatórios
   const requiredFields = ['birth_date', 'gender', 'sexual_orientation', 'state', 'city', 'profession', 'relationship_status', 'bio'];
@@ -114,6 +227,7 @@ export const CompleteProfile = () => {
         relationship_status: formData.relationship_status || null,
         bio: formData.bio || null,
         interests: formData.interests,
+        // Garantia de não reexibir o CompleteProfile caso o trigger não esteja ativo
         profile_completed: true,
       };
 
@@ -132,7 +246,14 @@ export const CompleteProfile = () => {
           title: "Perfil completado!",
           description: "Bem-vindo(a) ao Sensual Nexus Connect",
         });
-        navigate('/home');
+        // Garantir que o contexto de perfil seja atualizado antes da navegação
+        try {
+          await refreshProfile();
+        } catch (e) {
+          // ignore
+        }
+        // Redirecionar para o perfil
+        navigate('/profile', { replace: true });
       }
     } catch (error) {
       console.error('Profile update error:', error);
@@ -222,64 +343,105 @@ export const CompleteProfile = () => {
                 
                 <div>
                   <label className="text-white text-sm">Gênero *</label>
-                  <Select value={formData.gender} onValueChange={(value) => handleFieldChange('gender', value)}>
-                    <SelectTrigger className={`bg-white/10 border-primary/30 text-white ${
-                      errors.gender ? 'border-red-500 border-2' : ''
-                    }`}>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      <SelectItem value="masculino" className="text-white hover:bg-gray-700">Masculino</SelectItem>
-                      <SelectItem value="feminino" className="text-white hover:bg-gray-700">Feminino</SelectItem>
-                      <SelectItem value="nao_binario" className="text-white hover:bg-gray-700">Não-binário</SelectItem>
-                      <SelectItem value="outro" className="text-white hover:bg-gray-700">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="relative">
+                    <select
+                      value={formData.gender}
+                      onChange={(e) => handleFieldChange('gender', e.target.value)}
+                      className={`appearance-none bg-white/10 border border-primary/40 ${!formData.gender ? 'text-gray-300' : 'text-white'} w-full h-11 rounded-lg px-3 pr-10 py-2 text-sm backdrop-blur-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 focus:shadow-[0_0_30px_rgba(255,54,164,0.15)] hover:bg-white/15 ${
+                        errors.gender ? 'border-red-500 border-2' : ''
+                      }`}
+                    >
+                      <option value="" disabled>Selecione</option>
+                      <option value="masculino">Masculino</option>
+                      <option value="feminino">Feminino</option>
+                      <option value="nao_binario">Não-binário</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
+                  </div>
                   {errors.gender && <p className="text-red-400 text-xs mt-1">Campo obrigatório</p>}
                 </div>
                 
                 <div>
                   <label className="text-white text-sm">Orientação Sexual *</label>
-                  <Select value={formData.sexual_orientation} onValueChange={(value) => handleFieldChange('sexual_orientation', value)}>
-                    <SelectTrigger className={`bg-white/10 border-primary/30 text-white ${
-                      errors.sexual_orientation ? 'border-red-500 border-2' : ''
-                    }`}>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      <SelectItem value="heterossexual" className="text-white hover:bg-gray-700">Heterossexual</SelectItem>
-                      <SelectItem value="homossexual" className="text-white hover:bg-gray-700">Homossexual</SelectItem>
-                      <SelectItem value="bissexual" className="text-white hover:bg-gray-700">Bissexual</SelectItem>
-                      <SelectItem value="pansexual" className="text-white hover:bg-gray-700">Pansexual</SelectItem>
-                      <SelectItem value="outro" className="text-white hover:bg-gray-700">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="relative">
+                    <select
+                      value={formData.sexual_orientation}
+                      onChange={(e) => handleFieldChange('sexual_orientation', e.target.value)}
+                      className={`appearance-none bg-white/10 border border-primary/40 ${!formData.sexual_orientation ? 'text-gray-300' : 'text-white'} w-full h-11 rounded-lg px-3 pr-10 py-2 text-sm backdrop-blur-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 focus:shadow-[0_0_30px_rgba(255,54,164,0.15)] hover:bg-white/15 ${
+                        errors.sexual_orientation ? 'border-red-500 border-2' : ''
+                      }`}
+                    >
+                      <option value="" disabled>Selecione</option>
+                      <option value="heterossexual">Heterossexual</option>
+                      <option value="homossexual">Homossexual</option>
+                      <option value="bissexual">Bissexual</option>
+                      <option value="pansexual">Pansexual</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
+                  </div>
                   {errors.sexual_orientation && <p className="text-red-400 text-xs mt-1">Campo obrigatório</p>}
                 </div>
                 
                 <div>
                   <label className="text-white text-sm">Estado *</label>
-                  <Input
-                    value={formData.state}
-                    onChange={(e) => handleFieldChange('state', e.target.value)}
-                    placeholder="Ex: São Paulo"
-                    className={`bg-white/10 border-primary/30 text-white placeholder:text-gray-400 ${
-                      errors.state ? 'border-red-500 border-2' : ''
-                    }`}
-                  />
+                  <div className="relative">
+                    <select
+                      value={formData.state}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleFieldChange('state', val);
+                        // reset city when state changes
+                        handleFieldChange('city', '');
+                      }}
+                      disabled={ufsLoading}
+                      className={`appearance-none bg-white/10 border border-primary/40 ${!formData.state ? 'text-gray-300' : 'text-white'} w-full h-11 rounded-lg px-3 pr-10 py-2 text-sm backdrop-blur-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 focus:shadow-[0_0_30px_rgba(255,54,164,0.15)] hover:bg-white/15 ${
+                        errors.state ? 'border-red-500 border-2' : ''
+                      }`}
+                    >
+                      <option value="" disabled>{ufsLoading ? 'Carregando...' : 'Selecione o estado (UF)'}</option>
+                      {ufs.map((uf) => (
+                        <option key={uf.id} value={uf.sigla}>{uf.nome} ({uf.sigla})</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
+                  </div>
                   {errors.state && <p className="text-red-400 text-xs mt-1">Campo obrigatório</p>}
                 </div>
                 
                 <div>
                   <label className="text-white text-sm">Cidade *</label>
-                  <Input
-                    value={formData.city}
-                    onChange={(e) => handleFieldChange('city', e.target.value)}
-                    placeholder="Ex: São Paulo"
-                    className={`bg-white/10 border-primary/30 text-white placeholder:text-gray-400 ${
-                      errors.city ? 'border-red-500 border-2' : ''
-                    }`}
-                  />
+                  {(!municipiosError && municipios.length > 0) ? (
+                    <div className="relative">
+                      <select
+                        value={formData.city}
+                        onChange={(e) => handleFieldChange('city', e.target.value)}
+                        disabled={!formData.state || municipiosLoading}
+                        className={`appearance-none bg-white/10 border border-primary/40 ${!formData.city ? 'text-gray-300' : 'text-white'} w-full h-11 rounded-lg px-3 pr-10 py-2 text-sm backdrop-blur-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 focus:shadow-[0_0_30px_rgba(255,54,164,0.15)] hover:bg-white/15 ${
+                          errors.city ? 'border-red-500 border-2' : ''
+                        }`}
+                      >
+                        <option value="" disabled>{municipiosLoading ? 'Carregando...' : 'Selecione a cidade'}</option>
+                        {municipios.map((m) => (
+                          <option key={m.id} value={m.nome}>{m.nome}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
+                    </div>
+                  ) : (
+                    <Input
+                      value={manualCity}
+                      onChange={(e) => {
+                        setManualCity(e.target.value);
+                        handleFieldChange('city', e.target.value);
+                      }}
+                      placeholder={municipiosLoading ? 'Carregando...' : 'Digite sua cidade'}
+                      className={`bg-white/10 border-primary/30 text-white placeholder:text-gray-400 ${
+                        errors.city ? 'border-red-500 border-2' : ''
+                      }`}
+                    />
+                  )}
                   {errors.city && <p className="text-red-400 text-xs mt-1">Campo obrigatório</p>}
                 </div>
                 
@@ -298,20 +460,23 @@ export const CompleteProfile = () => {
                 
                 <div>
                   <label className="text-white text-sm">Status de Relacionamento *</label>
-                  <Select value={formData.relationship_status} onValueChange={(value) => handleFieldChange('relationship_status', value)}>
-                    <SelectTrigger className={`bg-white/10 border-primary/30 text-white ${
-                      errors.relationship_status ? 'border-red-500 border-2' : ''
-                    }`}>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      <SelectItem value="solteiro" className="text-white hover:bg-gray-700">Solteiro(a)</SelectItem>
-                      <SelectItem value="casado" className="text-white hover:bg-gray-700">Casado(a)</SelectItem>
-                      <SelectItem value="relacionamento" className="text-white hover:bg-gray-700">Em relacionamento</SelectItem>
-                      <SelectItem value="divorciado" className="text-white hover:bg-gray-700">Divorciado(a)</SelectItem>
-                      <SelectItem value="viuvo" className="text-white hover:bg-gray-700">Viúvo(a)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="relative">
+                    <select
+                      value={formData.relationship_status}
+                      onChange={(e) => handleFieldChange('relationship_status', e.target.value)}
+                      className={`appearance-none bg-white/10 border border-primary/40 ${!formData.relationship_status ? 'text-gray-300' : 'text-white'} w-full h-11 rounded-lg px-3 pr-10 py-2 text-sm backdrop-blur-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 focus:shadow-[0_0_30px_rgba(255,54,164,0.15)] hover:bg-white/15 ${
+                        errors.relationship_status ? 'border-red-500 border-2' : ''
+                      }`}
+                    >
+                      <option value="" disabled>Selecione</option>
+                      <option value="solteiro">Solteiro(a)</option>
+                      <option value="casado">Casado(a)</option>
+                      <option value="relacionamento">Em relacionamento</option>
+                      <option value="divorciado">Divorciado(a)</option>
+                      <option value="viuvo">Viúvo(a)</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
+                  </div>
                   {errors.relationship_status && <p className="text-red-400 text-xs mt-1">Campo obrigatório</p>}
                 </div>
                 

@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CreatePostModal } from "@/components/Modals/CreatePostModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { BlurredMedia } from "@/components/ui/blurred-media";
+import { uploadOriginalAndGenerateWatermark } from "@/lib/watermark";
+import UserPhotoCard from "@/components/media/UserPhotoCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +61,8 @@ export const PublicFeed = () => {
   const [editingPost, setEditingPost] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [deletePostId, setDeletePostId] = useState<string | null>(null);
+  const [expandedPosts, setExpandedPosts] = useState<{ [id: string]: boolean }>({});
+  const MAX_TEXT = 190;
 
   useEffect(() => {
     fetchPublicacoes();
@@ -244,27 +249,37 @@ export const PublicFeed = () => {
       let mediaUrl = newPost.midia_url;
       let mediaType = 'texto';
 
-      // Upload image to Supabase Storage if a file was selected
+      // Upload media if a file was selected
       if (newPost.midia_url && newPost.midia_url.startsWith('blob:')) {
         const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
         const selectedFile = fileInput?.files?.[0];
         
         if (selectedFile) {
-          const fileExt = selectedFile.name.split('.').pop();
-          const fileName = `${profile?.user_id}/${Date.now()}.${fileExt}`;
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('publicacoes')
-            .upload(fileName, selectedFile);
-
-          if (uploadError) throw uploadError;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('publicacoes')
-            .getPublicUrl(fileName);
-
-          mediaUrl = publicUrl;
           mediaType = selectedFile.type.startsWith('video/') ? 'video' : 'imagem';
+
+          if (mediaType === 'imagem') {
+            // Image: route through watermark pipeline
+            const { data: wm, error: wmErr } = await uploadOriginalAndGenerateWatermark({
+              file: selectedFile,
+              userId: profile?.user_id || 'unknown',
+            });
+            if (wmErr || !wm) {
+              throw new Error(wmErr || 'Falha ao marcar d\'água a imagem');
+            }
+            mediaUrl = wm.publicUrl;
+          } else {
+            // Video: keep previous direct upload path
+            const fileExt = selectedFile.name.split('.').pop();
+            const fileName = `${profile?.user_id}/${Date.now()}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage
+              .from('publicacoes')
+              .upload(fileName, selectedFile);
+            if (uploadError) throw uploadError;
+            const { data: { publicUrl } } = supabase.storage
+              .from('publicacoes')
+              .getPublicUrl(fileName);
+            mediaUrl = publicUrl;
+          }
         }
       }
 
@@ -392,7 +407,7 @@ export const PublicFeed = () => {
   };
 
   const handleViewProfile = (userId: string) => {
-    navigate(`/profile/${userId}`);
+    navigate(`/profile/view/${userId}`);
   };
 
   const loadMorePosts = async () => {
@@ -507,53 +522,21 @@ export const PublicFeed = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gradient">Publicações Recentes</h2>
         
-        <Dialog open={showCreatePost} onOpenChange={handleOpenCreateDialog}>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-primary hover:opacity-90 text-white rounded-full px-6 py-2">
-              <Plus className="h-5 w-5 mr-2" />
-              Criar Publicação
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-background/95 backdrop-blur border-white/20">
-            <DialogHeader>
-              <DialogTitle className="text-gradient">Criar Nova Publicação</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Textarea
-                placeholder="O que você está pensando? (máx. 500 caracteres)"
-                value={newPost.descricao}
-                onChange={(e) => setNewPost({...newPost, descricao: e.target.value})}
-                className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
-                rows={4}
-                maxLength={500}
-              />
-              <div className="space-y-2">
-                <label className="text-sm text-gray-300">Anexar Imagem/Vídeo (opcional)</label>
-                <input
-                  type="file"
-                  accept="image/*,video/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const url = URL.createObjectURL(file);
-                      setNewPost({...newPost, midia_url: url});
-                    }
-                  }}
-                  className="block w-full text-sm text-gray-300
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-primary file:text-white
-                    hover:file:bg-primary/80
-                    file:cursor-pointer cursor-pointer"
-                />
-              </div>
-              <Button onClick={handleCreatePost} className="w-full bg-gradient-primary hover:opacity-90">
-                Publicar
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button
+          className="bg-gradient-primary hover:opacity-90 text-white rounded-full px-6 py-2"
+          onClick={() => handleOpenCreateDialog(true)}
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Criar Publicação
+        </Button>
+        <CreatePostModal
+          isOpen={showCreatePost}
+          onOpenChange={setShowCreatePost}
+          onPostCreated={() => {
+            setShowCreatePost(false);
+            fetchPublicacoes();
+          }}
+        />
       </div>
 
       {/* Feed de publicações */}
@@ -622,26 +605,37 @@ export const PublicFeed = () => {
 
             {/* Conteúdo da publicação */}
             {publicacao.descricao && (
-              <div className="px-4 pb-3">
-                <p className="text-white">{publicacao.descricao}</p>
+              <div className="px-4 pb-3 space-y-1">
+                <p className="text-white">
+                  {expandedPosts[publicacao.id] || publicacao.descricao.length <= MAX_TEXT
+                    ? publicacao.descricao
+                    : `${publicacao.descricao.slice(0, MAX_TEXT)}...`}
+                </p>
+                {publicacao.descricao.length > MAX_TEXT && (
+                  <button
+                    className="text-primary text-sm hover:underline"
+                    onClick={() =>
+                      setExpandedPosts((prev) => ({
+                        ...prev,
+                        [publicacao.id]: !prev[publicacao.id],
+                      }))
+                    }
+                  >
+                    {expandedPosts[publicacao.id] ? 'ver menos' : 'ver mais'}
+                  </button>
+                )}
               </div>
             )}
 
-            {/* Mídia */}
-            {publicacao.midia_url && (
-              <div className="w-full px-4 mb-4">
-                <div className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20">
-                  <BlurredMedia
-                    src={publicacao.midia_url}
-                    alt="Publicação"
-                    type={publicacao.tipo_midia === 'video' ? 'video' : 'image'}
-                    isPremium={isPremium || index < 3}
-                    controls={true}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-            )}
+            {/* Mídia (carrossel ou fallback para única mídia) */}
+            <PublicacaoCarrossel
+              publicacaoId={publicacao.id}
+              isPremium={isPremium || index < 3}
+              fallbackMidia={publicacao.midia_url ? {
+                url: publicacao.midia_url,
+                tipo: publicacao.tipo_midia === 'video' ? 'video' : 'image'
+              } : undefined}
+            />
 
             {/* Múltiplas Mídias - buscar da nova tabela */}
             {publicacao.tipo_midia === 'multipla' && (

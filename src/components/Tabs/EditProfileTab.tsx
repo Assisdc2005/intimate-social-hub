@@ -78,7 +78,7 @@ export const EditProfileTab = () => {
       const result = await updateProfile(updates);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw result.error;
       }
 
       toast({
@@ -105,33 +105,36 @@ export const EditProfileTab = () => {
 
     try {
       setSaving(true);
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.user_id}/avatar.${fileExt}`;
-      
-      // Delete old avatar if exists
+      const bucket = 'fotos_perfil';
+      const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const filePath = `${profile.user_id}/avatar.${fileExt}`;
+
+      // Delete old avatar if exists (compute full path from public URL)
       if (profile.avatar_url) {
-        const oldPath = profile.avatar_url.split('/').pop();
-        if (oldPath) {
-          await supabase.storage
-            .from('fotos_perfil')
-            .remove([`${profile.user_id}/${oldPath}`]);
+        const marker = `/object/public/${bucket}/`;
+        const idx = profile.avatar_url.indexOf(marker);
+        if (idx !== -1) {
+          const oldRelPath = profile.avatar_url.substring(idx + marker.length).split('?')[0];
+          if (oldRelPath) {
+            await supabase.storage.from(bucket).remove([oldRelPath]);
+          }
         }
       }
 
-      // Upload new avatar
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('fotos_perfil')
-        .upload(fileName, file, { upsert: true });
+      // Upload new avatar (with correct content type, allow overwrite)
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file, { upsert: true, contentType: file.type });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('fotos_perfil')
-        .getPublicUrl(fileName);
+        .from(bucket)
+        .getPublicUrl(filePath);
 
       // Update profile with new avatar URL
-      const result = await updateProfile({ avatar_url: publicUrl });
+      const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
+      const result = await updateProfile({ avatar_url: cacheBustedUrl });
       
       if (result.error) {
         throw new Error(result.error);
@@ -146,7 +149,7 @@ export const EditProfileTab = () => {
       console.error('Error uploading avatar:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar foto de perfil",
+        description: typeof error === 'string' ? error : ((error as any)?.message || JSON.stringify(error) || "Erro ao atualizar foto de perfil"),
         variant: "destructive",
       });
     } finally {

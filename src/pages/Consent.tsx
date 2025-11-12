@@ -13,9 +13,11 @@ export const Consent = () => {
             </div>
             <h1 className="text-xl font-bold text-gradient">Sensual</h1>
           </div>
-          <Button variant="ghost" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))}>
-            Voltar
-          </Button>
+          <div className="flex items-center">
+            <Button variant="ghost" onClick={() => navigate(-1)}>
+              Voltar
+            </Button>
+          </div>
         </div>
       </header>
 

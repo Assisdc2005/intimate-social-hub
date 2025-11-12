@@ -96,7 +96,7 @@ export const OnlineProfiles = () => {
   };
 
   const handleViewProfile = (userId: string) => {
-    navigate(`/profile/${userId}`);
+    navigate(`/profile/view/${userId}`);
   };
 
   if (loading) {

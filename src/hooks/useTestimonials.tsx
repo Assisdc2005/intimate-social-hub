@@ -35,34 +35,55 @@ export const useTestimonials = (profileUserId?: string) => {
     try {
       setLoading(true);
 
-      // Fetch approved testimonials for the profile
+      // Fetch approved testimonials (no embedded join to avoid 400 when FK alias differs)
       const { data: approvedData } = await supabase
         .from('depoimentos')
-        .select(`
-          *,
-          profiles!depoimentos_autor_id_fkey(display_name, avatar_url)
-        `)
+        .select('*')
         .eq('destinatario_id', profileUserId)
         .eq('status', 'aprovado')
         .order('created_at', { ascending: false });
 
+      // Fetch authors' profiles and merge
+      const approvedAuthorIds = [...new Set((approvedData || []).map((d: any) => d.autor_id))];
+      let approvedWithProfiles = approvedData || [];
+      if (approvedAuthorIds.length) {
+        const { data: authorsProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', approvedAuthorIds);
+        approvedWithProfiles = (approvedData || []).map((d: any) => ({
+          ...d,
+          profiles: authorsProfiles?.find((p: any) => p.user_id === d.autor_id)
+        }));
+      }
+
       // If viewing own profile, also fetch pending testimonials
-      let pendingData = [];
+      let pendingData: any[] = [];
       if (user?.id === profileUserId) {
         const { data: pending } = await supabase
           .from('depoimentos')
-          .select(`
-            *,
-            profiles!depoimentos_autor_id_fkey(display_name, avatar_url)
-          `)
+          .select('*')
           .eq('destinatario_id', profileUserId)
           .eq('status', 'pendente')
           .order('created_at', { ascending: false });
-        
-        pendingData = pending || [];
+
+        // Merge authors for pending
+        const pendingAuthorIds = [...new Set((pending || []).map((d: any) => d.autor_id))];
+        let pendingWithProfiles = pending || [];
+        if (pendingAuthorIds.length) {
+          const { data: authorsProfiles } = await supabase
+            .from('profiles')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', pendingAuthorIds);
+          pendingWithProfiles = (pending || []).map((d: any) => ({
+            ...d,
+            profiles: authorsProfiles?.find((p: any) => p.user_id === d.autor_id)
+          }));
+        }
+        pendingData = pendingWithProfiles;
       }
 
-      setTestimonials((approvedData as any) || []);
+      setTestimonials((approvedWithProfiles as any) || []);
       setPendingTestimonials((pendingData as any));
     } catch (error) {
       console.error('Error fetching testimonials:', error);

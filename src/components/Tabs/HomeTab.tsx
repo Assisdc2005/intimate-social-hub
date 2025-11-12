@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Heart, MessageCircle, Share2, TrendingUp, Zap, Crown, Play, Filter, MapPin, Clock, Camera, User } from "lucide-react";
+import { Plus, MessageCircle, Share2, TrendingUp, Zap, Crown, Play, Filter, MapPin, Clock, Camera, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,22 +10,18 @@ import { OnlineProfiles } from "@/components/Profile/OnlineProfiles";
 import { PublicFeed } from "@/components/Feed/PublicFeed";
 import { CreatePostModal } from "@/components/Modals/CreatePostModal";
 import { PremiumBlockModal } from "@/components/Modals/PremiumBlockModal";
-import { useNavigate, useLocation } from "react-router-dom";
-import { CompleteProfileModal } from "@/components/Modals/CompleteProfileModal";
+import { useNavigate } from "react-router-dom";
 
 export const HomeTab = () => {
-  const { profile, isPremium, refreshProfile } = useProfile();
+  const { profile, isPremium } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
-  const afterComplete = (location.state as any)?.afterComplete as string | undefined;
   const [posts, setPosts] = useState<any[]>([]);
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showPremiumBlockModal, setShowPremiumBlockModal] = useState(false);
-  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
 
   useEffect(() => {
     if (profile?.user_id) {
@@ -33,44 +29,162 @@ export const HomeTab = () => {
     }
   }, [profile]);
 
-  // If redirected from /profile, open immediately; otherwise use 7s delay
+  // Auto-refresh the list periodically to keep it dynamic and never empty
   useEffect(() => {
-    if (!profile || profile.profile_completed) return;
-    if (afterComplete) {
-      setShowCompleteProfile(true);
-      // clear state to avoid reopening on subsequent renders
-      navigate('/home', { replace: true, state: undefined });
-      return;
-    }
-    const timer = setTimeout(() => setShowCompleteProfile(true), 7000);
-    return () => clearTimeout(timer);
-  }, [profile?.profile_completed, afterComplete]);
+    if (!profile?.user_id) return;
+    const interval = window.setInterval(() => {
+      fetchData();
+    }, 60000); // refresh every 60s
+    return () => window.clearInterval(interval);
+  }, [profile?.user_id]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      // Fetch latest posts
+      // Fetch latest posts (no embedded join to avoid 400 when FK name differs)
       const { data: postsData } = await supabase
         .from('publicacoes')
-        .select(`
-          *,
-          profiles!publicacoes_user_id_fkey (display_name, avatar_url)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(5);
 
-      // Fetch top users
-      const { data: usersData } = await supabase
-        .from('profiles')
-        .select('*')
-        .neq('user_id', profile?.user_id)
-        .eq('profile_completed', true)
-        .order('updated_at', { ascending: false })
-        .limit(3);
+      // Fetch related profiles separately and merge
+      const userIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
+      let postsWithProfiles = postsData || [];
+      if (userIds.length) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', userIds);
+        postsWithProfiles = (postsData || []).map((p: any) => ({
+          ...p,
+          profiles: profilesData?.find((pr: any) => pr.user_id === p.user_id)
+        }));
+      }
 
-      setPosts(postsData || []);
-      setTopUsers(usersData || []);
+      // Fetch top users with rules:
+      // - only profiles with at least one photo (photos not null OR avatar_url present)
+      // - prefer female; if less than 5, fill with others
+      // - randomize order to vary between accesses
+      // - limit to 5
+
+      const LIMIT_POOL = 20; // fetch a pool to randomize from
+      const FEMALE_GENDER_FILTER = 'fem%'; // handle 'feminino' variations
+
+      const commonFilters = (query: any) =>
+        query
+          .eq('profile_completed', true)
+          .neq('user_id', profile?.user_id)
+          .limit(LIMIT_POOL);
+
+      const { data: femalesPool } = await commonFilters(
+        supabase
+          .from('profiles')
+          .select('*')
+          .ilike('gender', FEMALE_GENDER_FILTER)
+      );
+
+      const { data: othersPool } = await commonFilters(
+        supabase
+          .from('profiles')
+          .select('*')
+          .not('gender', 'ilike', FEMALE_GENDER_FILTER)
+      );
+
+      // Helper to check has photo (strict): photos array length > 0 OR avatar_url non-empty
+      const hasPhoto = (p: any) => {
+        const hasPhotosArr = Array.isArray(p?.photos) && p.photos.length > 0;
+        const hasAvatar = typeof p?.avatar_url === 'string' && p.avatar_url.trim() !== '';
+        return hasPhotosArr || hasAvatar;
+      };
+
+      // Online heuristics: status_online true OR last_seen within 5 minutes
+      const isOnline = (p: any) => {
+        if (p?.status_online === true) return true;
+        if (!p?.last_seen) return false;
+        const FIVE_MIN = 5 * 60 * 1000;
+        const last = new Date(p.last_seen).getTime();
+        return Date.now() - last <= FIVE_MIN;
+      };
+
+      // Deduplicate by user_id and keep only with photo
+      const dedupeById = (arr: any[]) => {
+        const seen = new Set<string>();
+        const out: any[] = [];
+        for (const item of arr || []) {
+          if (!item?.user_id) continue;
+          if (seen.has(item.user_id)) continue;
+          if (!hasPhoto(item)) continue;
+          seen.add(item.user_id);
+          out.push(item);
+        }
+        return out;
+      };
+
+      // Prioritize online first within each group
+      const sortByOnline = (arr: any[]) => [...arr].sort((a, b) => Number(isOnline(b)) - Number(isOnline(a)));
+
+      const females = sortByOnline(dedupeById(femalesPool || []));
+      const others = sortByOnline(dedupeById(othersPool || []).filter(
+        (p) => !females.find((f) => f.user_id === p.user_id)
+      ));
+
+      // Randomize helpers
+      const shuffle = (arr: any[]) => arr.sort(() => Math.random() - 0.5);
+
+      const selected: any[] = [];
+      selected.push(...shuffle([...females]).slice(0, 5));
+      if (selected.length < 5) {
+        const remaining = 5 - selected.length;
+        selected.push(...shuffle([...others]).slice(0, remaining));
+      }
+
+      // If still less than 5 (database has few matches), fetch a broader pool to fill (still prefer with photo)
+      if (selected.length < 5) {
+        const remaining = 5 - selected.length;
+        const { data: fallbackPool } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('profile_completed', true)
+          .neq('user_id', profile?.user_id)
+          .limit(LIMIT_POOL);
+
+        const fallback = sortByOnline(dedupeById(fallbackPool || []).filter(
+          (p) => !selected.find((s) => s.user_id === p.user_id)
+        ));
+        selected.push(...shuffle(fallback).slice(0, remaining));
+      }
+
+      // Final safeguard: if still less than 5, allow filling with any completed profiles (even without photo)
+      if (selected.length < 5) {
+        const remaining = 5 - selected.length;
+        const { data: broadPool } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('profile_completed', true)
+          .neq('user_id', profile?.user_id)
+          .limit(LIMIT_POOL);
+        const broad = sortByOnline(dedupeById(broadPool || []).filter(
+          (p) => !selected.find((s) => s.user_id === p.user_id)
+        ));
+        selected.push(...shuffle(broad).slice(0, remaining));
+      }
+
+      // Ensure exactly 5 and simulate online presence for display purposes
+      // Prioritize online first, then randomize within each group
+      const onlineArr = selected.filter((u) => isOnline(u));
+      const offlineArr = selected.filter((u) => !isOnline(u));
+      const ordered = [...shuffle(onlineArr), ...shuffle(offlineArr)];
+      const selectedFive = ordered.slice(0, 5).map((u) => ({
+        ...u,
+        simulated_online: isOnline(u),
+      }));
+
+      setPosts(postsWithProfiles);
+      if (selectedFive.length > 0) {
+        setTopUsers(selectedFive);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -197,7 +311,7 @@ export const HomeTab = () => {
             {topUsers.map((user) => (
               <div
                 key={user.user_id}
-                onClick={() => navigate(`/profile/${user.user_id}`)}
+                onClick={() => navigate(`/profile/view/${user.user_id}`)}
                 className="flex-shrink-0 w-[160px] snap-start cursor-pointer group"
               >
                 <div className="relative rounded-2xl overflow-hidden bg-gradient-card border border-primary/20 transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:shadow-[var(--shadow-glow)]">
@@ -270,7 +384,6 @@ export const HomeTab = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
-            <Heart className="w-5 h-5 text-primary" />
             
           </div>
           
@@ -293,19 +406,6 @@ export const HomeTab = () => {
       <PremiumBlockModal 
         isOpen={showPremiumBlockModal}
         onOpenChange={setShowPremiumBlockModal}
-      />
-
-      {/* Complete Profile Modal */}
-      <CompleteProfileModal
-        isOpen={showCompleteProfile}
-        onOpenChange={setShowCompleteProfile}
-        onCompleted={() => {
-          setShowCompleteProfile(false);
-          refreshProfile();
-          if (afterComplete) {
-            navigate(afterComplete, { replace: true, state: undefined });
-          }
-        }}
       />
     </div>
   );

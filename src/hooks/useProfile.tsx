@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -33,7 +33,17 @@ export interface Profile {
   updated_at: string;
 }
 
-export const useProfile = () => {
+type ProfileContextValue = {
+  profile: Profile | null;
+  loading: boolean;
+  updateProfile: (updates: any) => Promise<{ data?: Profile; error?: any }>;
+  refreshProfile: () => Promise<void>;
+  isPremium: boolean;
+};
+
+const ProfileContext = createContext<ProfileContextValue | undefined>(undefined);
+
+export const ProfileProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,11 +62,56 @@ export const useProfile = () => {
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('❌ Error fetching profile:', error);
-      } else if (data) {
+      } 
+
+      if (!data) {
+        // Create minimal profile row if not exists
+        console.log('ℹ️ No profile row found. Creating minimal profile...');
+        const { data: created, error: createErr } = await supabase
+          .from('profiles')
+          .insert({ user_id: user.id, display_name: user.email?.split('@')[0] || 'Usuário' })
+          .select('*')
+          .single();
+        if (createErr) {
+          console.error('❌ Error creating minimal profile:', createErr);
+        } else {
+          const tipoAssinatura = (created.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
+          const profileData: Profile = {
+            id: created.id,
+            user_id: created.user_id,
+            display_name: created.display_name,
+            bio: created.bio,
+            birth_date: created.birth_date,
+            gender: created.gender,
+            sexual_orientation: created.sexual_orientation,
+            state: created.state,
+            city: created.city,
+            profession: created.profession,
+            looking_for: created.looking_for,
+            objectives: created.objectives,
+            body_type: created.body_type,
+            height: created.height,
+            weight: created.weight,
+            ethnicity: created.ethnicity,
+            smokes: created.smokes,
+            drinks: created.drinks,
+            relationship_status: created.relationship_status,
+            interests: created.interests,
+            profile_completed: created.profile_completed || false,
+            avatar_url: created.avatar_url,
+            tipo_assinatura: tipoAssinatura,
+            subscription_expires_at: (created as any).subscription_expires_at,
+            assinatura_id: (created as any).assinatura_id,
+            created_at: created.created_at,
+            updated_at: created.updated_at
+          };
+          setProfile(profileData);
+        }
+      } else {
         console.log('✅ Profile data loaded:', data);
         
         // Ensure tipo_assinatura is properly typed
@@ -109,7 +164,7 @@ export const useProfile = () => {
 
   // Configurar real-time subscription para mudanças no perfil
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
     console.log('📡 Setting up real-time subscription for profile changes');
     
@@ -126,20 +181,19 @@ export const useProfile = () => {
         (payload) => {
           console.log('📡 Profile updated via real-time:', payload.new);
           
-          // Atualizar o estado do perfil com os novos dados
           if (payload.new) {
             const tipoAssinatura = (payload.new.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
-            
-            const updatedProfile = {
-              ...profile,
-              ...payload.new,
-              tipo_assinatura: tipoAssinatura,
-              subscription_expires_at: (payload.new as any).subscription_expires_at,
-              assinatura_id: (payload.new as any).assinatura_id,
-            } as Profile;
-            
-            console.log('🔄 Updated profile status:', updatedProfile.tipo_assinatura);
-            setProfile(updatedProfile);
+            setProfile((prev) => {
+              const merged = {
+                ...(prev || {}),
+                ...payload.new,
+                tipo_assinatura: tipoAssinatura,
+                subscription_expires_at: (payload.new as any).subscription_expires_at,
+                assinatura_id: (payload.new as any).assinatura_id,
+              } as Profile;
+              console.log('🔄 Updated profile status:', merged.tipo_assinatura);
+              return merged;
+            });
           }
         }
       )
@@ -149,7 +203,7 @@ export const useProfile = () => {
       console.log('📡 Unsubscribing from profile changes');
       supabase.removeChannel(channel);
     };
-  }, [user, profile]);
+  }, [user?.id]);
 
   const updateProfile = async (updates: any) => {
     if (!user) return { error: 'Not authenticated' };
@@ -157,15 +211,57 @@ export const useProfile = () => {
     try {
       console.log('🔄 Updating profile for user:', user.id, 'with updates:', updates);
       
+      // Use upsert to avoid PGRST116 when row doesn't exist or zero rows affected
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('user_id', user.id)
+        .upsert({ ...updates, user_id: user.id }, { onConflict: 'user_id' })
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('❌ Supabase update error:', error);
+        // Fallback: if PGRST116 (no rows returned), try fetching current profile
+        if ((error as any).code === 'PGRST116') {
+          const { data: existing, error: fetchErr } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          if (fetchErr) return { error: fetchErr };
+          // Return existing as success since the row exists but update returned 0 rows
+          const tipoAssinatura = (existing.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
+          const profileData: Profile = {
+            id: existing.id,
+            user_id: existing.user_id,
+            display_name: existing.display_name,
+            bio: existing.bio,
+            birth_date: existing.birth_date,
+            gender: existing.gender,
+            sexual_orientation: existing.sexual_orientation,
+            state: existing.state,
+            city: existing.city,
+            profession: existing.profession,
+            looking_for: existing.looking_for,
+            objectives: existing.objectives,
+            body_type: existing.body_type,
+            height: existing.height,
+            weight: existing.weight,
+            ethnicity: existing.ethnicity,
+            smokes: existing.smokes,
+            drinks: existing.drinks,
+            relationship_status: existing.relationship_status,
+            interests: existing.interests,
+            profile_completed: existing.profile_completed || false,
+            avatar_url: existing.avatar_url,
+            tipo_assinatura: tipoAssinatura,
+            subscription_expires_at: (existing as any).subscription_expires_at,
+            assinatura_id: (existing as any).assinatura_id,
+            created_at: existing.created_at,
+            updated_at: existing.updated_at
+          };
+          setProfile(profileData);
+          return { data: profileData };
+        }
         return { error };
       }
 
@@ -207,7 +303,45 @@ export const useProfile = () => {
         return { data: profileData };
       }
 
-      return { error: 'No data returned' };
+      // If upsert returned no data (unlikely), fetch current profile
+      const { data: existing, error: fetchErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      if (fetchErr) return { error: fetchErr };
+      const tipoAssinatura = (existing.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
+      const profileData: Profile = {
+        id: existing.id,
+        user_id: existing.user_id,
+        display_name: existing.display_name,
+        bio: existing.bio,
+        birth_date: existing.birth_date,
+        gender: existing.gender,
+        sexual_orientation: existing.sexual_orientation,
+        state: existing.state,
+        city: existing.city,
+        profession: existing.profession,
+        looking_for: existing.looking_for,
+        objectives: existing.objectives,
+        body_type: existing.body_type,
+        height: existing.height,
+        weight: existing.weight,
+        ethnicity: existing.ethnicity,
+        smokes: existing.smokes,
+        drinks: existing.drinks,
+        relationship_status: existing.relationship_status,
+        interests: existing.interests,
+        profile_completed: existing.profile_completed || false,
+        avatar_url: existing.avatar_url,
+        tipo_assinatura: tipoAssinatura,
+        subscription_expires_at: (existing as any).subscription_expires_at,
+        assinatura_id: (existing as any).assinatura_id,
+        created_at: existing.created_at,
+        updated_at: existing.updated_at
+      };
+      setProfile(profileData);
+      return { data: profileData };
     } catch (error) {
       console.error('❌ Update profile catch error:', error);
       return { error };
@@ -222,18 +356,30 @@ export const useProfile = () => {
   };
 
   // Verificar se é premium baseado EXCLUSIVAMENTE no campo tipo_assinatura
-  const isPremium = () => {
+  const isPremium = useMemo(() => {
     if (!profile) return false;
     const isPremiumStatus = profile.tipo_assinatura === 'premium';
     console.log('🎯 isPremium check:', isPremiumStatus, 'tipo_assinatura:', profile.tipo_assinatura);
     return isPremiumStatus;
-  };
+  }, [profile]);
 
-  return {
+  const value: ProfileContextValue = {
     profile,
     loading,
     updateProfile,
     refreshProfile,
-    isPremium: isPremium(),
+    isPremium,
   };
+
+  return (
+    <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>
+  );
+};
+
+export const useProfile = () => {
+  const ctx = useContext(ProfileContext);
+  if (!ctx) {
+    throw new Error('useProfile must be used within a ProfileProvider');
+  }
+  return ctx;
 };

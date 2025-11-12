@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from "@/hooks/use-toast"
-import { useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { 
   User, 
@@ -187,7 +187,7 @@ export default function Profile() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/login');
+      // signOut já redireciona para '/'. Evitar navegação duplicada que causa 404 flash.
     } catch (error) {
       console.error('Error signing out:', error);
       toast({
@@ -202,11 +202,12 @@ export default function Profile() {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      navigate('/login');
+      // Redirecionar para Landing Page
+      window.location.href = '/';
       toast({
-        title: "Sucesso",
-        description: "Conta excluída com sucesso!",
-      });
+        title: "Conta desconectada",
+        description: "Você saiu da sua conta",
+      })
     } catch (error) {
       console.error('Error deleting account:', error);
       toast({
@@ -302,287 +303,99 @@ export default function Profile() {
                       <Mail className="h-4 w-4 text-primary" />
                       <span>{user?.email}</span>
                     </div>
-                    
                     {age && (
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-primary" />
                         <span>{age} anos</span>
                       </div>
                     )}
-                    
-                    {profile?.gender && (
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-primary" />
-                        <span className="capitalize">{profile.gender}</span>
-                      </div>
-                    )}
-                    
-                    {(profile?.city || profile?.state) && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-primary" />
-                        <span>{profile.city}{profile.city && profile.state && ', '}{profile.state}</span>
-                      </div>
-                    )}
-                    
-                    {profile?.profession && (
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-primary" />
-                        <span>{profile.profession}</span>
-                      </div>
-                    )}
-                    
-                    {profile?.sexual_orientation && (
-                      <div className="flex items-center gap-2">
-                        <Heart className="h-4 w-4 text-primary" />
-                        <span className="capitalize">{profile.sexual_orientation}</span>
-                      </div>
-                    )}
-                    
-                    {profile?.relationship_status && (
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-primary" />
-                        <span className="capitalize">{profile.relationship_status}</span>
-                      </div>
-                    )}
-                    
-                    {profile?.looking_for && (
-                      <div className="flex items-center gap-2">
-                        <Target className="h-4 w-4 text-primary" />
-                        <span>{profile.looking_for}</span>
-                      </div>
-                    )}
                   </div>
-
-                  {profile?.bio && (
-                    <TruncatedText text={profile.bio} maxLength={190} className="mt-4 text-center sm:text-left" />
+                  
+                  {profile?.gender && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-primary" />
+                      <span className="capitalize">{profile.gender}</span>
+                    </div>
                   )}
-
-                  <div className="flex flex-col sm:flex-row gap-3 mt-6 items-center">
-                    <Button 
-                      onClick={() => navigate('/profile/edit')}
-                      className="bg-gradient-primary hover:opacity-90 text-white w-full sm:w-auto"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar Perfil
-                    </Button>
-                  </div>
+                  
+                  {(profile?.city || profile?.state) && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span>{profile.city}{profile.city && profile.state && ', '}{profile.state}</span>
+                    </div>
+                  )}
+                  
+                  {profile?.profession && (
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-primary" />
+                      <span>{profile.profession}</span>
+                    </div>
+                  )}
+                  
+                  {profile?.sexual_orientation && (
+                    <div className="flex items-center gap-2">
+                      <Heart className="h-4 w-4 text-primary" />
+                      <span className="capitalize">{profile.sexual_orientation}</span>
+                    </div>
+                  )}
+                  
+                  {profile?.relationship_status && (
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-primary" />
+                      <span className="capitalize">{profile.relationship_status}</span>
+                    </div>
+                  )}
+                  
+                  {profile?.looking_for && (
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-primary" />
+                      <span>{profile.looking_for}</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Additional Profile Info */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            
-            {/* Physical Info */}
-            {(profile?.height || profile?.weight || profile?.body_type || profile?.ethnicity) && (
-              <Card className="bg-glass backdrop-blur-md border-primary/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white text-lg">Informações Físicas</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 p-4 sm:p-6">
-                  {profile?.height && (
-                    <div>
-                      <p className="text-xs sm:text-sm text-gray-400">Altura</p>
-                      <p className="text-white text-sm sm:text-base">{profile.height} cm</p>
-                    </div>
-                  )}
-                  {profile?.weight && (
-                    <div>
-                      <p className="text-sm text-gray-400">Peso</p>
-                      <p className="text-white">{profile.weight} kg</p>
-                    </div>
-                  )}
-                  {profile?.body_type && (
-                    <div>
-                      <p className="text-sm text-gray-400">Tipo Físico</p>
-                      <p className="text-white capitalize">{profile.body_type}</p>
-                    </div>
-                  )}
-                  {profile?.ethnicity && (
-                    <div>
-                      <p className="text-sm text-gray-400">Etnia</p>
-                      <p className="text-white capitalize">{profile.ethnicity}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                {profile?.bio && (
+                  <TruncatedText text={profile.bio} maxLength={190} className="mt-4 text-center sm:text-left" />
+                )}
 
-            {/* Lifestyle Info */}
-            {(profile?.smokes !== undefined || profile?.drinks !== undefined) && (
-              <Card className="bg-glass backdrop-blur-md border-primary/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white text-lg">Estilo de Vida</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {profile?.smokes !== undefined && (
-                    <div>
-                      <p className="text-sm text-gray-400">Fuma</p>
-                      <p className="text-white">{profile.smokes ? 'Sim' : 'Não'}</p>
-                    </div>
-                  )}
-                  {profile?.drinks !== undefined && (
-                    <div>
-                      <p className="text-sm text-gray-400">Bebe</p>
-                      <p className="text-white">{profile.drinks ? 'Sim' : 'Não'}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Interests */}
-          {profile?.interests && profile.interests.length > 0 && (
-            <Card className="bg-glass backdrop-blur-md border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-white">Interesses</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {profile.interests.map((interest, index) => (
-                    <Badge 
-                      key={index}
-                      className="bg-primary/20 text-primary border border-primary/30"
-                    >
-                      {interest}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Testimonials Management */}
-          <TestimonialsManagement />
-
-          {/* Posts Section */}
-          <Card className="bg-glass backdrop-blur-md border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Camera className="h-5 w-5" />
-                Minhas Publicações ({userPosts.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {postsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : userPosts.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Você ainda não fez nenhuma publicação</p>
+                <div className="flex flex-col sm:flex-row gap-3 mt-6 items-center">
                   <Button 
-                    onClick={() => navigate('/home')}
-                    className="mt-4 bg-gradient-primary hover:opacity-90 text-white"
+                    onClick={() => navigate('/profile/edit')}
+                    className="bg-gradient-primary hover:opacity-90 text-white w-full sm:w-auto"
                   >
-                    Fazer primeira publicação
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar Perfil
                   </Button>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {userPosts.map((post) => (
-                    <Card key={post.id} className="bg-white/5 border-white/10">
-                      <CardContent className="p-3 sm:p-4">
-                        {post.midia_url && (
-                          <div className="aspect-square rounded-lg overflow-hidden mb-3">
-                            <BlurredMedia
-                              src={post.midia_url}
-                              alt="Post"
-                              type={post.tipo_midia === 'video' ? 'video' : 'image'}
-                              isPremium={isPremium}
-                              className="w-full h-full"
-                            />
-                          </div>
-                        )}
-                        
-                        {post.descricao && (
-                          <p className="text-white mb-3 text-xs sm:text-sm line-clamp-3">{post.descricao}</p>
-                        )}
-                        
-                        <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
-                          <div className="flex items-center gap-3 sm:gap-4">
-                            <div className="flex items-center gap-1">
-                              <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
-                              {post.curtidas_count}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                              {post.comentarios_count}
-                            </div>
-                          </div>
-                          <span className="text-xs">
-                            {new Date(post.created_at).toLocaleDateString('pt-BR')}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Account Settings */}
-          <Card className="bg-glass backdrop-blur-md border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-white">Configurações da Conta</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              
-              {/* Premium Status */}
-              <div className="flex items-center justify-between p-4 bg-gradient-primary/20 rounded-lg border border-primary/30">
-                <div className="flex items-center gap-3">
-                  <Crown className="h-6 w-6 text-primary" />
-                  <div>
-                    <p className="text-white font-medium">Status da Assinatura</p>
-                    <p className="text-sm text-gray-300">
-                      {isPremium ? 'Premium Ativo' : 'Conta Gratuita'}
-                    </p>
-                  </div>
-                </div>
-                <Button 
-                  onClick={handleSubscriptionManagement}
-                  variant="outline"
-                  className="border-primary/30 text-primary hover:bg-primary/20"
-                >
-                  Gerenciar
-                </Button>
+                {profile.interests.map((interest, index) => (
+                  <Badge 
+                    key={index}
+                    className="bg-primary/20 text-primary border border-primary/30"
+                  >
+                    {interest}
+                  </Badge>
+                ))}
               </div>
+            
+          </CardContent>
+        </Card>
 
-              {/* Theme Toggle */}
-              <div className="flex items-center justify-between">
-                <span className="text-white">Tema escuro</span>
-                <Switch checked={isDarkTheme} onCheckedChange={handleThemeToggle} />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                <Button 
-                  onClick={() => navigate('/profile/edit')}
-                  variant="outline" 
-                  className="w-full border-primary/30 text-primary hover:bg-primary/20"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar Perfil
-                </Button>
-                
-                <Button 
-                  onClick={handleSignOut}
-                  variant="ghost" 
-                  className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sair da Conta
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
+      {/* Tabs Navigation */}
+      <div className="w-full">
+        <div className="flex flex-wrap gap-2 bg-white/5 rounded-xl p-2 border border-white/10">
+          <NavLink to="/profile/about" className={({isActive}) => `px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Sobre</NavLink>
+          <NavLink to="/profile/testimonials" className={({isActive}) => `px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Depoimentos</NavLink>
+          <NavLink to="/profile/posts" className={({isActive}) => `px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Minhas Publicações</NavLink>
+          <NavLink to="/profile/settings" className={({isActive}) => `px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Configurações da Conta</NavLink>
         </div>
       </div>
+
+      {/* Sub-route content */}
+      <div className="mt-4">
+        <Outlet />
+      </div>
+    </div>
+    </div>
     </div>
   );
 }

@@ -29,11 +29,14 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
-    // Validate file count (max 5 files)
-    if (selectedFiles.length + files.length > 5) {
+    // Enforce media count based on plan
+    const maxFiles = isPremium ? 999 : 1;
+    if (selectedFiles.length + files.length > maxFiles) {
       toast({
         title: "Muitos arquivos",
-        description: "Você pode selecionar no máximo 5 mídias por publicação",
+        description: isPremium
+          ? "Você selecionou arquivos demais. Reduza a quantidade."
+          : "Usuários não premium podem anexar apenas 1 mídia por publicação.",
         variant: "destructive",
       });
       return;
@@ -90,11 +93,12 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
 
   const uploadFile = async (file: File): Promise<string | null> => {
     try {
+      // Upload both images and videos directly to 'posts-media' to restore previous behavior
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `posts/${profile?.user_id}/${fileName}`;
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('posts-media')
         .upload(filePath, file);
 
@@ -114,8 +118,15 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
   const handleSubmit = async () => {
     // Verificar se é premium
     if (!isPremium) {
-      setShowPremiumModal(true);
-      return;
+      // Non-premium: ensure at most 1 media attached
+      if (selectedFiles.length > 1) {
+        toast({
+          title: "Limite de mídia",
+          description: "Usuários não premium podem anexar apenas 1 mídia por publicação.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     if (!content.trim() && selectedFiles.length === 0) {
@@ -130,13 +141,18 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
     setUploading(true);
 
     try {
+      // Determine tipo_midia allowed by DB constraint
+      const hasMedia = selectedFiles.length > 0;
+      const hasVideo = selectedFiles.some((f) => f.type.startsWith('video/'));
+      const tipoMidia: 'texto' | 'imagem' | 'video' = hasMedia ? (hasVideo ? 'video' : 'imagem') : 'texto';
+
       // Criar a publicação primeiro
       const { data: publicacao, error: publicacaoError } = await supabase
         .from('publicacoes')
         .insert({
           user_id: profile?.user_id,
           descricao: content.trim(),
-          tipo_midia: selectedFiles.length > 0 ? 'multipla' : 'texto'
+          tipo_midia: tipoMidia
         })
         .select('id')
         .single();
@@ -145,11 +161,13 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
 
       // Upload e inserir mídias se existirem
       if (selectedFiles.length > 0) {
+        let firstUploadedUrl: string | null = null;
         const mediaUploads = selectedFiles.map(async (file, index) => {
           const uploadedUrl = await uploadFile(file);
           if (!uploadedUrl) {
             throw new Error(`Erro no upload da mídia ${index + 1}`);
           }
+          if (firstUploadedUrl === null) firstUploadedUrl = uploadedUrl;
 
           return supabase
             .from('publicacao_midias')
@@ -162,9 +180,16 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
         });
 
         const results = await Promise.all(mediaUploads);
-        
         for (const result of results) {
           if (result.error) throw result.error;
+        }
+
+        // Compatibilidade: salvar a primeira mídia também em publicacoes.midia_url
+        if (firstUploadedUrl) {
+          await supabase
+            .from('publicacoes')
+            .update({ midia_url: firstUploadedUrl })
+            .eq('id', publicacao.id);
         }
       }
 

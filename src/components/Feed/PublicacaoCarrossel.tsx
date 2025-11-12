@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { BlurredMedia } from '@/components/ui/blurred-media';
+import UserPhotoCard from '@/components/media/UserPhotoCard';
+
 import { supabase } from '@/integrations/supabase/client';
 
 interface PublicacaoMedia {
@@ -13,9 +15,10 @@ interface PublicacaoMedia {
 interface PublicacaoCarrosselProps {
   publicacaoId: string;
   isPremium: boolean;
+  fallbackMidia?: { url: string; tipo: 'image' | 'video' };
 }
 
-export const PublicacaoCarrossel = ({ publicacaoId, isPremium }: PublicacaoCarrosselProps) => {
+export const PublicacaoCarrossel = ({ publicacaoId, isPremium, fallbackMidia }: PublicacaoCarrosselProps) => {
   const [midias, setMidias] = useState<PublicacaoMedia[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,6 +56,26 @@ export const PublicacaoCarrossel = ({ publicacaoId, isPremium }: PublicacaoCarro
   }
 
   if (!midias.length) {
+    if (fallbackMidia) {
+      return (
+        <div className="w-full px-4 mb-4">
+          <div className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20">
+            {fallbackMidia.tipo === 'video' ? (
+              <BlurredMedia
+                src={fallbackMidia.url}
+                alt="Publicação"
+                type="video"
+                isPremium={isPremium}
+                controls={true}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <UserPhotoCard src={fallbackMidia.url} alt="Publicação" className="w-full h-full" />
+            )}
+          </div>
+        </div>
+      );
+    }
     return null;
   }
 
@@ -62,14 +85,18 @@ export const PublicacaoCarrossel = ({ publicacaoId, isPremium }: PublicacaoCarro
     return (
       <div className="w-full px-4 mb-4">
         <div className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20">
-          <BlurredMedia
-            src={media.midia_url}
-            alt="Publicação"
-            type={media.tipo_midia === 'video' ? 'video' : 'image'}
-            isPremium={isPremium}
-            controls={true}
-            className="w-full h-full object-cover"
-          />
+          {media.tipo_midia === 'video' ? (
+            <BlurredMedia
+              src={media.midia_url}
+              alt="Publicação"
+              type="video"
+              isPremium={isPremium}
+              controls={true}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <UserPhotoCard src={media.midia_url} alt="Publicação" className="w-full h-full" />
+          )}
         </div>
       </div>
     );
@@ -83,14 +110,18 @@ export const PublicacaoCarrossel = ({ publicacaoId, isPremium }: PublicacaoCarro
           {midias.map((media) => (
             <CarouselItem key={media.id}>
               <div className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20">
-                <BlurredMedia
-                  src={media.midia_url}
-                  alt="Publicação"
-                  type={media.tipo_midia === 'video' ? 'video' : 'image'}
-                  isPremium={isPremium}
-                  controls={true}
-                  className="w-full h-full object-cover"
-                />
+                {media.tipo_midia === 'video' ? (
+                  <BlurredMedia
+                    src={media.midia_url}
+                    alt="Publicação"
+                    type="video"
+                    isPremium={isPremium}
+                    controls={true}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <UserPhotoCard src={media.midia_url} alt="Publicação" className="w-full h-full" />
+                )}
               </div>
             </CarouselItem>
           ))}
