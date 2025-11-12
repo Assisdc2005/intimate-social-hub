@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 export const EditProfileTab = () => {
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, refreshProfile } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
@@ -81,6 +81,9 @@ export const EditProfileTab = () => {
         throw result.error;
       }
 
+      // Force refresh do perfil para atualizar em todos os componentes
+      await refreshProfile();
+
       toast({
         title: "Perfil atualizado!",
         description: "Suas informações foram salvas com sucesso",
@@ -139,6 +142,9 @@ export const EditProfileTab = () => {
       if (result.error) {
         throw new Error(result.error);
       }
+
+      // Force refresh do perfil para atualizar em todos os componentes
+      await refreshProfile();
 
       toast({
         title: "Foto atualizada!",

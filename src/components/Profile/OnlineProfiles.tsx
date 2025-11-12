@@ -146,6 +146,7 @@ export const OnlineProfiles = () => {
                         src={profileUser.avatar_url}
                         alt={profileUser.display_name}
                         className="w-full h-full object-cover"
+                        key={profileUser.avatar_url}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">

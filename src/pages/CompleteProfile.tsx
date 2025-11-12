@@ -17,6 +17,7 @@ export const CompleteProfile = () => {
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
+    display_name: '',
     birth_date: '',
     gender: '',
     sexual_orientation: '',
@@ -153,7 +154,7 @@ export const CompleteProfile = () => {
   }, [formData.state]);
 
   // Campos obrigatórios
-  const requiredFields = ['birth_date', 'gender', 'sexual_orientation', 'state', 'city', 'profession', 'relationship_status', 'bio'];
+  const requiredFields = ['display_name', 'birth_date', 'gender', 'sexual_orientation', 'state', 'city', 'profession', 'relationship_status', 'bio'];
 
   // Função para retornar à página de autenticação
   const handleBackToAuth = async () => {
@@ -210,6 +211,7 @@ export const CompleteProfile = () => {
 
     try {
       const profileData = {
+        display_name: formData.display_name.trim(),
         birth_date: formData.birth_date || null,
         gender: formData.gender || null,
         sexual_orientation: formData.sexual_orientation || null,
@@ -326,6 +328,23 @@ export const CompleteProfile = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="text-white text-sm">Nome de exibição *</label>
+                  <Input
+                    type="text"
+                    value={formData.display_name}
+                    onChange={(e) => handleFieldChange('display_name', e.target.value)}
+                    required
+                    className={`bg-white/10 border-primary/30 text-white placeholder:text-gray-400 ${
+                      errors.display_name ? 'border-red-500 border-2' : ''
+                    }`}
+                    placeholder="Como você quer ser chamado(a)"
+                  />
+                  {errors.display_name && <p className="text-red-400 text-xs mt-1">Campo obrigatório</p>}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-white text-sm">Data de nascimento *</label>

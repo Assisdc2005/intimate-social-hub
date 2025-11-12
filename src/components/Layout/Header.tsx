@@ -16,13 +16,14 @@ export const Header = () => {
           onClick={() => navigate('/profile')}
           variant="ghost"
           size="icon"
-          className="w-10 h-10 rounded-full bg-gradient-secondary hover:scale-110 transition-all duration-300 shadow-[var(--shadow-glow)] p-0"
+          className="w-10 h-10 rounded-full bg-gradient-secondary hover:scale-110 transition-all duration-300 shadow-[var(--shadow-glow)] p-0 overflow-hidden"
         >
           {profile?.avatar_url ? (
             <img 
               src={profile.avatar_url} 
               alt="Avatar" 
               className="w-full h-full rounded-full object-cover"
+              key={profile.avatar_url}
             />
           ) : (
             <User className="w-5 h-5 text-white" />

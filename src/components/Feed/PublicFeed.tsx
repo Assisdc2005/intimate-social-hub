@@ -550,7 +550,12 @@ export const PublicFeed = () => {
                 onClick={() => handleViewProfile(publicacao.user_id)}
               >
                 {publicacao.profiles?.avatar_url ? (
-                  <img src={publicacao.profiles.avatar_url} alt={publicacao.profiles.display_name} className="w-full h-full object-cover" />
+                  <img 
+                    src={publicacao.profiles.avatar_url} 
+                    alt={publicacao.profiles.display_name} 
+                    className="w-full h-full object-cover"
+                    key={publicacao.profiles.avatar_url}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white font-bold">
                     {publicacao.profiles?.display_name?.[0] || 'U'}
@@ -710,7 +715,12 @@ export const PublicFeed = () => {
                 <div className="flex items-center gap-3 mt-4">
                   <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
                     {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+                      <img 
+                        src={profile.avatar_url} 
+                        alt={profile.display_name} 
+                        className="w-full h-full object-cover"
+                        key={profile.avatar_url}
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
                         {profile?.display_name?.[0] || 'U'}

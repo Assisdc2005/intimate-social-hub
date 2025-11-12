@@ -73,6 +73,7 @@ export const ProfileTab = () => {
                   src={profile.avatar_url} 
                   alt={profile.display_name}
                   className="w-full h-full rounded-full object-cover border-2 border-primary"
+                  key={profile.avatar_url}
                 />
               ) : (
                 <div className="w-full h-full rounded-full bg-gradient-primary flex items-center justify-center">
