@@ -11,11 +11,11 @@ export const LandingPage = () => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   const handleGetStarted = () => {
-    navigate('/complete-profile');
+    navigate('/signup');
   };
 
   const handleLogin = () => {
-    navigate('/auth');
+    navigate('/login');
   };
 
   return (

@@ -6,7 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
-import { Auth } from "./pages/Auth";
+import { Login } from "./pages/Login";
+import { Signup } from "./pages/Signup";
 import { ResetPassword } from "./pages/ResetPassword";
 import { CompleteProfile } from "./pages/CompleteProfile";
 import Profile from "./pages/Profile";
@@ -70,17 +71,31 @@ function AuthenticatedApp() {
         element={<LandingPage />}
       />
       
-      {/* Página de autenticação - sempre acessível */}
+      {/* Páginas de autenticação - sempre acessíveis */}
       <Route 
-        path="/auth" 
+        path="/login" 
         element={
           user ? (
             <Navigate to="/home" replace />
           ) : (
-            <Auth />
+            <Login />
           )
         } 
       />
+      
+      <Route 
+        path="/signup" 
+        element={
+          user ? (
+            <Navigate to="/home" replace />
+          ) : (
+            <Signup />
+          )
+        } 
+      />
+      
+      {/* Redirect antigo /auth para /login */}
+      <Route path="/auth" element={<Navigate to="/login" replace />} />
       
       {/* Página de reset de senha - sempre acessível */}
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -96,7 +111,7 @@ function AuthenticatedApp() {
               <CompleteProfile />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/login" replace />
           )
         } 
       />
@@ -108,13 +123,13 @@ function AuthenticatedApp() {
           user ? (
             <HomeWithDelay />
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/login" replace />
           )
         } 
       />
       
       <Route 
-        path="/profile" 
+        path="/profile"
         element={
           user ? (
             profile?.profile_completed ? (
@@ -123,7 +138,7 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/login" replace />
           )
         }
       >
@@ -135,7 +150,7 @@ function AuthenticatedApp() {
       </Route>
       
       <Route 
-        path="/discover" 
+        path="/discover"
         element={
           user ? (
             profile?.profile_completed ? (
@@ -144,13 +159,13 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/login" replace />
           )
         } 
       />
       
       <Route 
-        path="/messages" 
+        path="/messages"
         element={
           user ? (
             profile?.profile_completed ? (
@@ -159,13 +174,13 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/login" replace />
           )
         } 
       />
       
       <Route 
-        path="/premium" 
+        path="/premium"
         element={
           user ? (
             profile?.profile_completed ? (
@@ -174,13 +189,13 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/login" replace />
           )
         } 
       />
       
       <Route 
-        path="/profile/edit" 
+        path="/profile/edit"
         element={
           user ? (
             profile?.profile_completed ? (
@@ -189,13 +204,13 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/login" replace />
           )
         } 
       />
       
       <Route 
-        path="/profile/view/:userId" 
+        path="/profile/view/:userId"
         element={
           user ? (
             profile?.profile_completed ? (
@@ -204,7 +219,7 @@ function AuthenticatedApp() {
               <Navigate to="/complete-profile" replace />
             )
           ) : (
-            <Navigate to="/auth" replace />
+            <Navigate to="/login" replace />
           )
         } 
       />
