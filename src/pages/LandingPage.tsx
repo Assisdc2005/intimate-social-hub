@@ -11,7 +11,7 @@ export const LandingPage = () => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   const handleGetStarted = () => {
-    navigate('/auth');
+    navigate('/complete-profile');
   };
 
   const handleLogin = () => {
