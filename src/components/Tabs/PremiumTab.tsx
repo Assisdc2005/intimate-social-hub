@@ -10,7 +10,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 
 export const PremiumTab = () => {
   const { profile, isPremium, refreshProfile } = useProfile();
-  const { subscription, loading, checkSubscription, createCheckout } = useSubscription();
+  const { subscription, loading, createCheckout } = useSubscription();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

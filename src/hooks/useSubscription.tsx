@@ -33,10 +33,7 @@ export const useSubscription = () => {
     try {
       console.log('🔍 Checking subscription for user:', user.id);
       
-      // Sempre atualizar o perfil primeiro
-      await refreshProfile();
-      
-      // Buscar dados da assinatura diretamente no banco
+      // Buscar dados da assinatura diretamente no banco (sem refreshProfile para evitar loops)
       const { data: subscriptionData, error } = await supabase
         .from('assinaturas')
         .select('*')
@@ -98,15 +95,16 @@ export const useSubscription = () => {
   };
 
   useEffect(() => {
-    checkSubscription();
-  }, [user]);
+    if (user) {
+      checkSubscription();
+    }
+  }, [user?.id]); // Usar user.id em vez de user completo para evitar loops
 
   // Usar o valor isPremium do useProfile (baseado exclusivamente em tipo_assinatura)
   return {
     isPremium, // Do useProfile
     subscription,
     loading,
-    checkSubscription,
     createCheckout
   };
 };
