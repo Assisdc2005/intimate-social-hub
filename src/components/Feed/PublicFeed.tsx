@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Heart, MessageCircle, Plus, Send, User, Clock, Crown, Trash2, Edit2 } from "lucide-react";
+import { Heart, MessageCircle, Plus, Send, User, Clock, Crown, Trash2, Edit2, Lock } from "lucide-react";
 import { PhotoGrid } from "@/components/Profile/PhotoGrid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CreatePostModal } from "@/components/Modals/CreatePostModal";
+import { PremiumContentModal } from "@/components/Modals/PremiumContentModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { BlurredMedia } from "@/components/ui/blurred-media";
 import { uploadOriginalAndGenerateWatermark } from "@/lib/watermark";
@@ -62,7 +63,9 @@ export const PublicFeed = () => {
   const [editContent, setEditContent] = useState('');
   const [deletePostId, setDeletePostId] = useState<string | null>(null);
   const [expandedPosts, setExpandedPosts] = useState<{ [id: string]: boolean }>({});
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const MAX_TEXT = 190;
+  const FREE_POSTS_LIMIT = 5; // Primeiras 5 publicações gratuitas
 
   useEffect(() => {
     fetchPublicacoes();
@@ -312,7 +315,13 @@ export const PublicFeed = () => {
     }
   };
 
-  const handleLike = async (publicacaoId: string) => {
+  const handleLike = async (publicacaoId: string, index: number) => {
+    // Verificar se a publicação está bloqueada (index >= 5 e não é premium)
+    if (!isPremium && index >= FREE_POSTS_LIMIT) {
+      setShowPremiumModal(true);
+      return;
+    }
+
     if (!isPremium) {
       toast({
         title: "Seja Premium para curtir publicações",
@@ -359,7 +368,13 @@ export const PublicFeed = () => {
     }
   };
 
-  const handleComment = async (publicacaoId: string) => {
+  const handleComment = async (publicacaoId: string, index: number) => {
+    // Verificar se a publicação está bloqueada (index >= 5 e não é premium)
+    if (!isPremium && index >= FREE_POSTS_LIMIT) {
+      setShowPremiumModal(true);
+      return;
+    }
+
     if (!isPremium) {
       toast({
         title: "Seja Premium para comentar publicações",
@@ -399,11 +414,21 @@ export const PublicFeed = () => {
     }
   };
 
-  const toggleComments = (publicacaoId: string) => {
+  const toggleComments = (publicacaoId: string, index: number) => {
+    // Verificar se a publicação está bloqueada (index >= 5 e não é premium)
+    if (!isPremium && index >= FREE_POSTS_LIMIT) {
+      setShowPremiumModal(true);
+      return;
+    }
+
     setShowComments(prev => ({ ...prev, [publicacaoId]: !prev[publicacaoId] }));
     if (!comentarios[publicacaoId]) {
       fetchComentarios(publicacaoId);
     }
+  };
+
+  const handleBlockedInteraction = () => {
+    setShowPremiumModal(true);
   };
 
   const handleViewProfile = (userId: string) => {
@@ -541,8 +566,29 @@ export const PublicFeed = () => {
 
       {/* Feed de publicações */}
       <div className="space-y-6">
-        {publicacoes.map((publicacao, index) => (
-          <div key={publicacao.id} className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
+        {publicacoes.map((publicacao, index) => {
+          const isBlocked = !isPremium && index >= FREE_POSTS_LIMIT;
+          
+          return (
+          <div 
+            key={publicacao.id} 
+            className={`bg-white/5 rounded-2xl border border-white/10 overflow-hidden relative ${
+              isBlocked ? 'cursor-pointer' : ''
+            }`}
+            onClick={isBlocked ? handleBlockedInteraction : undefined}
+          >
+            {/* Overlay de bloqueio */}
+            {isBlocked && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
+                <div className="text-center space-y-3 p-6">
+                  <div className="w-16 h-16 mx-auto bg-gradient-primary rounded-full flex items-center justify-center shadow-glow animate-pulse">
+                    <Lock className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Conteúdo Premium</h3>
+                  <p className="text-white/80">Torne-se Premium para ver</p>
+                </div>
+              </div>
+            )}
             {/* Header da publicação */}
             <div className="flex items-center gap-3 p-4">
               <div 
@@ -633,27 +679,33 @@ export const PublicFeed = () => {
             )}
 
             {/* Mídia (carrossel ou fallback para única mídia) */}
-            <PublicacaoCarrossel
-              publicacaoId={publicacao.id}
-              isPremium={isPremium || index < 3}
-              fallbackMidia={publicacao.midia_url ? {
-                url: publicacao.midia_url,
-                tipo: publicacao.tipo_midia === 'video' ? 'video' : 'image'
-              } : undefined}
-            />
+            <div className={isBlocked ? 'blur-lg pointer-events-none' : ''}>
+              <PublicacaoCarrossel
+                publicacaoId={publicacao.id}
+                isPremium={isPremium || index < FREE_POSTS_LIMIT}
+                fallbackMidia={publicacao.midia_url ? {
+                  url: publicacao.midia_url,
+                  tipo: publicacao.tipo_midia === 'video' ? 'video' : 'image'
+                } : undefined}
+              />
 
-            {/* Múltiplas Mídias - buscar da nova tabela */}
-            {publicacao.tipo_midia === 'multipla' && (
-              <PublicacaoCarrossel publicacaoId={publicacao.id} isPremium={isPremium || index < 3} />
-            )}
+              {/* Múltiplas Mídias - buscar da nova tabela */}
+              {publicacao.tipo_midia === 'multipla' && (
+                <PublicacaoCarrossel publicacaoId={publicacao.id} isPremium={isPremium || index < FREE_POSTS_LIMIT} />
+              )}
+            </div>
 
             {/* Actions */}
-            <div className="px-4 pb-3">
+            <div className={`px-4 pb-3 ${isBlocked ? 'blur-sm pointer-events-none' : ''}`}>
               <div className="flex items-center gap-4 mb-3">
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => handleLike(publicacao.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLike(publicacao.id, index);
+                  }}
+                  disabled={isBlocked}
                   className={`text-gray-400 hover:text-red-500 hover:bg-white/10 ${
                     userLikes.has(publicacao.id) ? 'text-red-500' : ''
                   }`}
@@ -664,7 +716,11 @@ export const PublicFeed = () => {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => toggleComments(publicacao.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleComments(publicacao.id, index);
+                  }}
+                  disabled={isBlocked}
                   className="text-gray-400 hover:text-white hover:bg-white/10"
                 >
                   <MessageCircle className="w-5 h-5 mr-2" />
@@ -673,7 +729,11 @@ export const PublicFeed = () => {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => handleViewProfile(publicacao.user_id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewProfile(publicacao.user_id);
+                  }}
+                  disabled={isBlocked}
                   className="text-gray-400 hover:text-white hover:bg-white/10"
                 >
                   <User className="w-5 h-5 mr-2" />
@@ -683,7 +743,7 @@ export const PublicFeed = () => {
             </div>
 
             {/* Comentários */}
-            {showComments[publicacao.id] && (
+            {showComments[publicacao.id] && !isBlocked && (
               <div className="px-4 pb-4">
                 <div className="space-y-3 mt-4">
                   {comentarios[publicacao.id]?.map((comentario) => (
@@ -734,11 +794,11 @@ export const PublicFeed = () => {
                       onChange={(e) => setNewComment(e.target.value)}
                       disabled={!isPremium}
                       className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                      onKeyPress={(e) => e.key === 'Enter' && handleComment(publicacao.id)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleComment(publicacao.id, index)}
                     />
                     <Button
                       size="sm"
-                      onClick={() => handleComment(publicacao.id)}
+                      onClick={() => handleComment(publicacao.id, index)}
                       disabled={!isPremium || !newComment.trim()}
                       className="bg-gradient-primary hover:opacity-90"
                     >
@@ -764,7 +824,8 @@ export const PublicFeed = () => {
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
 
       {/* Ver mais button */}
@@ -821,6 +882,12 @@ export const PublicFeed = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal Premium */}
+      <PremiumContentModal 
+        isOpen={showPremiumModal}
+        onOpenChange={setShowPremiumModal}
+      />
 
       {/* Modal de Confirmação de Exclusão */}
       <AlertDialog open={!!deletePostId} onOpenChange={() => setDeletePostId(null)}>
