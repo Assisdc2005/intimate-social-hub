@@ -116,41 +116,41 @@ async function handlePaymentCompleted(supabase: any, data: any) {
   console.log('✅ Processing payment completed:', data);
   
   try {
-    // Extrair informações do evento
-    const customerEmail = data.customer?.email || data.email || data.buyer?.email;
+    // Extrair checkout_id do webhook da Cakto
+    const checkoutId = data.checkout_id || data.id || data.transaction_id;
     const amount = data.amount || data.value || data.total;
-    const productId = data.product_id || data.product?.id;
     const transactionId = data.transaction_id || data.id;
     
-    console.log('📋 Payment details:', { customerEmail, amount, productId, transactionId });
+    console.log('📋 Payment details:', { checkoutId, amount, transactionId });
 
-    if (!customerEmail) {
-      console.error('❌ No customer email found in webhook data');
+    if (!checkoutId) {
+      console.error('❌ No checkout_id found in webhook data');
       return;
     }
 
-    // Buscar usuário pelo email
-    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+    // Buscar checkout registrado para obter user_id
+    const { data: checkout, error: checkoutError } = await supabase
+      .from('cakto_checkouts')
+      .select('user_id, periodo')
+      .eq('checkout_id', checkoutId)
+      .single();
     
-    if (userError) {
-      console.error('❌ Error fetching users:', userError);
+    if (checkoutError || !checkout) {
+      console.error('❌ Checkout not found:', checkoutId, checkoutError);
       return;
     }
 
-    const user = userData.users.find((u: any) => u.email === customerEmail);
+    const userId = checkout.user_id;
+    const periodo = checkout.periodo || 'mensal';
     
-    if (!user) {
-      console.error('❌ User not found with email:', customerEmail);
-      return;
-    }
-
-    console.log('👤 User found:', user.id, user.email);
+    console.log('👤 User ID:', userId);
+    console.log('📅 Period:', periodo);
 
     // Buscar perfil do usuário
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("*")
-      .eq("user_id", user.id)
+      .select("id, user_id")
+      .eq("user_id", userId)
       .single();
 
     if (profileError) {
@@ -158,43 +158,34 @@ async function handlePaymentCompleted(supabase: any, data: any) {
       return;
     }
 
-    // Determinar período da assinatura baseado no produto/link
-    let periodo = 'semanal';
+    // Calcular data de fim baseado no período
     let dataFim = new Date();
-    
-    // Mapear produtos para períodos
-    if (productId?.includes('492897') || data.product_name?.includes('Semanal')) {
-      periodo = 'semanal';
+    if (periodo === 'semanal') {
       dataFim.setDate(dataFim.getDate() + 7);
-    } else if (productId?.includes('492920') || data.product_name?.includes('Quinzenal')) {
-      periodo = 'quinzenal';
+    } else if (periodo === 'quinzenal') {
       dataFim.setDate(dataFim.getDate() + 14);
-    } else if (productId?.includes('492928') || data.product_name?.includes('Mensal')) {
-      periodo = 'mensal';
+    } else if (periodo === 'mensal') {
       dataFim.setMonth(dataFim.getMonth() + 1);
-    } else {
-      // Default para semanal
-      dataFim.setDate(dataFim.getDate() + 7);
     }
 
-    console.log('📅 Subscription period:', periodo, 'expires:', dataFim);
+    console.log('📅 Subscription expires:', dataFim);
 
     // Criar nova assinatura
     const { data: subscription, error: subError } = await supabase
       .from("assinaturas")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         perfil_id: profile.id,
-        cakto_transaction_id: transactionId,
+        cakto_checkout_id: checkoutId,
         status: "active",
         data_inicio: new Date().toISOString(),
         data_fim: dataFim.toISOString(),
         valor: amount || 0,
         periodo: periodo,
         plano: `Premium ${periodo}`,
-        stripe_customer_id: customerEmail, // Usar email como identificador
+        stripe_customer_id: null,
         stripe_subscription_id: transactionId,
-        stripe_price_id: productId || 'cakto-' + periodo,
+        stripe_price_id: periodo,
       })
       .select()
       .single();
@@ -203,16 +194,22 @@ async function handlePaymentCompleted(supabase: any, data: any) {
       console.error('❌ Error creating subscription:', subError);
       
       // Se falhar, tentar atualizar manualmente o perfil
-      await updateProfileToPremium(supabase, user.id, dataFim);
+      await updateProfileToPremium(supabase, userId, dataFim);
       return;
     }
 
     console.log('✅ Subscription created:', subscription);
 
-    // Atualizar perfil para premium - manual fallback se o trigger falhar
-    await updateProfileToPremium(supabase, user.id, dataFim, subscription.id);
+    // Atualizar checkout para completed
+    await supabase
+      .from('cakto_checkouts')
+      .update({ status: 'completed' })
+      .eq('checkout_id', checkoutId);
 
-    console.log('✅ Payment completed successfully processed for user:', user.email);
+    // Atualizar perfil para premium - manual fallback se o trigger falhar
+    await updateProfileToPremium(supabase, userId, dataFim, subscription.id);
+
+    console.log('✅ Payment completed successfully processed for user:', userId);
   } catch (error) {
     console.error('❌ Error processing payment completed:', error);
   }

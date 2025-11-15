@@ -6,6 +6,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 
 export const PremiumTab = () => {
@@ -121,14 +122,43 @@ export const PremiumTab = () => {
     }
   ];
 
-  const handleSubscribe = (caktoLink: string, planName: string) => {
-    toast({
-      title: "Redirecionando para pagamento",
-      description: `Você será redirecionado para o checkout do plano ${planName}`,
-    });
-    
-    // Abrir link da Cakto em nova aba
-    window.open(caktoLink, '_blank');
+  const handleSubscribe = async (caktoLink: string, planName: string) => {
+    try {
+      const planId = planName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      
+      toast({
+        title: "Preparando checkout...",
+        description: `Criando sessão de pagamento para o plano ${planName}.`,
+      });
+      
+      console.log('Creating Cakto checkout:', { caktoLink, planId });
+      
+      const { data, error } = await supabase.functions.invoke('create-cakto-checkout', {
+        body: { 
+          periodo: planId,
+          caktoLink: caktoLink
+        }
+      });
+
+      if (error) {
+        console.error('Checkout error:', error);
+        throw new Error(error.message || 'Erro ao criar checkout');
+      }
+
+      if (!data || !data.url) {
+        throw new Error('URL de checkout não recebida');
+      }
+
+      console.log('✅ Checkout session created, opening URL:', data.url);
+      window.open(data.url, '_blank');
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast({
+        title: "Erro ao criar checkout",
+        description: error instanceof Error ? error.message : "Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleRefreshStatus = async () => {

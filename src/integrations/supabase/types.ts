@@ -724,10 +724,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      verificar_status_premium: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      verificar_status_premium: { Args: never; Returns: undefined }
     }
     Enums: {
       body_type: "magro" | "atletico" | "mediano" | "curvilinio" | "plus_size"
