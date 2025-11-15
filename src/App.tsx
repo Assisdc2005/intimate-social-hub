@@ -6,10 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
-import { Login } from "./pages/Login";
-import { Signup } from "./pages/Signup";
-import { ResetPassword } from "./pages/ResetPassword";
-import { CompleteProfile } from "./pages/CompleteProfile";
 import Profile from "./pages/Profile";
 import AboutTab from "./pages/profile-tabs/AboutTab";
 import TestimonialsTab from "./pages/profile-tabs/TestimonialsTab";
@@ -18,9 +14,13 @@ import SettingsTab from "./pages/profile-tabs/SettingsTab";
 import { UserProfile } from "./pages/UserProfile";
 import { LandingPage } from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
-import { useAuth } from "./hooks/useAuth";
+import { Login } from "./pages/Login";
+import { Signup } from "./pages/Signup";
+import { ResetPassword } from "./pages/ResetPassword";
+import { CompleteProfile } from "./pages/CompleteProfile";
+import AdminDashboard from "./pages/AdminDashboard";
+import { useAuth, AuthProvider } from "./hooks/useAuth";
 import { useProfile, ProfileProvider } from "./hooks/useProfile";
-import { AuthProvider } from "./hooks/useAuth";
 import { About } from "./pages/About";
 import { Terms } from "./pages/Terms";
 import { Privacy } from "./pages/Privacy";
@@ -231,6 +231,9 @@ function AuthenticatedApp() {
       <Route path="/refund" element={<Refund />} />
       <Route path="/help" element={<Help />} />
       <Route path="/consent" element={<Consent />} />
+      
+      {/* Rota administrativa - apenas para admins */}
+      <Route path="/adm" element={<AdminDashboard />} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
