@@ -645,6 +645,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_likes: {
         Row: {
           created_at: string
@@ -724,9 +745,66 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_user: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
+      admin_get_all_users: {
+        Args: {
+          filter_type?: string
+          limit_count?: number
+          offset_count?: number
+          search_term?: string
+        }
+        Returns: {
+          avatar_url: string
+          birth_date: string
+          city: string
+          created_at: string
+          display_name: string
+          email: string
+          gender: string
+          id: string
+          last_seen: string
+          state: string
+          tipo_assinatura: string
+          user_id: string
+        }[]
+      }
+      admin_grant_premium: {
+        Args: { days?: number; target_user_id: string }
+        Returns: undefined
+      }
+      admin_revoke_premium: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
+      get_admin_metrics: { Args: never; Returns: Json }
+      get_age_distribution: {
+        Args: never
+        Returns: {
+          age_group: string
+          count: number
+        }[]
+      }
+      get_users_history: {
+        Args: never
+        Returns: {
+          count: number
+          date: string
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       verificar_status_premium: { Args: never; Returns: undefined }
     }
     Enums: {
+      app_role: "admin" | "user"
       body_type: "magro" | "atletico" | "mediano" | "curvilinio" | "plus_size"
       ethnicity_type:
         | "branco"
@@ -883,6 +961,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       body_type: ["magro", "atletico", "mediano", "curvilinio", "plus_size"],
       ethnicity_type: [
         "branco",
