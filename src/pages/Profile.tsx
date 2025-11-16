@@ -187,7 +187,7 @@ export default function Profile() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      // signOut já redireciona para '/'. Evitar navegação duplicada que causa 404 flash.
+      navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
       toast({
@@ -202,8 +202,7 @@ export default function Profile() {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      // Redirecionar para Landing Page
-      window.location.href = '/';
+      navigate('/');
       toast({
         title: "Conta desconectada",
         description: "Você saiu da sua conta",
