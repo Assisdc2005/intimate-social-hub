@@ -247,7 +247,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">      
-      {/* Back Button */}
+      {/* Back and Logout Buttons */}
       <div className="fixed top-4 left-4 z-50">
         <Button 
           onClick={() => navigate('/home')}
@@ -257,6 +257,18 @@ export default function Profile() {
         >
           <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-1" />
           <span className="hidden sm:inline text-sm">Voltar</span>
+        </Button>
+      </div>
+
+      <div className="fixed top-4 right-4 z-50">
+        <Button 
+          onClick={handleSignOut}
+          variant="ghost" 
+          size="sm"
+          className="text-gray-300 hover:text-white hover:bg-white/10 p-2 rounded-full"
+        >
+          <LogOut className="h-4 w-4 sm:h-5 sm:w-5 mr-1" />
+          <span className="hidden sm:inline text-sm">Sair</span>
         </Button>
       </div>
 
