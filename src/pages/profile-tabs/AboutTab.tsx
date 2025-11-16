@@ -27,50 +27,48 @@ export const AboutTab = () => {
           {profile?.bio && (
             <p className="text-white/90">{profile.bio}</p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            {age && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <span>{age} anos</span>
-              </div>
-            )}
-            {profile?.gender && (
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" />
-                <span className="capitalize">{profile.gender}</span>
-              </div>
-            )}
-            {(profile?.city || profile?.state) && (
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span>{profile?.city}{profile?.city && profile?.state && ", "}{profile?.state}</span>
-              </div>
-            )}
-            {profile?.profession && (
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-primary" />
-                <span>{profile.profession}</span>
-              </div>
-            )}
-            {profile?.sexual_orientation && (
-              <div className="flex items-center gap-2">
-                <Heart className="h-4 w-4 text-primary" />
-                <span className="capitalize">{profile.sexual_orientation}</span>
-              </div>
-            )}
-            {profile?.relationship_status && (
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
-                <span className="capitalize">{profile.relationship_status}</span>
-              </div>
-            )}
-            {profile?.looking_for && (
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" />
-                <span>{profile.looking_for}</span>
-              </div>
-            )}
-          </div>
+          {age && (
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="h-4 w-4 text-primary" />
+              <span>{age} anos</span>
+            </div>
+          )}
+          {profile?.gender && (
+            <div className="flex items-center gap-2 text-sm">
+              <User className="h-4 w-4 text-primary" />
+              <span className="capitalize">{profile.gender}</span>
+            </div>
+          )}
+          {(profile?.city || profile?.state) && (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span>{profile?.city}{profile?.city && profile?.state && ", "}{profile?.state}</span>
+            </div>
+          )}
+          {profile?.profession && (
+            <div className="flex items-center gap-2 text-sm">
+              <Briefcase className="h-4 w-4 text-primary" />
+              <span>{profile.profession}</span>
+            </div>
+          )}
+          {profile?.sexual_orientation && (
+            <div className="flex items-center gap-2 text-sm">
+              <Heart className="h-4 w-4 text-primary" />
+              <span className="capitalize">{profile.sexual_orientation}</span>
+            </div>
+          )}
+          {profile?.relationship_status && (
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="h-4 w-4 text-primary" />
+              <span className="capitalize">{profile.relationship_status}</span>
+            </div>
+          )}
+          {profile?.looking_for && (
+            <div className="flex items-center gap-2 text-sm">
+              <Target className="h-4 w-4 text-primary" />
+              <span>{profile.looking_for}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
