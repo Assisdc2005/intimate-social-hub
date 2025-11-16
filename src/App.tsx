@@ -55,20 +55,6 @@ function AuthenticatedApp() {
     return age < 18;
   }, [profile?.birth_date]);
 
-  // Home wrapper: shows Home immediately, then redirects to Complete Profile after 10s if needed
-  const HomeWithDelay = () => {
-    const navigate = useNavigate();
-    React.useEffect(() => {
-      if (user && !profile?.profile_completed) {
-        const t = window.setTimeout(() => {
-          navigate("/complete-profile", { replace: true });
-        }, 10000);
-        return () => window.clearTimeout(t);
-      }
-    }, [user, profile?.profile_completed, navigate]);
-    return <Index />;
-  };
-
   if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
@@ -133,12 +119,12 @@ function AuthenticatedApp() {
         } 
       />
       
-      {/* Todas as rotas protegidas - redirecionam para /auth se não autenticado */}
+      {/* Todas as rotas protegidas - redirecionam para /login se não autenticado */}
       <Route 
         path="/home" 
         element={
           user ? (
-            <HomeWithDelay />
+            <Index />
           ) : (
             <Navigate to="/login" replace />
           )

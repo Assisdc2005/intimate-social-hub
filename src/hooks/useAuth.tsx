@@ -70,18 +70,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
     
-    // Se não há erro e o usuário foi criado, redirecionar para /home
-    if (!error && data.user) {
-      window.location.href = '/home';
-    }
-    
     return { error };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    // Redirect to Landing Page
-    window.location.href = '/';
   };
 
   const updatePassword = async (newPassword: string) => {

@@ -54,7 +54,7 @@ const SettingsTab = () => {
       const { data, error } = await supabase.functions.invoke('delete-account', { body: {} });
       if (error) throw error;
       await signOut();
-      window.location.href = '/';
+      navigate('/');
     } catch (e: any) {
       console.error('Erro ao excluir conta:', e);
       toast({
