@@ -142,7 +142,7 @@ All colors MUST be HSL.
   
   /* Premium card with glow */
   .card-premium {
-    @apply bg-card/80 backdrop-blur-md border border-primary/20 rounded-2xl p-6 shadow-[var(--shadow-premium)] transition-all duration-300 hover:border-primary/40 hover:shadow-[var(--shadow-glow)];
+    @apply bg-card/80 backdrop-blur-md border border-primary/20 rounded-2xl p-6 shadow-[var(--shadow-premium)] transition-all duration-300 hover:border-primary/40 hover:shadow-[var(--shadow-glow)] relative z-[1] overflow-visible;
   }
   
   /* Navigation active state */

@@ -7,6 +7,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { OnlineProfiles } from "@/components/Profile/OnlineProfiles";
+import { useFakeOnline } from "@/hooks/useFakeOnline";
 import { PublicFeed } from "@/components/Feed/PublicFeed";
 import { CreatePostModal } from "@/components/Modals/CreatePostModal";
 import { PremiumBlockModal } from "@/components/Modals/PremiumBlockModal";
@@ -16,6 +17,7 @@ export const HomeTab = () => {
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isOnlineOrFake, registerCandidates } = useFakeOnline();
   const [posts, setPosts] = useState<any[]>([]);
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,14 +44,37 @@ export const HomeTab = () => {
     try {
       setLoading(true);
 
-      // Fetch latest posts (no embedded join to avoid 400 when FK name differs)
-      const { data: postsData } = await supabase
+      // Fetch latest posts (select only necessary columns)
+      const postsPromise = supabase
         .from('publicacoes')
-        .select('*')
+        .select('id, user_id, conteudo, midia_url, tipo_midia, created_at')
         .order('created_at', { ascending: false })
         .limit(5);
 
-      // Fetch related profiles separately and merge
+      // Base profiles query builders (select minimal fields)
+      const LIMIT_POOL = 20; // fetch a pool to randomize from
+      const FEMALE_GENDER_FILTER = 'fem%'; // handle 'feminino' variations
+      const commonFilters = (query: any) =>
+        query
+          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
+          .eq('profile_completed', true)
+          .neq('user_id', profile?.user_id)
+          .limit(LIMIT_POOL);
+
+      // Run independent queries in parallel
+      const femalesQuery = commonFilters(supabase.from('profiles')).ilike('gender', FEMALE_GENDER_FILTER);
+      const othersQuery = commonFilters(supabase.from('profiles')).not('gender', 'ilike', FEMALE_GENDER_FILTER);
+      const [
+        { data: postsData },
+        { data: femalesPool },
+        { data: othersPool }
+      ] = await Promise.all([
+        postsPromise,
+        femalesQuery,
+        othersQuery
+      ]);
+
+      // Fetch related profiles for posts in parallel only if needed
       const userIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
       let postsWithProfiles = postsData || [];
       if (userIds.length) {
@@ -68,29 +93,6 @@ export const HomeTab = () => {
       // - prefer female; if less than 5, fill with others
       // - randomize order to vary between accesses
       // - limit to 5
-
-      const LIMIT_POOL = 20; // fetch a pool to randomize from
-      const FEMALE_GENDER_FILTER = 'fem%'; // handle 'feminino' variations
-
-      const commonFilters = (query: any) =>
-        query
-          .eq('profile_completed', true)
-          .neq('user_id', profile?.user_id)
-          .limit(LIMIT_POOL);
-
-      const { data: femalesPool } = await commonFilters(
-        supabase
-          .from('profiles')
-          .select('*')
-          .ilike('gender', FEMALE_GENDER_FILTER)
-      );
-
-      const { data: othersPool } = await commonFilters(
-        supabase
-          .from('profiles')
-          .select('*')
-          .not('gender', 'ilike', FEMALE_GENDER_FILTER)
-      );
 
       // Helper to check has photo (strict): photos array length > 0 OR avatar_url non-empty
       const hasPhoto = (p: any) => {
@@ -122,8 +124,8 @@ export const HomeTab = () => {
         return out;
       };
 
-      // Prioritize online first within each group
-      const sortByOnline = (arr: any[]) => [...arr].sort((a, b) => Number(isOnline(b)) - Number(isOnline(a)));
+      // Prioritize online (real or fake) first within each group
+      const sortByOnline = (arr: any[]) => [...arr].sort((a, b) => Number(isOnlineOrFake(b)) - Number(isOnlineOrFake(a)));
 
       const females = sortByOnline(dedupeById(femalesPool || []));
       const others = sortByOnline(dedupeById(othersPool || []).filter(
@@ -145,7 +147,7 @@ export const HomeTab = () => {
         const remaining = 5 - selected.length;
         const { data: fallbackPool } = await supabase
           .from('profiles')
-          .select('*')
+          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
           .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
@@ -161,7 +163,7 @@ export const HomeTab = () => {
         const remaining = 5 - selected.length;
         const { data: broadPool } = await supabase
           .from('profiles')
-          .select('*')
+          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
           .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
@@ -173,18 +175,25 @@ export const HomeTab = () => {
 
       // Ensure exactly 5 and simulate online presence for display purposes
       // Prioritize online first, then randomize within each group
-      const onlineArr = selected.filter((u) => isOnline(u));
-      const offlineArr = selected.filter((u) => !isOnline(u));
+      const onlineArr = selected.filter((u) => isOnlineOrFake(u));
+      const offlineArr = selected.filter((u) => !isOnlineOrFake(u));
       const ordered = [...shuffle(onlineArr), ...shuffle(offlineArr)];
       const selectedFive = ordered.slice(0, 5).map((u) => ({
         ...u,
-        simulated_online: isOnline(u),
+        simulated_online: isOnlineOrFake(u),
       }));
 
       setPosts(postsWithProfiles);
       if (selectedFive.length > 0) {
         setTopUsers(selectedFive);
       }
+
+      // Register visible candidates to the fake-online rotation system
+      const candidates = [...(femalesPool || []), ...(othersPool || [])].map((u: any) => ({
+        user_id: u.user_id,
+        isRealOnline: isOnline(u),
+      }));
+      if (candidates.length) registerCandidates(candidates);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -297,7 +306,7 @@ export const HomeTab = () => {
             <Zap className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-bold text-foreground">Online Agora</h2>
             <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
-              {topUsers.length} pessoas
+              +9 Online próximo à você!
             </Badge>
           </div>
         </div>
@@ -322,6 +331,8 @@ export const HomeTab = () => {
                         src={user.avatar_url} 
                         alt={user.display_name}
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-white font-bold text-4xl">
@@ -329,11 +340,13 @@ export const HomeTab = () => {
                       </div>
                     )}
                     
-                    {/* Online Badge */}
-                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-green-500/90 backdrop-blur-sm px-2 py-1 rounded-full">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                      <span className="text-white text-xs font-semibold">LIVE</span>
-                    </div>
+                    {/* Online Badge (real or fake) */}
+                    {isOnlineOrFake(user) && (
+                      <div className="absolute top-2 left-2 flex items-center gap-1 bg-green-500/90 backdrop-blur-sm px-2 py-1 rounded-full">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                        <span className="text-white text-xs font-semibold">LIVE</span>
+                      </div>
+                    )}
 
                     {/* Premium Crown */}
                     {user.tipo_assinatura === 'premium' && (

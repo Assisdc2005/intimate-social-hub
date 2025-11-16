@@ -10,16 +10,21 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { useFakeOnline } from "@/hooks/useFakeOnline";
 import { useNavigate } from "react-router-dom";
 
 export const DiscoverTab = () => {
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isOnlineOrFake, registerCandidates } = useFakeOnline();
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
+  const [advancedFilter, setAdvancedFilter] = useState<'' | 'online' | 'recent_posts' | 'last_login'>('');
+  const [listKey, setListKey] = useState<string>('initial');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPost, setNewPost] = useState({ content: '', media_type: 'texto', media_url: '' });
@@ -29,6 +34,7 @@ export const DiscoverTab = () => {
     relationship_status: 'all',
     subscription_type: 'all',
   });
+  const [debouncedCity, setDebouncedCity] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -119,14 +125,24 @@ export const DiscoverTab = () => {
   };
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedCity(filters.city), 300);
+    return () => clearTimeout(t);
+  }, [filters.city]);
+
+  useEffect(() => {
     let filtered = users;
 
     // Apply search filter
-    if (searchTerm) {
+    if (debouncedSearch) {
       filtered = filtered.filter(user =>
-        user.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.profession?.toLowerCase().includes(searchTerm.toLowerCase())
+        user.display_name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        user.city?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        user.profession?.toLowerCase().includes(debouncedSearch.toLowerCase())
       );
     }
 
@@ -134,8 +150,8 @@ export const DiscoverTab = () => {
     if (filters.gender && filters.gender !== 'all') {
       filtered = filtered.filter(user => user.gender === filters.gender);
     }
-    if (filters.city) {
-      filtered = filtered.filter(user => user.city?.toLowerCase().includes(filters.city.toLowerCase()));
+    if (debouncedCity) {
+      filtered = filtered.filter(user => user.city?.toLowerCase().includes(debouncedCity.toLowerCase()));
     }
     if (filters.relationship_status && filters.relationship_status !== 'all') {
       filtered = filtered.filter(user => user.relationship_status === filters.relationship_status);
@@ -144,8 +160,40 @@ export const DiscoverTab = () => {
       filtered = filtered.filter(user => user.subscription_type === filters.subscription_type);
     }
 
+    // Advanced filter logic
+    if (advancedFilter === 'online') {
+      filtered = filtered.filter((u: any) => isOnlineOrFake(u));
+      // Keep current order
+    } else if (advancedFilter === 'recent_posts') {
+      const latestByUser: Record<string, number> = {};
+      for (const p of posts) {
+        const ts = new Date(p.created_at).getTime();
+        if (!latestByUser[p.user_id] || ts > latestByUser[p.user_id]) latestByUser[p.user_id] = ts;
+      }
+      filtered = [...filtered].sort((a: any, b: any) => (latestByUser[b.user_id] || 0) - (latestByUser[a.user_id] || 0));
+    } else if (advancedFilter === 'last_login') {
+      filtered = [...filtered].sort((a: any, b: any) => {
+        const at = a.last_seen ? new Date(a.last_seen).getTime() : (a.updated_at ? new Date(a.updated_at).getTime() : 0);
+        const bt = b.last_seen ? new Date(b.last_seen).getTime() : (b.updated_at ? new Date(b.updated_at).getTime() : 0);
+        return bt - at;
+      });
+    }
+
     setFilteredUsers(filtered);
-  }, [searchTerm, filters, users]);
+    setListKey(`list-${advancedFilter}-${debouncedSearch}-${debouncedCity}-${filters.gender}-${filters.relationship_status}-${filters.subscription_type}`);
+  }, [debouncedSearch, debouncedCity, filters.gender, filters.relationship_status, filters.subscription_type, users, posts, advancedFilter]);
+
+  // Register all currently loaded users as candidates for rotation
+  useEffect(() => {
+    if (!users?.length) return;
+    const FIVE_MIN = 5 * 60 * 1000;
+    const now = Date.now();
+    const candidates = users.map((u: any) => ({
+      user_id: u.user_id,
+      isRealOnline: (u?.status_online === true || u?.status_online === 'true' || (u?.last_seen && now - new Date(u.last_seen).getTime() <= FIVE_MIN))
+    }));
+    registerCandidates(candidates);
+  }, [users, registerCandidates]);
 
   const handleAddFriend = async (userId: string) => {
     if (!isPremium) {
@@ -369,7 +417,7 @@ export const DiscoverTab = () => {
       </div>
 
       {/* Filters Bar */}
-      <div className="glass rounded-2xl p-4">
+      <div className="glass rounded-2xl p-4 relative z-20">
         <div className="flex gap-3 mb-4">
           <Button
             className="bg-gradient-primary hover:opacity-90 text-white rounded-full flex items-center gap-2"
@@ -383,6 +431,36 @@ export const DiscoverTab = () => {
         {/* Filters */}
         {showFilters && (
           <div className="grid grid-cols-2 gap-3">
+            {/* Advanced quick filters */}
+            <div className="col-span-2 flex flex-nowrap items-center gap-2 mb-1 overflow-x-auto scrollbar-hide">
+              <button
+                type="button"
+                onClick={() => setAdvancedFilter(advancedFilter === 'online' ? '' : 'online')}
+                aria-pressed={advancedFilter === 'online'}
+                className={`shrink-0 inline-flex items-center whitespace-nowrap text-xs px-2.5 py-1.5 rounded-full border transition ${advancedFilter === 'online' ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-white/10 border-white/20 text-white hover:bg-white/15'}`}
+                title="Online agora"
+              >
+                Online Agora
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdvancedFilter(advancedFilter === 'recent_posts' ? '' : 'recent_posts')}
+                aria-pressed={advancedFilter === 'recent_posts'}
+                className={`shrink-0 inline-flex items-center whitespace-nowrap text-xs px-2.5 py-1.5 rounded-full border transition ${advancedFilter === 'recent_posts' ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-white/10 border-white/20 text-white hover:bg-white/15'}`}
+                title="Últimas publicações"
+              >
+                Últimas publicações
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdvancedFilter(advancedFilter === 'last_login' ? '' : 'last_login')}
+                aria-pressed={advancedFilter === 'last_login'}
+                className={`shrink-0 inline-flex items-center whitespace-nowrap text-xs px-2.5 py-1.5 rounded-full border transition ${advancedFilter === 'last_login' ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-white/10 border-white/20 text-white hover:bg-white/15'}`}
+                title="Último login"
+              >
+                Último login
+              </button>
+            </div>
             <Select value={filters.gender} onValueChange={(value) => setFilters({...filters, gender: value === 'all' ? '' : value})}>
               <SelectTrigger className="bg-white/10 border-white/20 text-white">
                 <SelectValue placeholder="Gênero" />
@@ -430,10 +508,10 @@ export const DiscoverTab = () => {
 
 
       {/* Users Cards Grid */}
-      <div className="card-premium">
+      <div className="card-premium relative z-0">
         <h3 className="text-xl font-semibold text-gradient mb-6">Perfis Recomendados</h3>
         
-        <div className="space-y-4">
+        <div key={listKey} className="space-y-4 animate-fade-in">
           {filteredUsers.map((user) => (
             <div key={user.id} className="bg-white/5 rounded-2xl p-6 border border-white/10">
               {/* User Header */}
@@ -451,6 +529,9 @@ export const DiscoverTab = () => {
                       </div>
                     )}
                   </div>
+                  {isOnlineOrFake(user) && (
+                    <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-green-500 ring-2 ring-black/60" />
+                  )}
                   {user.subscription_type === 'premium' && (
                     <div className="absolute -top-1 -right-1 w-6 h-6 bg-accent rounded-full flex items-center justify-center">
                       <span className="text-white text-xs">★</span>

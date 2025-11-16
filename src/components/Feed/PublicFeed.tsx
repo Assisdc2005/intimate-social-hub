@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CreatePostModal } from "@/components/Modals/CreatePostModal";
 import { PremiumContentModal } from "@/components/Modals/PremiumContentModal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -16,6 +17,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { PublicacaoCarrossel } from "./PublicacaoCarrossel";
+import { useAdmin } from "@/hooks/useAdmin";
 
 interface Publicacao {
   id: string;
@@ -49,6 +51,8 @@ export const PublicFeed = () => {
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
+
   const [publicacoes, setPublicacoes] = useState<Publicacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreatePost, setShowCreatePost] = useState(false);
@@ -64,12 +68,63 @@ export const PublicFeed = () => {
   const [deletePostId, setDeletePostId] = useState<string | null>(null);
   const [expandedPosts, setExpandedPosts] = useState<{ [id: string]: boolean }>({});
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [reactionMenuPost, setReactionMenuPost] = useState<string | null>(null);
+  const [userReactions, setUserReactions] = useState<Record<string, 'hot' | 'desire' | 'flirty' | 'kiss' | null>>({});
+  const [reactionStats, setReactionStats] = useState<Record<string, { hot: number; desire: number; flirty: number; kiss: number }>>({});
+  const [userLikeCount, setUserLikeCount] = useState<number>(0);
+  const [userCommentCount, setUserCommentCount] = useState<number>(0);
   const MAX_TEXT = 190;
   const FREE_POSTS_LIMIT = 5; // Primeiras 5 publicações gratuitas
+
+  const getReactionEmoji = (r?: 'hot' | 'desire' | 'flirty' | 'kiss' | null) => {
+    switch (r) {
+      case 'hot': return '🔥';
+      case 'desire': return '🤤';
+      case 'flirty': return '😏';
+      case 'kiss': return '💋';
+      default: return null;
+    }
+  };
+
+  const getDominantReaction = (postId: string): 'hot' | 'desire' | 'flirty' | 'kiss' | null => {
+    const stats = reactionStats[postId];
+    if (!stats) return null;
+    const entries: Array<["hot"|"desire"|"flirty"|"kiss", number]> = [
+      ['hot', stats.hot || 0],
+      ['desire', stats.desire || 0],
+      ['flirty', stats.flirty || 0],
+      ['kiss', stats.kiss || 0],
+    ];
+    entries.sort((a, b) => b[1] - a[1]);
+    return entries[0][1] > 0 ? entries[0][0] : null;
+  };
+
+  const fetchReactionStats = async (postIds: string[]) => {
+    if (!postIds.length) return;
+    try {
+      const { data, error } = await supabase
+        .from('curtidas_publicacoes')
+        .select('publicacao_id, reaction')
+        .in('publicacao_id', postIds);
+      if (error) throw error;
+      const rows = (data as any[]) || [];
+      const acc: Record<string, { hot: number; desire: number; flirty: number; kiss: number }> = {};
+      for (const r of rows) {
+        const pid = r.publicacao_id as string;
+        const rx = r.reaction as 'hot' | 'desire' | 'flirty' | 'kiss' | null;
+        if (!acc[pid]) acc[pid] = { hot: 0, desire: 0, flirty: 0, kiss: 0 };
+        if (rx && acc[pid][rx] !== undefined) acc[pid][rx] += 1;
+      }
+      setReactionStats((prev) => ({ ...prev, ...acc }));
+    } catch (e) {
+      console.error('Erro ao buscar estatísticas de reações:', e);
+    }
+  };
 
   useEffect(() => {
     fetchPublicacoes();
     fetchUserLikes();
+    fetchUserCommentsCount();
 
     // Set up real-time subscription
     const channel = supabase
@@ -162,11 +217,24 @@ export const PublicFeed = () => {
         profiles: profilesData?.find(profile => profile.user_id === pub.user_id)
       }));
 
+      // Filter out posts from deleted users or placeholder profiles
+      const filteredPublicacoes = publicacoesWithProfiles.filter((p) => {
+        const dn = p.profiles?.display_name?.trim();
+        if (!p.profiles) return false;
+        if (!dn) return false;
+        // Exclude generic placeholder names like 'Usuário'
+        return dn.toLowerCase() !== 'usuário' && dn.toLowerCase() !== 'usuario';
+      });
+
       if (offset === 0) {
-        setPublicacoes(publicacoesWithProfiles);
+        setPublicacoes(filteredPublicacoes);
       } else {
-        setPublicacoes(prev => [...prev, ...publicacoesWithProfiles]);
+        setPublicacoes(prev => [...prev, ...filteredPublicacoes]);
       }
+
+      // carregar agregados de reações para os posts carregados
+      const pageIds = publicacoesWithProfiles.map((p) => p.id);
+      fetchReactionStats(pageIds);
 
       // Check if there are more posts
       if (publicacoesWithProfiles.length < 20) {
@@ -185,12 +253,32 @@ export const PublicFeed = () => {
     try {
       const { data } = await supabase
         .from('curtidas_publicacoes')
-        .select('publicacao_id')
+        .select('publicacao_id, reaction')
         .eq('user_id', profile.user_id);
 
-      setUserLikes(new Set(data?.map(like => like.publicacao_id) || []));
+      const rows = (data as any[]) || [];
+      setUserLikes(new Set(rows.map((like: any) => like.publicacao_id)));
+      setUserLikeCount(rows.length || 0);
+      const map: Record<string, 'hot' | 'desire' | 'flirty' | 'kiss' | null> = {};
+      for (const row of rows) {
+        map[row.publicacao_id] = (row.reaction as any) ?? null;
+      }
+      setUserReactions(map);
     } catch (error) {
       console.error('Erro ao buscar curtidas:', error);
+    }
+  };
+
+  const fetchUserCommentsCount = async () => {
+    if (!profile?.user_id) return;
+    try {
+      const { count, error } = await supabase
+        .from('comentarios_publicacoes')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', profile.user_id);
+      if (!error) setUserCommentCount(count || 0);
+    } catch (e) {
+      console.error('Erro ao contar comentários do usuário:', e);
     }
   };
 
@@ -323,48 +411,77 @@ export const PublicFeed = () => {
     }
 
     if (!isPremium) {
+      const alreadyLikedThisPost = userLikes.has(publicacaoId);
+      // Permite alterar reação na mesma publicação; bloqueia segunda curtida em outra publicação
+      if (!alreadyLikedThisPost && userLikeCount >= 1) {
+        setShowPremiumModal(true);
+        return;
+      }
       toast({
         title: "Seja Premium para curtir publicações",
         description: "Faça upgrade para o Premium e libere curtidas ilimitadas",
         variant: "destructive",
       });
-      return;
+      // Não retorna aqui, abre o popover para selecionar a reação da primeira curtida
     }
+    // Abre o menu de reações
+    setReactionMenuPost(publicacaoId);
+  };
 
+  const handleSelectReaction = async (
+    publicacaoId: string,
+    index: number,
+    reaction: 'hot' | 'desire' | 'flirty' | 'kiss'
+  ) => {
     try {
-      const isLiked = userLikes.has(publicacaoId);
-      
-      if (isLiked) {
-        // Unlike
-        await supabase
-          .from('curtidas_publicacoes')
-          .delete()
-          .eq('publicacao_id', publicacaoId)
-          .eq('user_id', profile?.user_id);
-        
-        setUserLikes(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(publicacaoId);
-          return newSet;
-        });
-      } else {
-        // Like
-        await supabase
-          .from('curtidas_publicacoes')
-          .insert({ publicacao_id: publicacaoId, user_id: profile?.user_id });
-        
-        setUserLikes(prev => new Set([...prev, publicacaoId]));
+      const alreadyLiked = userLikes.has(publicacaoId);
+      // Gating: se não premium e tentando reagir numa segunda publicação, bloquear
+      if (!isPremium && !alreadyLiked && userLikeCount >= 1) {
+        setShowPremiumModal(true);
+        return;
       }
 
-      // Update local state
-      setPublicacoes(prev => prev.map(pub => 
-        pub.id === publicacaoId 
-          ? { ...pub, curtidas_count: isLiked ? pub.curtidas_count - 1 : pub.curtidas_count + 1 }
-          : pub
-      ));
+      const { error } = await supabase
+        .from('curtidas_publicacoes')
+        .upsert(
+          [{ publicacao_id: publicacaoId, user_id: profile?.user_id, reaction }],
+          { onConflict: 'user_id,publicacao_id' }
+        );
+      if (error) throw error;
 
-    } catch (error) {
-      console.error('Erro ao curtir:', error);
+      setUserLikes(prev => new Set([...prev, publicacaoId]));
+      setUserReactions(prev => ({ ...prev, [publicacaoId]: reaction }));
+
+      // Atualiza agregados locais (dominant reaction visível para todos)
+      setReactionStats(prev => {
+        const current = prev[publicacaoId] || { hot: 0, desire: 0, flirty: 0, kiss: 0 };
+        const old = userReactions[publicacaoId];
+        const next = { ...current };
+        if (!alreadyLiked) {
+          // primeira reação do usuário neste post
+          next[reaction] = (next[reaction] || 0) + 1;
+        } else if (old && old !== reaction) {
+          // trocando reação: decrementa antiga e incrementa nova
+          next[old] = Math.max(0, (next[old] || 0) - 1);
+          next[reaction] = (next[reaction] || 0) + 1;
+        }
+        return { ...prev, [publicacaoId]: next };
+      });
+
+      // Atualiza contagem apenas se era a primeira reação
+      if (!alreadyLiked) {
+        setPublicacoes(prev => prev.map(pub => 
+          pub.id === publicacaoId 
+            ? { ...pub, curtidas_count: pub.curtidas_count + 1 }
+            : pub
+        ));
+        setUserLikeCount((c) => c + 1);
+      }
+    } catch (e) {
+      console.error('Erro ao reagir:', e);
+      toast({ title: 'Erro', description: 'Não foi possível enviar sua reação', variant: 'destructive' });
+    } finally {
+      setReactionMenuPost(null);
     }
   };
 
@@ -376,6 +493,11 @@ export const PublicFeed = () => {
     }
 
     if (!isPremium) {
+      // Gating: apenas 1 comentário no total para não-premium
+      if (userCommentCount >= 1) {
+        setShowPremiumModal(true);
+        return;
+      }
       toast({
         title: "Seja Premium para comentar publicações",
         description: "Faça upgrade para o Premium e libere comentários ilimitados",
@@ -398,6 +520,7 @@ export const PublicFeed = () => {
       if (error) throw error;
 
       setNewComment('');
+      setUserCommentCount((c) => c + 1);
       
       // Update local state
       setPublicacoes(prev => prev.map(pub => 
@@ -489,31 +612,45 @@ export const PublicFeed = () => {
     if (!deletePostId) return;
 
     try {
-      // Deletar mídias relacionadas primeiro
-      await supabase
-        .from('publicacao_midias')
-        .delete()
-        .eq('publicacao_id', deletePostId);
+      // Se admin, usar Edge Function para apagar storage e registros com privilégios
+      if (isAdmin) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const jwt = sessionData.session?.access_token;
+        const res = await fetch('/functions/v1/admin_delete_publicacao_with_media', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+          },
+          body: JSON.stringify({ publicacaoId: deletePostId }),
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`Edge Function error: ${txt}`);
+        }
+      } else {
+        // Fluxo original (dono do post) - deletar dependências e depois a publicação
+        await supabase
+          .from('publicacao_midias')
+          .delete()
+          .eq('publicacao_id', deletePostId);
 
-      // Deletar curtidas
-      await supabase
-        .from('curtidas_publicacoes')
-        .delete()
-        .eq('publicacao_id', deletePostId);
+        await supabase
+          .from('curtidas_publicacoes')
+          .delete()
+          .eq('publicacao_id', deletePostId);
 
-      // Deletar comentários
-      await supabase
-        .from('comentarios_publicacoes')
-        .delete()
-        .eq('publicacao_id', deletePostId);
+        await supabase
+          .from('comentarios_publicacoes')
+          .delete()
+          .eq('publicacao_id', deletePostId);
 
-      // Deletar publicação
-      const { error } = await supabase
-        .from('publicacoes')
-        .delete()
-        .eq('id', deletePostId);
-
-      if (error) throw error;
+        const { error } = await supabase
+          .from('publicacoes')
+          .delete()
+          .eq('id', deletePostId);
+        if (error) throw error;
+      }
 
       setPublicacoes(prev => prev.filter(pub => pub.id !== deletePostId));
 
@@ -626,17 +763,19 @@ export const PublicFeed = () => {
                 </p>
               </div>
 
-              {/* Botões de editar e deletar (só aparecem para o dono) */}
-              {profile?.user_id === publicacao.user_id && (
+              {/* Botões de editar e deletar (dono ou admin) */}
+              {(profile?.user_id === publicacao.user_id || isAdmin) && (
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleEditPost(publicacao.id, publicacao.descricao || '')}
-                    className="text-gray-400 hover:text-white hover:bg-white/10"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
+                  {profile?.user_id === publicacao.user_id && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEditPost(publicacao.id, publicacao.descricao || '')}
+                      className="text-gray-400 hover:text-white hover:bg-white/10"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
@@ -698,21 +837,66 @@ export const PublicFeed = () => {
             {/* Actions */}
             <div className={`px-4 pb-3 ${isBlocked ? 'blur-sm pointer-events-none' : ''}`}>
               <div className="flex items-center gap-4 mb-3">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleLike(publicacao.id, index);
+                <Popover 
+                  open={reactionMenuPost === publicacao.id}
+                  onOpenChange={(o) => {
+                    if (o) {
+                      if (!isPremium) {
+                        setShowPremiumModal(true);
+                        return;
+                      }
+                      setReactionMenuPost(publicacao.id);
+                    } else {
+                      setReactionMenuPost(null);
+                    }
                   }}
-                  disabled={isBlocked}
-                  className={`text-gray-400 hover:text-red-500 hover:bg-white/10 ${
-                    userLikes.has(publicacao.id) ? 'text-red-500' : ''
-                  }`}
                 >
-                  <Heart className={`w-5 h-5 mr-2 ${userLikes.has(publicacao.id) ? 'fill-current' : ''}`} />
-                  {publicacao.curtidas_count}
-                </Button>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike(publicacao.id, index);
+                      }}
+                      disabled={isBlocked}
+                      className={`text-gray-400 hover:text-red-500 hover:bg-white/10 ${
+                        userLikes.has(publicacao.id) ? 'text-red-500' : ''
+                      }`}
+                    >
+                      {getReactionEmoji(userReactions[publicacao.id] ?? getDominantReaction(publicacao.id)) ? (
+                        <span className="text-lg mr-2">{getReactionEmoji(userReactions[publicacao.id] ?? getDominantReaction(publicacao.id))}</span>
+                      ) : (
+                        <Heart className={`w-5 h-5 mr-2 ${userLikes.has(publicacao.id) ? 'fill-current' : ''}`} />
+                      )}
+                      {publicacao.curtidas_count}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" sideOffset={8} className="w-auto p-2 bg-background/95 backdrop-blur border-white/20 rounded-xl">
+                    <div className="grid grid-cols-4 gap-2">
+                      <button
+                        className="text-xl hover:scale-110 transition"
+                        onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'hot'); }}
+                        title="Foguinho"
+                      >🔥</button>
+                      <button
+                        className="text-xl hover:scale-110 transition"
+                        onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'desire'); }}
+                        title="Babando"
+                      >🤤</button>
+                      <button
+                        className="text-xl hover:scale-110 transition"
+                        onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'flirty'); }}
+                        title="Olhar safado"
+                      >😏</button>
+                      <button
+                        className="text-xl hover:scale-110 transition"
+                        onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'kiss'); }}
+                        title="Beijo sexy"
+                      >💋</button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <Button
                   size="sm"
                   variant="ghost"

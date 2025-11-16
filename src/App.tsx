@@ -5,28 +5,29 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
-import Index from "./pages/Index";
-import Profile from "./pages/Profile";
-import AboutTab from "./pages/profile-tabs/AboutTab";
-import TestimonialsTab from "./pages/profile-tabs/TestimonialsTab";
-import PostsTab from "./pages/profile-tabs/PostsTab";
-import SettingsTab from "./pages/profile-tabs/SettingsTab";
-import { UserProfile } from "./pages/UserProfile";
-import { LandingPage } from "./pages/LandingPage";
-import NotFound from "./pages/NotFound";
-import { Login } from "./pages/Login";
-import { Signup } from "./pages/Signup";
-import { ResetPassword } from "./pages/ResetPassword";
-import { CompleteProfile } from "./pages/CompleteProfile";
-import AdminDashboard from "./pages/AdminDashboard";
+const Index = React.lazy(() => import("./pages/Index"));
+const Profile = React.lazy(() => import("./pages/Profile"));
+const AboutTab = React.lazy(() => import("./pages/profile-tabs/AboutTab"));
+const TestimonialsTab = React.lazy(() => import("./pages/profile-tabs/TestimonialsTab"));
+const PostsTab = React.lazy(() => import("./pages/profile-tabs/PostsTab"));
+const SettingsTab = React.lazy(() => import("./pages/profile-tabs/SettingsTab"));
+const UserProfile = React.lazy(() => import("./pages/UserProfile").then(m => ({ default: (m as any).default ?? (m as any).UserProfile })));
+const LandingPage = React.lazy(() => import("./pages/LandingPage").then(m => ({ default: (m as any).default ?? (m as any).LandingPage })));
+const NotFound = React.lazy(() => import("./pages/NotFound").then(m => ({ default: (m as any).default ?? (m as any).NotFound })));
+const Login = React.lazy(() => import("./pages/Login").then(m => ({ default: (m as any).default ?? (m as any).Login })));
+const Signup = React.lazy(() => import("./pages/Signup").then(m => ({ default: (m as any).default ?? (m as any).Signup })));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword").then(m => ({ default: (m as any).default ?? (m as any).ResetPassword })));
+const CompleteProfile = React.lazy(() => import("./pages/CompleteProfile").then(m => ({ default: (m as any).default ?? (m as any).CompleteProfile })));
+const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard").then(m => ({ default: (m as any).default ?? (m as any).AdminDashboard })));
 import { useAuth, AuthProvider } from "./hooks/useAuth";
+import { FakeOnlineProvider } from "./hooks/useFakeOnline";
 import { useProfile, ProfileProvider } from "./hooks/useProfile";
-import { About } from "./pages/About";
-import { Terms } from "./pages/Terms";
-import { Privacy } from "./pages/Privacy";
-import { Refund } from "./pages/Refund";
-import { Help } from "./pages/Help";
-import Consent from "./pages/Consent";
+const About = React.lazy(() => import("./pages/About").then(m => ({ default: (m as any).default ?? (m as any).About })));
+const Terms = React.lazy(() => import("./pages/Terms").then(m => ({ default: (m as any).default ?? (m as any).Terms })));
+const Privacy = React.lazy(() => import("./pages/Privacy").then(m => ({ default: (m as any).default ?? (m as any).Privacy })));
+const Refund = React.lazy(() => import("./pages/Refund").then(m => ({ default: (m as any).default ?? (m as any).Refund })));
+const Help = React.lazy(() => import("./pages/Help").then(m => ({ default: (m as any).default ?? (m as any).Help })));
+const Consent = React.lazy(() => import("./pages/Consent").then(m => ({ default: (m as any).default ?? (m as any).Consent })));
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,19 @@ function AuthenticatedApp() {
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
   }, [location.pathname]);
+
+  // Helper: compute age and restrict under 18 from accessing /complete-profile
+  const isUnder18 = React.useMemo(() => {
+    const dob = profile?.birth_date;
+    if (!dob) return true; // block when missing birth date
+    const b = new Date(dob);
+    if (isNaN(b.getTime())) return true;
+    const today = new Date();
+    let age = today.getFullYear() - b.getFullYear();
+    const m = today.getMonth() - b.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
+    return age < 18;
+  }, [profile?.birth_date]);
 
   // Home wrapper: shows Home immediately, then redirects to Complete Profile after 10s if needed
   const HomeWithDelay = () => {
@@ -64,7 +78,8 @@ function AuthenticatedApp() {
   }
 
   return (
-    <Routes>
+    <React.Suspense fallback={<div className="min-h-screen bg-gradient-hero flex items-center justify-center"><div className="text-white text-lg">Carregando...</div></div>}>
+      <Routes>
       {/* Rota raiz - Landing Page para todos os visitantes */}
       <Route 
         path="/" 
@@ -107,6 +122,8 @@ function AuthenticatedApp() {
           user ? (
             profile?.profile_completed ? (
               <Navigate to="/home" replace />
+            ) : isUnder18 ? (
+              <Navigate to="/" replace />
             ) : (
               <CompleteProfile />
             )
@@ -236,7 +253,8 @@ function AuthenticatedApp() {
       <Route path="/adm" element={<AdminDashboard />} />
       
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </React.Suspense>
   );
 }
 
@@ -248,7 +266,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ProfileProvider>
-            <AuthenticatedApp />
+            <FakeOnlineProvider>
+              <AuthenticatedApp />
+            </FakeOnlineProvider>
           </ProfileProvider>
         </AuthProvider>
       </BrowserRouter>
