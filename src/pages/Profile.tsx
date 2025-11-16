@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useFriendships } from '@/hooks/useFriendships';
 import { toast } from "@/hooks/use-toast"
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { TruncatedText } from "@/components/ui/truncated-text";
@@ -65,6 +66,7 @@ interface UserPost {
 export default function Profile() {
   const { user, updatePassword, signOut } = useAuth();
   const { profile, isPremium, loading: profileLoading } = useProfile();
+  const { friends } = useFriendships();
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [newPassword, setNewPassword] = useState('');
@@ -243,6 +245,7 @@ export default function Profile() {
   }
 
   const age = profile?.birth_date ? calculateAge(profile.birth_date) : null;
+  const friendsCount = friends.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">      
@@ -291,6 +294,18 @@ export default function Profile() {
                         {profile?.display_name?.[0]?.toUpperCase() || 'U'}
                       </div>
                     )}
+
+                  {/* Friends counter */}
+                  <div className="mt-4 flex items-center gap-2 text-sm text-gray-300">
+                    <Users className="h-4 w-4 text-primary" />
+                    <button
+                      type="button"
+                      className="hover:text-white transition-colors"
+                      onClick={() => navigate('/profile/about?tab=friends')}
+                    >
+                      Amigos: {friendsCount}
+                    </button>
+                  </div>
                   </div>
                   {isPremium && (
                     <div className="absolute -top-2 -right-2 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-full flex items-center justify-center">
@@ -309,60 +324,7 @@ export default function Profile() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-gray-300 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-primary" />
-                      <span>{user?.email}</span>
-                    </div>
-                    {age && (
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <span>{age} anos</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {profile?.gender && (
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-primary" />
-                      <span className="capitalize">{profile.gender}</span>
-                    </div>
-                  )}
-                  
-                  {(profile?.city || profile?.state) && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      <span>{profile.city}{profile.city && profile.state && ', '}{profile.state}</span>
-                    </div>
-                  )}
-                  
-                  {profile?.profession && (
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-primary" />
-                      <span>{profile.profession}</span>
-                    </div>
-                  )}
-                  
-                  {profile?.sexual_orientation && (
-                    <div className="flex items-center gap-2">
-                      <Heart className="h-4 w-4 text-primary" />
-                      <span className="capitalize">{profile.sexual_orientation}</span>
-                    </div>
-                  )}
-                  
-                  {profile?.relationship_status && (
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-primary" />
-                      <span className="capitalize">{profile.relationship_status}</span>
-                    </div>
-                  )}
-                  
-                  {profile?.looking_for && (
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-primary" />
-                      <span>{profile.looking_for}</span>
-                    </div>
-                  )}
+                  {/* Removed detailed personal info (email, gender, location, profession, orientation, relationship status, bio) as requested */}
                 </div>
 
                 {profile?.bio && (

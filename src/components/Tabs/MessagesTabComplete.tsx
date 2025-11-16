@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useConversations } from "@/hooks/useConversations";
 import { useMessages } from "@/hooks/useMessages";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +56,7 @@ export const MessagesTabComplete = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
@@ -83,6 +85,61 @@ export const MessagesTabComplete = () => {
     const success = await sendMessage(newMessage);
     if (success) {
       setNewMessage("");
+    }
+  };
+
+  const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Permitir re-selecionar o mesmo arquivo depois
+    e.target.value = "";
+
+    if (!file || !selectedConversation || !profile?.user_id) return;
+
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: "Assine o plano premium para enviar mídias no chat",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+
+      const fileExt = file.name.split(".").pop();
+      // Usar pasta do próprio usuário para respeitar políticas de RLS do bucket
+      const fileName = `${profile.user_id}/chat/${selectedConversation.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("publicacoes")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("publicacoes")
+        .getPublicUrl(fileName);
+
+      const success = await sendMessage(publicUrl);
+      if (!success) {
+        throw new Error("Falha ao enviar mensagem de imagem");
+      }
+
+      toast({
+        title: "Imagem enviada",
+        description: "Sua imagem foi enviada com sucesso",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Erro ao enviar imagem no chat:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a imagem. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -332,7 +389,12 @@ export const MessagesTabComplete = () => {
 
             {/* Mensagens do dia */}
             <div className="space-y-2">
-              {dayMessages.map((message) => (
+              {dayMessages.map((message) => {
+                const isImageMessage =
+                  /^https?:\/\//.test(message.content) &&
+                  /(\.png|\.jpe?g|\.gif|\.webp)$/i.test(message.content.split("?")[0]);
+
+                return (
                 <div
                   key={message.id}
                   className={`flex ${message.sender_id === profile?.user_id ? 'justify-end' : 'justify-start'}`}
@@ -341,8 +403,16 @@ export const MessagesTabComplete = () => {
                     message.sender_id === profile?.user_id
                       ? 'bg-gradient-to-r from-primary to-accent text-white rounded-l-2xl rounded-tr-2xl shadow-[0_4px_15px_rgba(139,69,255,0.3)]'
                       : 'bg-white/10 backdrop-blur-sm border border-white/20 text-foreground rounded-r-2xl rounded-tl-2xl shadow-[0_4px_15px_rgba(255,255,255,0.1)]'
-                  } p-4 hover:shadow-lg transition-all duration-300`}>
-                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  } p-2 hover:shadow-lg transition-all duration-300`}>
+                    {isImageMessage ? (
+                      <img
+                        src={message.content}
+                        alt="Imagem da conversa"
+                        className="rounded-2xl max-h-64 w-auto object-cover"
+                      />
+                    ) : (
+                      <p className="text-sm leading-relaxed px-2 py-2">{message.content}</p>
+                    )}
                     <p className={`text-xs mt-1 ${
                       message.sender_id === profile?.user_id 
                         ? 'text-white/70' 
@@ -358,7 +428,8 @@ export const MessagesTabComplete = () => {
                     </p>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         ))}
@@ -405,16 +476,20 @@ export const MessagesTabComplete = () => {
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={() => toast({ title: 'Mídia', description: 'Envio de fotos em breve', variant: 'default' })}
+                onChange={handleImageSelected}
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="w-10 h-10 rounded-xl"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => !uploadingImage && fileInputRef.current?.click()}
               >
-                <ImageIcon className="w-5 h-5" />
+                {uploadingImage ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <ImageIcon className="w-5 h-5" />
+                )}
               </Button>
               <Button
                 onClick={handleSendMessage}

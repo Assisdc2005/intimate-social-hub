@@ -16,9 +16,10 @@ interface PublicacaoCarrosselProps {
   publicacaoId: string;
   isPremium: boolean;
   fallbackMidia?: { url: string; tipo: 'image' | 'video' };
+  onMediaClick?: (payload: { url: string; tipo: 'image' | 'video' }) => void;
 }
 
-export const PublicacaoCarrossel = ({ publicacaoId, isPremium, fallbackMidia }: PublicacaoCarrosselProps) => {
+export const PublicacaoCarrossel = ({ publicacaoId, isPremium, fallbackMidia, onMediaClick }: PublicacaoCarrosselProps) => {
   const [midias, setMidias] = useState<PublicacaoMedia[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,7 +60,10 @@ export const PublicacaoCarrossel = ({ publicacaoId, isPremium, fallbackMidia }: 
     if (fallbackMidia) {
       return (
         <div className="w-full px-4 mb-4">
-          <div className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20">
+          <div
+            className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20 cursor-pointer"
+            onClick={() => onMediaClick?.({ url: fallbackMidia.url, tipo: fallbackMidia.tipo })}
+          >
             {fallbackMidia.tipo === 'video' ? (
               <BlurredMedia
                 src={fallbackMidia.url}
@@ -84,7 +88,10 @@ export const PublicacaoCarrossel = ({ publicacaoId, isPremium, fallbackMidia }: 
     const media = midias[0];
     return (
       <div className="w-full px-4 mb-4">
-        <div className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20">
+        <div
+          className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20 cursor-pointer"
+          onClick={() => onMediaClick?.({ url: media.midia_url, tipo: media.tipo_midia === 'video' ? 'video' : 'image' })}
+        >
           {media.tipo_midia === 'video' ? (
             <BlurredMedia
               src={media.midia_url}
@@ -109,7 +116,10 @@ export const PublicacaoCarrossel = ({ publicacaoId, isPremium, fallbackMidia }: 
         <CarouselContent>
           {midias.map((media) => (
             <CarouselItem key={media.id}>
-              <div className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20">
+              <div
+                className="relative w-full h-[300px] rounded-lg overflow-hidden bg-black/20 cursor-pointer"
+                onClick={() => onMediaClick?.({ url: media.midia_url, tipo: media.tipo_midia === 'video' ? 'video' : 'image' })}
+              >
                 {media.tipo_midia === 'video' ? (
                   <BlurredMedia
                     src={media.midia_url}

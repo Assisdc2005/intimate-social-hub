@@ -151,7 +151,7 @@ export const useNotifications = () => {
       case 'curtida':
         return `${name} curtiu seu perfil`;
       case 'novo_amigo':
-        return `${name} enviou uma solicitação de amizade`;
+        return `${name} quer ser seu amigo`;
       case 'visita':
         return `${name} visitou seu perfil`;
       case 'comentario':

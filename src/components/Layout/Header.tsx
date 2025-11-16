@@ -2,7 +2,7 @@ import { Bell, Heart, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
-import { NotificationButton } from "./NotificationButton";
+import { NotificationBell } from "@/components/Notifications/NotificationBell";
 
 export const Header = () => {
   const { profile } = useProfile();
@@ -41,7 +41,7 @@ export const Header = () => {
         </div>
         
         {/* Notificações à direita */}
-        <NotificationButton />
+        <NotificationBell />
       </div>
     </header>
   );

@@ -116,6 +116,20 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         
         // Ensure tipo_assinatura is properly typed
         const tipoAssinatura = (data.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
+
+        const hasRequiredFields = !!(
+          data.display_name &&
+          data.birth_date &&
+          data.gender &&
+          data.sexual_orientation &&
+          data.state &&
+          data.city &&
+          data.profession &&
+          data.relationship_status &&
+          data.bio &&
+          Array.isArray(data.interests) && data.interests.length > 0
+        );
+        const computedProfileCompleted = !!(data.profile_completed || hasRequiredFields);
         
         // Map data to Profile interface - safely handle new fields
         const profileData: Profile = {
@@ -139,7 +153,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
           drinks: data.drinks,
           relationship_status: data.relationship_status,
           interests: data.interests,
-          profile_completed: data.profile_completed || false,
+          profile_completed: computedProfileCompleted,
           avatar_url: data.avatar_url,
           tipo_assinatura: tipoAssinatura, // CAMPO PRINCIPAL
           subscription_expires_at: (data as any).subscription_expires_at, // Safe access to new field
@@ -191,7 +205,22 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
                 subscription_expires_at: (payload.new as any).subscription_expires_at,
                 assinatura_id: (payload.new as any).assinatura_id,
               } as Profile;
-              console.log('🔄 Updated profile status:', merged.tipo_assinatura);
+
+              const hasRequiredFields = !!(
+                merged.display_name &&
+                merged.birth_date &&
+                merged.gender &&
+                merged.sexual_orientation &&
+                merged.state &&
+                merged.city &&
+                merged.profession &&
+                merged.relationship_status &&
+                merged.bio &&
+                Array.isArray(merged.interests) && merged.interests.length > 0
+              );
+              merged.profile_completed = !!(merged.profile_completed || hasRequiredFields);
+
+              console.log('🔄 Updated profile status:', merged.tipo_assinatura, 'profile_completed:', merged.profile_completed);
               return merged;
             });
           }
@@ -230,6 +259,20 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
           if (fetchErr) return { error: fetchErr };
           // Return existing as success since the row exists but update returned 0 rows
           const tipoAssinatura = (existing.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
+          const hasRequiredFields = !!(
+            existing.display_name &&
+            existing.birth_date &&
+            existing.gender &&
+            existing.sexual_orientation &&
+            existing.state &&
+            existing.city &&
+            existing.profession &&
+            existing.relationship_status &&
+            existing.bio &&
+            Array.isArray(existing.interests) && existing.interests.length > 0
+          );
+          const computedProfileCompleted = !!(existing.profile_completed || hasRequiredFields);
+
           const profileData: Profile = {
             id: existing.id,
             user_id: existing.user_id,
@@ -251,7 +294,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
             drinks: existing.drinks,
             relationship_status: existing.relationship_status,
             interests: existing.interests,
-            profile_completed: existing.profile_completed || false,
+            profile_completed: computedProfileCompleted,
             avatar_url: existing.avatar_url,
             tipo_assinatura: tipoAssinatura,
             subscription_expires_at: (existing as any).subscription_expires_at,
@@ -311,6 +354,20 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         .single();
       if (fetchErr) return { error: fetchErr };
       const tipoAssinatura = (existing.tipo_assinatura === 'premium') ? 'premium' : 'gratuito';
+      const hasRequiredFields = !!(
+        existing.display_name &&
+        existing.birth_date &&
+        existing.gender &&
+        existing.sexual_orientation &&
+        existing.state &&
+        existing.city &&
+        existing.profession &&
+        existing.relationship_status &&
+        existing.bio &&
+        Array.isArray(existing.interests) && existing.interests.length > 0
+      );
+      const computedProfileCompleted = !!(existing.profile_completed || hasRequiredFields);
+
       const profileData: Profile = {
         id: existing.id,
         user_id: existing.user_id,
@@ -332,7 +389,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         drinks: existing.drinks,
         relationship_status: existing.relationship_status,
         interests: existing.interests,
-        profile_completed: existing.profile_completed || false,
+        profile_completed: computedProfileCompleted,
         avatar_url: existing.avatar_url,
         tipo_assinatura: tipoAssinatura,
         subscription_expires_at: (existing as any).subscription_expires_at,

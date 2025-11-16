@@ -35,6 +35,17 @@ export const Signup = () => {
           description: error.message,
           variant: "destructive",
         });
+      } else {
+        toast({
+          title: "Conta criada com sucesso",
+          description: "Aguarde alguns segundos, vamos te levar para completar seu perfil.",
+        });
+
+        // Redireciona automaticamente para /complete-profile após 12 segundos
+        // Esse redirecionamento só acontece após um novo cadastro bem-sucedido
+        setTimeout(() => {
+          navigate("/complete-profile", { replace: true });
+        }, 12000);
       }
     } catch (error: any) {
       toast({

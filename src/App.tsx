@@ -45,9 +45,12 @@ function AuthenticatedApp() {
   // Helper: compute age and restrict under 18 from accessing /complete-profile
   const isUnder18 = React.useMemo(() => {
     const dob = profile?.birth_date;
-    if (!dob) return true; // block when missing birth date
+    // Se não houver data de nascimento ainda, não bloqueia.
+    // Isso permite que o usuário acesse /complete-profile justamente para preencher esses dados.
+    if (!dob) return false;
     const b = new Date(dob);
-    if (isNaN(b.getTime())) return true;
+    // Se a data for inválida por algum motivo, também não bloqueia aqui.
+    if (isNaN(b.getTime())) return false;
     const today = new Date();
     let age = today.getFullYear() - b.getFullYear();
     const m = today.getMonth() - b.getMonth();

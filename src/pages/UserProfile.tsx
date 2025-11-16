@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Heart, MessageCircle, UserPlus, Calendar, Camera, Crown } from "lucide-react";
+import { ArrowLeft, MapPin, Heart, MessageCircle, UserPlus, Calendar, Camera, Crown, Users } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,16 @@ import { useFriendships } from "@/hooks/useFriendships";
 import { useTestimonials } from "@/hooks/useTestimonials";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { TestimonialsSection } from "@/components/Testimonials/TestimonialsSection";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface UserProfileData {
   user_id: string;
@@ -47,18 +58,21 @@ export const UserProfile = () => {
   const navigate = useNavigate();
   const { profile: currentUser, isPremium } = useProfile();
   const { toast } = useToast();
-  const { sendFriendRequest, isFriend, hasPendingRequest } = useFriendships();
+  const { sendFriendRequest, isFriend, hasPendingRequest, friends, refreshFriendships } = useFriendships();
+
   const { testimonials, createTestimonial } = useTestimonials(userId);
   const { getOnlineStatusBadge } = useOnlineStatus();
-  
+
   const [userProfile, setUserProfile] = useState<UserProfileData | null>(null);
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
+  const [friendsListOpen, setFriendsListOpen] = useState(false);
+  const [userFriends, setUserFriends] = useState<any[]>([]);
 
   useEffect(() => {
     if (!userId) return;
-    
+
     const fetchUserData = async () => {
       try {
         // Fetch user profile
@@ -82,7 +96,7 @@ export const UserProfile = () => {
 
         setUserProfile(profileData);
         setUserPosts(postsData || []);
-        
+
         // Record profile visit if not viewing own profile
         if (currentUser?.user_id && currentUser.user_id !== userId) {
           await supabase
@@ -101,6 +115,17 @@ export const UserProfile = () => {
               content: 'visitou seu perfil'
             });
         }
+
+        // Load friends of this user (so both users can see friend list)
+        const { data: friendsData } = await supabase
+          .from('amigos')
+          .select(`
+            amigo_id,
+            profiles!amigos_amigo_id_fkey(display_name, avatar_url)
+          `)
+          .eq('user_id', userId);
+
+        setUserFriends((friendsData as any) || []);
 
         // Simulate online status (this could be enhanced with real-time data)
         setIsOnline(Math.random() > 0.3);
@@ -176,46 +201,18 @@ export const UserProfile = () => {
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from('connections')
-        .insert({
-          requester_id: currentUser?.user_id,
-          addressee_id: userId,
-          status: 'pending'
-        });
+    if (!userId) return;
 
-      if (error) {
-        if (error.code === '23505') {
-          toast({
-            title: "Solicitação já enviada",
-            description: "Você já enviou uma solicitação para este usuário",
-            variant: "destructive",
-          });
-        } else {
-          throw error;
-        }
-      } else {
-        toast({
-          title: "Solicitação enviada!",
-          description: "Solicitação de amizade enviada com sucesso",
-        });
-
-        // Create notification
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: userId,
-            from_user_id: currentUser?.user_id,
-            type: 'novo_amigo',
-            content: 'enviou uma solicitação de amizade'
-          });
-      }
-    } catch (error) {
-      console.error('Error adding friend:', error);
+    const result = await sendFriendRequest(userId);
+    if (result.success) {
+      toast({
+        title: "Solicitação enviada!",
+        description: "Solicitação de amizade enviada com sucesso",
+      });
+    } else {
       toast({
         title: "Erro",
-        description: "Erro ao enviar solicitação",
+        description: result.error || "Erro ao enviar solicitação",
         variant: "destructive",
       });
     }
@@ -243,8 +240,8 @@ export const UserProfile = () => {
         });
 
         // Update local state
-        setUserPosts(prev => prev.map(post => 
-          post.id === postId 
+        setUserPosts(prev => prev.map(post =>
+          post.id === postId
             ? { ...post, curtidas_count: post.curtidas_count + 1 }
             : post
         ));
@@ -281,6 +278,9 @@ export const UserProfile = () => {
   }
 
   const age = userProfile.birth_date ? calculateAge(userProfile.birth_date) : null;
+  const isCurrentFriend = userId ? isFriend(userId) : false;
+  const hasPending = userId ? hasPendingRequest(userId) : false;
+  const friendsCount = userFriends.length;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -308,9 +308,9 @@ export const UserProfile = () => {
             <div className="relative">
               <div className="w-24 h-24 rounded-full bg-gradient-secondary overflow-hidden">
                 {userProfile.avatar_url ? (
-                  <img 
-                    src={userProfile.avatar_url} 
-                    alt={userProfile.display_name} 
+                  <img
+                    src={userProfile.avatar_url}
+                    alt={userProfile.display_name}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -339,7 +339,7 @@ export const UserProfile = () => {
                   <Badge className="bg-green-500 text-white">Online</Badge>
                 )}
               </div>
-              
+
               <div className="space-y-2 text-sm text-muted-foreground">
                 {age && userProfile.gender && (
                   <p>{userProfile.gender}, {age} anos</p>
@@ -364,6 +364,18 @@ export const UserProfile = () => {
               {userProfile.bio && (
                 <TruncatedText text={userProfile.bio} maxLength={190} className="mt-4" />
               )}
+              {/* Friends counter */}
+              <div className="mt-4 flex items-center gap-3 text-sm text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={() => friendsCount > 0 && setFriendsListOpen(true)}
+                  className="flex items-center gap-1 hover:text-white transition-colors disabled:opacity-50"
+                  disabled={friendsCount === 0}
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Amigos: {friendsCount}</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -392,11 +404,12 @@ export const UserProfile = () => {
                 onClick={handleAddFriend}
                 className="flex-1 bg-white/10 border border-white/20 text-white hover:bg-white/20"
                 variant="outline"
+                disabled={isCurrentFriend || hasPending}
               >
                 <UserPlus className="w-4 h-4 mr-2" />
-                Adicionar
+                {isCurrentFriend ? 'Amigos' : hasPending ? 'Solicitação enviada' : 'Adicionar'}
               </Button>
-              
+
               <Button
                 onClick={handleMessage}
                 className="flex-1 bg-gradient-primary hover:opacity-90 text-white"
@@ -409,70 +422,63 @@ export const UserProfile = () => {
         </CardContent>
       </Card>
 
-      {/* Posts Section */}
-      <Card className="glass backdrop-blur-xl border-primary/20">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Camera className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold text-gradient">
-              Publicações ({userPosts.length})
-            </h3>
-          </div>
-
-          {userPosts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>Nenhuma publicação ainda</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {userPosts.map((post) => (
-                <Card key={post.id} className="bg-white/5 border-white/10">
-                  <CardContent className="p-4">
-                    {post.midia_url && (
-                      <div className="aspect-square rounded-lg overflow-hidden mb-3">
-                        <BlurredMedia
-                          src={post.midia_url}
-                          alt="Post"
-                          type={post.tipo_midia === 'video' ? 'video' : 'image'}
-                          isPremium={isPremium}
-                          className="w-full h-full"
-                        />
-                      </div>
-                    )}
-                    
-                    {post.descricao && (
-                      <p className="text-foreground mb-3">{post.descricao}</p>
-                    )}
-                    
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center gap-4">
-                        <button
-                          onClick={() => handleLike(post.id)}
-                          className="flex items-center gap-1 hover:text-red-400 transition-colors"
-                        >
-                          <Heart className="w-4 h-4" />
-                          {post.curtidas_count}
-                        </button>
-                        <div className="flex items-center gap-1">
-                          <MessageCircle className="w-4 h-4" />
-                          {post.comentarios_count}
-                        </div>
-                      </div>
-                      <span>
-                        {new Date(post.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Testimonials Section */}
       <TestimonialsSection profileUserId={userId || ''} />
+
+      {/* Friends list modal */}
+      <AlertDialog open={friendsListOpen} onOpenChange={setFriendsListOpen}>
+        <AlertDialogContent className="bg-background/95 backdrop-blur border-white/20 max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              <Users className="w-4 h-4" /> Amigos de {userProfile.display_name}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Lista de amigos conectados com este perfil.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 max-h-80 overflow-y-auto mt-2">
+            {userFriends.map((friend) => (
+              <div key={friend.amigo_id} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
+                    {friend.profiles?.avatar_url ? (
+                      <img
+                        src={friend.profiles.avatar_url}
+                        alt={friend.profiles.display_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                        {friend.profiles?.display_name?.[0] || 'U'}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-sm text-white">{friend.profiles?.display_name}</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-primary hover:text-primary/80"
+                  onClick={() => {
+                    setFriendsListOpen(false);
+                    navigate(`/profile/view/${friend.amigo_id}`);
+                  }}
+                >
+                  Abrir perfil
+                </Button>
+              </div>
+            ))}
+            {userFriends.length === 0 && (
+              <p className="text-sm text-gray-400">Nenhum amigo ainda.</p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">
+              Fechar
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

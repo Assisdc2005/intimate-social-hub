@@ -38,8 +38,12 @@ export const UserPhotoCard: React.FC<Props> = ({ src, alt = "", onClick, classNa
         onDragStart={handleDragStart}
       />
 
-      {/* Transparent overlay to intercept any clicks / long-press */}
-      <div className="absolute inset-0" onContextMenu={handleContextMenu} />
+      {/* Transparent overlay to intercept long-press, but still allow click-through */}
+      <div
+        className="absolute inset-0"
+        onContextMenu={handleContextMenu}
+        onClick={onClick}
+      />
 
       {/* Optional subtle CSS watermark text overlay (defense-in-depth). The real watermark is baked server-side. */}
       <div
