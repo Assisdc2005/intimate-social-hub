@@ -248,18 +248,21 @@ export type Database = {
           created_at: string
           id: string
           publicacao_id: string
+          reaction: Database["public"]["Enums"]["reaction_type"] | null
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           publicacao_id: string
+          reaction?: Database["public"]["Enums"]["reaction_type"] | null
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           publicacao_id?: string
+          reaction?: Database["public"]["Enums"]["reaction_type"] | null
           user_id?: string
         }
         Relationships: []
@@ -745,6 +748,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_publicacao: {
+        Args: { target_publicacao_id: string }
+        Returns: undefined
+      }
       admin_delete_user: {
         Args: { target_user_id: string }
         Returns: undefined
@@ -827,6 +834,7 @@ export type Database = {
         | "pansexual"
         | "outro"
       post_type: "texto" | "imagem" | "video"
+      reaction_type: "hot" | "desire" | "flirty" | "kiss"
       relationship_status:
         | "solteiro"
         | "casado"
@@ -987,6 +995,7 @@ export const Constants = {
         "outro",
       ],
       post_type: ["texto", "imagem", "video"],
+      reaction_type: ["hot", "desire", "flirty", "kiss"],
       relationship_status: [
         "solteiro",
         "casado",
