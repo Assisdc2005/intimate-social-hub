@@ -140,16 +140,21 @@ export const PublicFeed = () => {
   };
 
   useEffect(() => {
-    fetchPublicacoes();
-    fetchUserLikes();
-    fetchUserCommentsCount();
+    if (!profile?.user_id) return;
+    
+    // Execute all initial fetches in parallel
+    Promise.all([
+      fetchPublicacoes(),
+      fetchUserLikes(),
+      fetchUserCommentsCount()
+    ]);
 
     // Set up real-time subscription
     const channel = supabase
       .channel('publicacoes_feed')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'publicacoes' },
-        (payload) => {
+        () => {
           fetchPublicacoes(); // Refresh the feed when new post is added
         }
       )
@@ -208,26 +213,33 @@ export const PublicFeed = () => {
 
   const fetchPublicacoes = async (offset = 0) => {
     try {
-      // Get publicacoes - 20 per page
-      const { data: publicacoesData, error: publicacoesError } = await supabase
+      // Execute all queries in parallel for better performance
+      const publicacoesQuery = supabase
         .from('publicacoes')
         .select('*')
         .order('created_at', { ascending: false })
         .range(offset, offset + 19);
 
+      const [{ data: publicacoesData, error: publicacoesError }] = await Promise.all([publicacoesQuery]);
+
       if (publicacoesError) throw publicacoesError;
 
-      if (!publicacoesData) {
-        setPublicacoes([]);
+      if (!publicacoesData || publicacoesData.length === 0) {
+        if (offset === 0) setPublicacoes([]);
+        if (publicacoesData?.length < 20) setHasMore(false);
         return;
       }
 
-      // Then get profiles for each publication
+      // Get unique user IDs
       const userIds = [...new Set(publicacoesData.map(pub => pub.user_id))];
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, display_name, avatar_url, city, state, tipo_assinatura')
-        .in('user_id', userIds);
+      
+      // Fetch profiles and user reactions in parallel
+      const [{ data: profilesData }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url, city, state, tipo_assinatura')
+          .in('user_id', userIds)
+      ]);
 
       // Combine data
       const publicacoesWithProfiles = publicacoesData.map(pub => ({
@@ -250,9 +262,11 @@ export const PublicFeed = () => {
         setPublicacoes(prev => [...prev, ...filteredPublicacoes]);
       }
 
-      // carregar agregados de reações para os posts carregados
+      // Load reaction stats asynchronously (non-blocking)
       const pageIds = publicacoesWithProfiles.map((p) => p.id);
-      fetchReactionStats(pageIds);
+      setTimeout(() => {
+        fetchReactionStats(pageIds);
+      }, 0);
 
       // Check if there are more posts
       if (publicacoesWithProfiles.length < 20) {
@@ -302,34 +316,37 @@ export const PublicFeed = () => {
 
   const fetchComentarios = async (publicacaoId: string) => {
     try {
-      // First get comments
-      const { data: comentariosData } = await supabase
-        .from('comentarios_publicacoes')
-        .select('*')
-        .eq('publicacao_id', publicacaoId)
-        .order('created_at', { ascending: false });
+      // Execute both queries in parallel for better performance
+      const [{ data: comentariosData }, { data: profilesData }] = await Promise.all([
+        supabase
+          .from('comentarios_publicacoes')
+          .select('*')
+          .eq('publicacao_id', publicacaoId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+      ]);
 
-      if (!comentariosData) {
+      if (!comentariosData || comentariosData.length === 0) {
         setComentarios(prev => ({ ...prev, [publicacaoId]: [] }));
         return;
       }
 
-      // Then get profiles for each comment
-      const userIds = [...new Set(comentariosData.map(com => com.user_id))];
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, display_name, avatar_url')
-        .in('user_id', userIds);
+      // Filter profiles to only those needed
+      const userIds = new Set(comentariosData.map(com => com.user_id));
+      const relevantProfiles = profilesData?.filter(p => userIds.has(p.user_id));
 
       // Combine data
       const comentariosWithProfiles = comentariosData.map(com => ({
         ...com,
-        profiles: profilesData?.find(profile => profile.user_id === com.user_id)
+        profiles: relevantProfiles?.find(profile => profile.user_id === com.user_id)
       }));
 
       setComentarios(prev => ({ ...prev, [publicacaoId]: comentariosWithProfiles }));
     } catch (error) {
       console.error('Erro ao buscar comentários:', error);
+      setComentarios(prev => ({ ...prev, [publicacaoId]: [] }));
     }
   };
 
@@ -562,9 +579,17 @@ export const PublicFeed = () => {
       return;
     }
 
+    const isCurrentlyShown = showComments[publicacaoId];
+    
+    // Toggle UI immediately (non-blocking)
     setShowComments(prev => ({ ...prev, [publicacaoId]: !prev[publicacaoId] }));
-    if (!comentarios[publicacaoId]) {
-      fetchComentarios(publicacaoId);
+    
+    // Load comments asynchronously if opening and not loaded yet
+    if (!isCurrentlyShown && !comentarios[publicacaoId]) {
+      // Use setTimeout to prevent blocking the UI thread
+      setTimeout(() => {
+        fetchComentarios(publicacaoId);
+      }, 0);
     }
   };
 
@@ -755,6 +780,7 @@ export const PublicFeed = () => {
                       src={publicacao.profiles.avatar_url} 
                       alt={publicacao.profiles.display_name} 
                       className="w-full h-full object-cover"
+                      loading="lazy"
                       key={publicacao.profiles.avatar_url}
                     />
                   ) : (
@@ -965,7 +991,7 @@ export const PublicFeed = () => {
                       <div key={comentario.id} className="flex gap-3">
                         <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
                           {comentario.profiles?.avatar_url ? (
-                            <img src={comentario.profiles.avatar_url} alt={comentario.profiles.display_name} className="w-full h-full object-cover" />
+                            <img src={comentario.profiles.avatar_url} alt={comentario.profiles.display_name} className="w-full h-full object-cover" loading="lazy" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
                               {comentario.profiles?.display_name?.[0] || 'U'}
@@ -989,11 +1015,12 @@ export const PublicFeed = () => {
                   {/* Adicionar comentário */}
                   <div className="flex items-center gap-3 mt-4">
                     <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
-                      {profile?.avatar_url ? (
+                        {profile?.avatar_url ? (
                         <img 
                           src={profile.avatar_url} 
                           alt={profile.display_name} 
                           className="w-full h-full object-cover"
+                          loading="lazy"
                           key={profile.avatar_url}
                         />
                       ) : (
