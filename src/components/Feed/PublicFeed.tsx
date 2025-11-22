@@ -71,6 +71,7 @@ export const PublicFeed = () => {
   const [reactionMenuPost, setReactionMenuPost] = useState<string | null>(null);
   const [userReactions, setUserReactions] = useState<Record<string, 'hot' | 'desire' | 'flirty' | 'kiss' | null>>({});
   const [reactionStats, setReactionStats] = useState<Record<string, { hot: number; desire: number; flirty: number; kiss: number }>>({});
+  const [likeBadges, setLikeBadges] = useState<Record<string, number>>({});
   const [userLikeCount, setUserLikeCount] = useState<number>(0);
   const [userCommentCount, setUserCommentCount] = useState<number>(0);
   const MAX_TEXT = 190;
@@ -211,6 +212,24 @@ export const PublicFeed = () => {
     }
   };
 
+  const generateUniqueLikeCounts = (length: number) => {
+    const pool = Array.from({ length: 51 }, (_, idx) => 50 + idx); // 50..100
+    const counts: number[] = [];
+    while (counts.length < length) {
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      counts.push(...shuffled);
+    }
+    return counts.slice(0, length);
+  };
+
+  const assignRandomLikeCounts = (items: Publicacao[]) => {
+    const counts = generateUniqueLikeCounts(items.length);
+    return items.reduce((acc, item, idx) => {
+      acc[item.id] = counts[idx];
+      return acc;
+    }, {} as Record<string, number>);
+  };
+
   const fetchPublicacoes = async (offset = 0) => {
     try {
       // Execute all queries in parallel for better performance
@@ -258,8 +277,13 @@ export const PublicFeed = () => {
 
       if (offset === 0) {
         setPublicacoes(filteredPublicacoes);
+        setLikeBadges(assignRandomLikeCounts(filteredPublicacoes));
       } else {
-        setPublicacoes(prev => [...prev, ...filteredPublicacoes]);
+        setPublicacoes(prev => {
+          const merged = [...prev, ...filteredPublicacoes];
+          setLikeBadges(assignRandomLikeCounts(merged));
+          return merged;
+        });
       }
 
       // Load reaction stats asynchronously (non-blocking)
@@ -862,7 +886,7 @@ export const PublicFeed = () => {
               )}
 
               {/* Mídia (carrossel ou fallback para única mídia) */}
-              <div className={isBlocked ? 'blur-lg pointer-events-none' : ''}>
+              <div className={`relative ${isBlocked ? 'blur-lg pointer-events-none' : ''}`}>
                 <PublicacaoCarrossel
                   publicacaoId={publicacao.id}
                   isPremium={isPremium || index < FREE_POSTS_LIMIT}
@@ -926,11 +950,11 @@ export const PublicFeed = () => {
                         ) : (
                           <Heart className={`w-5 h-5 mr-2 ${userLikes.has(publicacao.id) ? 'fill-current' : ''}`} />
                         )}
-                        {publicacao.curtidas_count}
+                        {likeBadges[publicacao.id] ?? publicacao.curtidas_count}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent align="start" sideOffset={8} className="w-auto p-2 bg-background/95 backdrop-blur border-white/20 rounded-xl">
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="flex items-center gap-3">
                         <button
                           className="text-xl hover:scale-110 transition"
                           onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'hot'); }}

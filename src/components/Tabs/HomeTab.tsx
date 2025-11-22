@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, MessageCircle, Share2, TrendingUp, Flame, Crown, Play, Filter, MapPin, Clock, Camera, User } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Plus, MessageCircle, Share2, TrendingUp, Flame, Crown, Play, Filter, MapPin, Clock, Camera, User, ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,62 @@ import { CreatePostModal } from "@/components/Modals/CreatePostModal";
 import { PremiumBlockModal } from "@/components/Modals/PremiumBlockModal";
 import { useNavigate } from "react-router-dom";
 
+type MosaicSize = 'tall' | 'wide' | 'square' | 'small';
+
+type MosaicPhoto = {
+  id: string;
+  userId: string;
+  imageUrl: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  createdAt: string;
+  size: MosaicSize;
+  likes: number;
+  comments: number;
+  shares: number;
+  isLiked: boolean;
+};
+
+type MosaicFeedRow = {
+  id: string;
+  user_id: string;
+  midia_url: string | null;
+  tipo_midia: string;
+  created_at: string;
+  profiles?: {
+    user_id: string;
+    display_name: string | null;
+    avatar_url?: string | null;
+  } | null;
+};
+
+const sizeClassMap: Record<MosaicSize, string> = {
+  tall: "col-span-6 sm:col-span-4 row-span-2",
+  wide: "col-span-12 sm:col-span-8 row-span-2",
+  square: "col-span-6 sm:col-span-4 row-span-1",
+  small: "col-span-6 sm:col-span-3 row-span-1",
+};
+
+const randomizeArray = <T,>(list: T[]) => [...list].sort(() => Math.random() - 0.5);
+
+const assignSize = (index: number): MosaicSize => {
+  const cycle: MosaicSize[] = ['tall', 'square', 'wide', 'small'];
+  return cycle[index % cycle.length];
+};
+
+const MOSAIC_PAGE_SIZE = 24;
+
+const formatTimeAgo = (isoDate: string) => {
+  const date = new Date(isoDate);
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.max(1, Math.floor(diffMs / 60000));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `${days} d`;
+};
+
 export const HomeTab = () => {
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
@@ -24,10 +80,13 @@ export const HomeTab = () => {
   const [likedProfiles, setLikedProfiles] = useState<Set<string>>(new Set());
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showPremiumBlockModal, setShowPremiumBlockModal] = useState(false);
+  const [mosaicPhotos, setMosaicPhotos] = useState<MosaicPhoto[]>([]);
+  const [carouselIndex, setCarouselIndex] = useState(0);
 
   useEffect(() => {
     if (profile?.user_id) {
       fetchData();
+      loadMosaicPhotos();
     }
   }, [profile]);
 
@@ -260,9 +319,96 @@ export const HomeTab = () => {
     }
   };
 
+  const buildMosaicPhotos = (rows: MosaicFeedRow[]) => {
+    const randomized = randomizeArray(rows);
+    return randomized.map((row, index) => ({
+      id: row.id,
+      userId: row.user_id,
+      imageUrl: row.midia_url || "https://source.unsplash.com/random/800x1000/?sensual,Female" + index,
+      displayName: row.profiles?.display_name || 'Membro Sensual',
+      avatarUrl: row.profiles?.avatar_url,
+      createdAt: row.created_at,
+      size: assignSize(index),
+      likes: Math.floor(Math.random() * 800) + 120,
+      comments: Math.floor(Math.random() * 120),
+      shares: Math.floor(Math.random() * 90),
+      isLiked: false,
+    }));
+  };
+
+  const loadMosaicPhotos = async () => {
+    if (!profile?.user_id) return;
+    try {
+      const { data: photoRows, error } = await supabase
+        .from('publicacoes')
+        .select('id, user_id, midia_url, tipo_midia, created_at')
+        .eq('tipo_midia', 'imagem')
+        .order('created_at', { ascending: false })
+        .limit(MOSAIC_PAGE_SIZE * 2);
+
+      if (error) throw error;
+      const rows = (photoRows as MosaicFeedRow[]) || [];
+      if (!rows.length) return;
+
+      const userIds = [...new Set(rows.map(row => row.user_id))];
+      let profilesMap: Record<string, { display_name: string | null; avatar_url?: string | null }> = {};
+      if (userIds.length) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, avatar_url')
+          .in('user_id', userIds);
+        if (profilesData?.length) {
+          profilesMap = profilesData.reduce((acc, item) => {
+            acc[item.user_id] = { display_name: item.display_name, avatar_url: item.avatar_url };
+            return acc;
+          }, {} as Record<string, { display_name: string | null; avatar_url?: string | null }>);
+        }
+      }
+
+      const rowsWithProfiles: MosaicFeedRow[] = rows.map(row => ({
+        ...row,
+        profiles: {
+          user_id: row.user_id,
+          display_name: profilesMap[row.user_id]?.display_name ?? 'Membro Sensual',
+          avatar_url: profilesMap[row.user_id]?.avatar_url ?? null,
+        },
+      }));
+
+      const nextPhotos = buildMosaicPhotos(rowsWithProfiles);
+      setMosaicPhotos(nextPhotos);
+    } catch (error) {
+      console.error('Erro ao carregar mosaico:', error);
+    }
+  };
+
+  const handleLikeMosaicPhoto = (photoId: string) => {
+    setMosaicPhotos(prev => prev.map(photo =>
+      photo.id === photoId
+        ? { ...photo, isLiked: !photo.isLiked, likes: photo.isLiked ? photo.likes - 1 : photo.likes + 1 }
+        : photo
+    ));
+  };
+
+  const handleCarouselNavigate = (direction: 'prev' | 'next') => {
+    setCarouselIndex(prev => {
+      const total = mosaicPhotos.length;
+      if (total === 0) return 0;
+      if (direction === 'prev') {
+        return prev === 0 ? total - 1 : prev - 1;
+      }
+      return prev === total - 1 ? 0 : prev + 1;
+    });
+  };
+
+  const visibleCarouselPhotos = useMemo(() => {
+    if (!mosaicPhotos.length) return [];
+    const ordered = [...mosaicPhotos.slice(carouselIndex), ...mosaicPhotos.slice(0, carouselIndex)];
+    return ordered.slice(0, 6);
+  }, [carouselIndex, mosaicPhotos]);
+
   const handlePostCreated = () => {
-    // Refresh posts after creation
     fetchData();
+    loadMosaicPhotos();
   };
 
   if (loading) {
@@ -327,8 +473,8 @@ export const HomeTab = () => {
                   {/* Avatar/Image */}
                   <div className="relative h-[200px] overflow-hidden bg-gradient-secondary">
                     {user.avatar_url ? (
-                      <img 
-                        src={user.avatar_url} 
+                      <img
+                        src={user.avatar_url}
                         alt={user.display_name}
                         className="w-full h-full object-cover"
                         loading="lazy"
@@ -336,14 +482,14 @@ export const HomeTab = () => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-white font-bold text-4xl">
-                        {user.display_name[0]?.toUpperCase()}
+                        {user.display_name?.[0]?.toUpperCase() || 'S'}
                       </div>
                     )}
-                    
-                    {/* Online Badge (real or fake) */}
+
+                    {/* Online Badge */}
                     {isOnlineOrFake(user) && (
                       <div className="absolute top-2 left-2 flex items-center gap-1 bg-green-500/90 backdrop-blur-sm px-2 py-1 rounded-full">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                         <span className="text-white text-xs font-semibold">LIVE</span>
                       </div>
                     )}
@@ -391,6 +537,107 @@ export const HomeTab = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Dynamic Mosaic + Carousel */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-2">
+            <Heart className="w-5 h-5 text-accent" />
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Top Sensuais</h2>
+              <p className="text-sm text-muted-foreground">Fotos reais de diferentes usuários, atualizadas em tempo real</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full border-white/20 bg-white/5 hover:bg-white/10"
+              onClick={() => handleCarouselNavigate('prev')}
+              aria-label="Anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full border-white/20 bg-white/5 hover:bg-white/10"
+              onClick={() => handleCarouselNavigate('next')}
+              aria-label="Próximo"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {mosaicPhotos.length === 0 ? (
+          <div className="grid grid-cols-2 gap-3 px-2 animate-pulse">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="h-48 rounded-2xl bg-white/5" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Carousel */}
+            <div className="bg-gradient-card rounded-3xl border border-white/10 p-4 shadow-[var(--shadow-glow)]">
+              <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+                <div className="relative rounded-3xl overflow-hidden min-h-[320px]">
+                  <img
+                    src={visibleCarouselPhotos[0]?.imageUrl}
+                    alt={visibleCarouselPhotos[0]?.displayName}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                  <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-white text-sm flex items-center gap-2">
+                        <span className="font-semibold">{visibleCarouselPhotos[0]?.displayName}</span>
+                        <span className="text-white/70 text-xs">{visibleCarouselPhotos[0] ? formatTimeAgo(visibleCarouselPhotos[0].createdAt) : ''}</span>
+                      </p>
+                      <p className="text-white/60 text-xs flex items-center gap-3 mt-1">
+                        <span>❤ {visibleCarouselPhotos[0]?.likes ?? 0}</span>
+                        <span>💬 {visibleCarouselPhotos[0]?.comments ?? 0}</span>
+                        <span>↗ {visibleCarouselPhotos[0]?.shares ?? 0}</span>
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className={`rounded-full ${visibleCarouselPhotos[0]?.isLiked ? 'bg-red-500 text-white' : 'bg-white/10 text-white'}`}
+                        onClick={() => visibleCarouselPhotos[0] && handleLikeMosaicPhoto(visibleCarouselPhotos[0].id)}
+                        aria-label="Curtir destaque"
+                      >
+                        <Heart className={`w-4 h-4 ${visibleCarouselPhotos[0]?.isLiked ? 'fill-current' : ''}`} />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {visibleCarouselPhotos.slice(1).map((thumb) => (
+                    <button
+                      key={thumb.id}
+                      className="relative rounded-2xl overflow-hidden group"
+                      onClick={() => setCarouselIndex(mosaicPhotos.findIndex(photo => photo.id === thumb.id))}
+                    >
+                      <img src={thumb.imageUrl} alt={thumb.displayName} className="w-full h-full object-cover" loading="lazy" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="absolute bottom-2 left-2 right-2 text-left">
+                        <p className="text-white text-sm font-semibold truncate">{thumb.displayName}</p>
+                        <p className="text-white/70 text-xs">{formatTimeAgo(thumb.createdAt)}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Mosaic Grid removido conforme solicitado */}
+          </div>
+        )}
       </div>
 
       {/* Recommended Posts Section - Vertical Feed */}
