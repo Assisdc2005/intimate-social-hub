@@ -1,27 +1,27 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useProfile } from '@/hooks/useProfile';
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useProfile } from "./useProfile";
-import { useToast } from "./use-toast";
-
-interface Message {
+export interface Message {
   id: string;
   content: string;
   sender_id: string;
-  created_at: string;
-  read_at?: string;
   conversation_id: string;
+  created_at: string;
+  read_at: string | null;
 }
 
 export const useMessages = (conversationId: string | null) => {
+  const { profile } = useProfile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const { profile } = useProfile();
-  const { toast } = useToast();
 
-  const loadMessages = async () => {
-    if (!conversationId) return;
+  const fetchMessages = useCallback(async () => {
+    if (!conversationId) {
+      setMessages([]);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -32,76 +32,75 @@ export const useMessages = (conversationId: string | null) => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      setMessages((data as Message[]) || []);
     } catch (error) {
       console.error('Erro ao carregar mensagens:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [conversationId]);
+
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const channel = supabase
+      .channel(`messages-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        () => {
+          fetchMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, fetchMessages]);
 
   const sendMessage = async (content: string) => {
-    if (!content.trim() || !conversationId || !profile?.user_id) return false;
+    if (!profile?.user_id || !conversationId || !content.trim()) {
+      return false;
+    }
 
     setSending(true);
-    
+
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          content,
-          sender_id: profile?.user_id
-        });
+      const { error } = await supabase.from('messages').insert({
+        content,
+        conversation_id: conversationId,
+        sender_id: profile.user_id,
+      });
 
       if (error) throw error;
 
-      // Update conversation's last message timestamp
       await supabase
         .from('conversations')
-        .update({ 
-          last_message_at: new Date().toISOString()
-        })
+        .update({ last_message_at: new Date().toISOString() })
         .eq('id', conversationId);
 
-      // Create notification for message recipient
-      const { data: conversation } = await supabase
-        .from('conversations')
-        .select('participant1_id, participant2_id')
-        .eq('id', conversationId)
-        .single();
-
-      if (conversation) {
-        const recipientId = conversation.participant1_id === profile?.user_id 
-          ? conversation.participant2_id 
-          : conversation.participant1_id;
-
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: recipientId,
-            from_user_id: profile?.user_id,
-            type: 'mensagem',
-            content: 'enviou uma nova mensagem'
-          });
-      }
-
+      await fetchMessages();
       return true;
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao enviar mensagem. Tente novamente.",
-        variant: "destructive",
-      });
+      console.error('Erro ao enviar mensagem:', error);
       return false;
     } finally {
       setSending(false);
     }
   };
 
-  const markMessagesAsRead = async () => {
-    if (!profile?.user_id || !conversationId) return;
+  const markMessagesAsRead = useCallback(async () => {
+    if (!conversationId || !profile?.user_id) return;
 
     try {
       const { error } = await supabase
@@ -111,67 +110,19 @@ export const useMessages = (conversationId: string | null) => {
         .neq('sender_id', profile.user_id)
         .is('read_at', null);
 
-      if (error) {
-        console.error('Error marking messages as read:', error);
-      }
+      if (error) throw error;
+      await fetchMessages();
     } catch (error) {
-      console.error('Error marking messages as read:', error);
+      console.error('Erro ao marcar mensagens como lidas:', error);
     }
-  };
-
-  // Carregar mensagens quando conversationId muda
-  useEffect(() => {
-    if (conversationId) {
-      loadMessages();
-    } else {
-      setMessages([]);
-    }
-  }, [conversationId]);
-
-  // Listener em tempo real para novas mensagens
-  useEffect(() => {
-    if (!conversationId) return;
-
-    console.log('Configurando listener para conversa:', conversationId);
-
-    const channel = supabase
-      .channel(`messages-${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`
-        },
-        (payload) => {
-          console.log('Nova mensagem recebida:', payload);
-          const newMessage = payload.new as Message;
-          
-          setMessages(currentMessages => {
-            // Verificar se a mensagem já existe para evitar duplicatas
-            const messageExists = currentMessages.some(msg => msg.id === newMessage.id);
-            if (messageExists) {
-              return currentMessages;
-            }
-            return [...currentMessages, newMessage];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('Removendo listener para conversa:', conversationId);
-      supabase.removeChannel(channel);
-    };
-  }, [conversationId]);
+  }, [conversationId, profile?.user_id, fetchMessages]);
 
   return {
     messages,
     loading,
     sending,
     sendMessage,
-    loadMessages,
-    markMessagesAsRead
+    markMessagesAsRead,
+    refreshMessages: fetchMessages,
   };
 };

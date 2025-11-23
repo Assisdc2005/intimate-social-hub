@@ -4,11 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
+import { useFriendships } from "@/hooks/useFriendships";
+import { useTestimonials } from "@/hooks/useTestimonials";
+import { useToast } from "@/hooks/use-toast";
+
 import { supabase } from "@/integrations/supabase/client";
 
 interface Notification {
   id: string;
-  type: 'curtida' | 'comentario' | 'visita' | 'mensagem' | 'novo_amigo';
+  type: 'curtida' | 'comentario' | 'visita' | 'mensagem' | 'novo_amigo' | 'depoimento';
   content: string;
   created_at: string;
   read_at?: string;
@@ -23,6 +27,10 @@ export const NotificationButton = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const { profile } = useProfile();
+  const { respondToFriendRequest, friendRequests } = useFriendships();
+  const { pendingTestimonials, moderateTestimonial } = useTestimonials(profile?.user_id);
+
+  const { toast } = useToast();
 
   const loadNotifications = async () => {
     if (!profile?.user_id) return;
@@ -101,6 +109,58 @@ export const NotificationButton = () => {
       setUnreadCount(0);
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  const handleFriendRequestAction = async (
+    requestId: string,
+    action: 'aceito' | 'recusado',
+    notificationId: string
+  ) => {
+    const result = await respondToFriendRequest(requestId, action);
+
+    if (result.success) {
+      await markAsRead(notificationId);
+      toast({
+        title: action === 'aceito' ? 'Amizade aceita!' : 'Solicitação recusada',
+        description:
+          action === 'aceito'
+            ? 'Agora vocês são amigos.'
+            : 'Você recusou a solicitação.',
+      });
+      loadNotifications();
+    } else if (result.error) {
+      toast({
+        title: 'Erro',
+        description: result.error,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleTestimonialAction = async (
+    testimonialId: string,
+    action: 'aprovado' | 'recusado',
+    notificationId: string
+  ) => {
+    const result = await moderateTestimonial(testimonialId, action);
+
+    if (result.success) {
+      await markAsRead(notificationId);
+      toast({
+        title: action === 'aprovado' ? 'Depoimento aprovado!' : 'Depoimento recusado',
+        description:
+          action === 'aprovado'
+            ? 'O depoimento agora aparece no seu perfil.'
+            : 'O depoimento foi recusado.',
+      });
+      loadNotifications();
+    } else if (result.error) {
+      toast({
+        title: 'Erro',
+        description: result.error,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -242,6 +302,114 @@ export const NotificationButton = () => {
                           <p className="text-xs text-muted-foreground/70 mt-1">
                             {formatTimeAgo(notification.created_at)}
                           </p>
+
+                          {notification.type === 'novo_amigo' && (
+                            <div className="flex gap-2 mt-3">
+                              {(() => {
+                                const pendingRequest = friendRequests.find(
+                                  (req) =>
+                                    req.remetente_id === (notification as any).from_user_id &&
+                                    req.status === 'pendente'
+                                );
+
+                                if (!pendingRequest) {
+                                  return (
+                                    <span className="text-xs text-muted-foreground">
+                                      Solicitação já processada.
+                                    </span>
+                                  );
+                                }
+
+                                return (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleFriendRequestAction(
+                                          pendingRequest.id,
+                                          'aceito',
+                                          notification.id
+                                        );
+                                      }}
+                                    >
+                                      Aceitar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-3 text-xs border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleFriendRequestAction(
+                                          pendingRequest.id,
+                                          'recusado',
+                                          notification.id
+                                        );
+                                      }}
+                                    >
+                                      Recusar
+                                    </Button>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          )}
+
+                          {notification.type === 'depoimento' && profile?.user_id && (
+                            <div className="flex gap-2 mt-3">
+                              {(() => {
+                                const pendingTestimonial = pendingTestimonials.find(
+                                  (testimonial: any) =>
+                                    testimonial.autor_id === (notification as any).from_user_id &&
+                                    testimonial.status === 'pendente'
+                                );
+
+                                if (!pendingTestimonial) {
+                                  return (
+                                    <span className="text-xs text-muted-foreground">
+                                      Depoimento já moderado.
+                                    </span>
+                                  );
+                                }
+
+                                return (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleTestimonialAction(
+                                          pendingTestimonial.id,
+                                          'aprovado',
+                                          notification.id
+                                        );
+                                      }}
+                                    >
+                                      Aprovar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-3 text-xs border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleTestimonialAction(
+                                          pendingTestimonial.id,
+                                          'recusado',
+                                          notification.id
+                                        );
+                                      }}
+                                    >
+                                      Recusar
+                                    </Button>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          )}
                         </div>
                         
                         {!notification.read_at && (

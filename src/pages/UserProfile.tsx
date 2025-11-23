@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Heart, MessageCircle, UserPlus, Calendar, Camera, Crown, Users } from "lucide-react";
 
@@ -69,6 +70,7 @@ export const UserProfile = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [friendsListOpen, setFriendsListOpen] = useState(false);
   const [userFriends, setUserFriends] = useState<any[]>([]);
+  const [requestSent, setRequestSent] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -209,6 +211,8 @@ export const UserProfile = () => {
         title: "Solicitação enviada!",
         description: "Solicitação de amizade enviada com sucesso",
       });
+      setRequestSent(true);
+      refreshFriendships();
     } else {
       toast({
         title: "Erro",
@@ -281,6 +285,7 @@ export const UserProfile = () => {
   const isCurrentFriend = userId ? isFriend(userId) : false;
   const hasPending = userId ? hasPendingRequest(userId) : false;
   const friendsCount = userFriends.length;
+  const hasSentOrPending = requestSent || hasPending;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -404,10 +409,10 @@ export const UserProfile = () => {
                 onClick={handleAddFriend}
                 className="flex-1 bg-white/10 border border-white/20 text-white hover:bg-white/20"
                 variant="outline"
-                disabled={isCurrentFriend || hasPending}
+                disabled={isCurrentFriend || hasSentOrPending}
               >
                 <UserPlus className="w-4 h-4 mr-2" />
-                {isCurrentFriend ? 'Amigos' : hasPending ? 'Solicitação enviada' : 'Adicionar'}
+                {isCurrentFriend ? 'Amigos' : hasSentOrPending ? 'Convite enviado' : 'Adicionar'}
               </Button>
 
               <Button

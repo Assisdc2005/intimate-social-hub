@@ -16,7 +16,7 @@ interface VideoPost {
   created_at: string;
   profiles?: {
     display_name: string;
-    avatar_url?: string;
+    avatar_url?: string; 
     tipo_assinatura?: string;
   };
 }

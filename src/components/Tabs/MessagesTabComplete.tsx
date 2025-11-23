@@ -54,6 +54,7 @@ export const MessagesTabComplete = () => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -65,6 +66,12 @@ export const MessagesTabComplete = () => {
   // Usar os hooks customizados
   const { conversations, loading: conversationsLoading } = useConversations();
   const { messages, sending, sendMessage, markMessagesAsRead } = useMessages(selectedConversation?.id || null);
+
+  useEffect(() => {
+    if (!messagesContainerRef.current) return;
+    const node = messagesContainerRef.current;
+    node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
+  }, [selectedConversation?.id, messages]);
 
   // Remove auto-scroll behavior to maintain user position
 
@@ -325,9 +332,9 @@ export const MessagesTabComplete = () => {
   const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] animate-fade-in">
+    <div className="relative flex flex-col h-full min-h-[calc(100vh-140px)] animate-fade-in">
       {/* Header do Chat - sticky/top */}
-      <Card className="glass backdrop-blur-xl border-primary/20 flex-shrink-0 sticky top-0 z-20">
+      <Card className="glass backdrop-blur-xl border-primary/20 flex-shrink-0 sticky top-20 left-0 right-0 z-40">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <Button
@@ -371,7 +378,7 @@ export const MessagesTabComplete = () => {
       </Card>
 
       {/* Mensagens */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth pb-32">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth pb-32">
         {Object.entries(messageGroups).map(([date, dayMessages]) => (
           <div key={date}>
             {/* Separador de data */}
@@ -436,8 +443,8 @@ export const MessagesTabComplete = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input de mensagem fixo com botões */}
-      <div className="fixed bottom-[60px] left-0 right-0 z-30 bg-background/95 backdrop-blur-xl border-t border-primary/20 p-4">
+      {/* Input de mensagem fica acima da bottom nav, mas não alcança o footer */}
+      <div className="sticky bottom-24 left-0 right-0 z-40 mt-4 bg-background/95 backdrop-blur-xl border-t border-primary/20 p-4 rounded-2xl shadow-[var(--shadow-glass)]">
         <div className="max-w-md mx-auto">
           {!isPremium ? (
             <div className="flex items-center justify-center p-4 text-center">
@@ -541,7 +548,7 @@ export const MessagesTabComplete = () => {
               const otherUserId = selectedConversation.participant1_id === profile?.user_id 
                 ? selectedConversation.participant2_id 
                 : selectedConversation.participant1_id;
-              navigate(`/profile/${otherUserId}`);
+              navigate(`/profile/view/${otherUserId}`);
             }}>Ver perfil completo</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -90,15 +90,6 @@ export const HomeTab = () => {
     }
   }, [profile]);
 
-  // Auto-refresh the list periodically to keep it dynamic and never empty
-  useEffect(() => {
-    if (!profile?.user_id) return;
-    const interval = window.setInterval(() => {
-      fetchData();
-    }, 60000); // refresh every 60s
-    return () => window.clearInterval(interval);
-  }, [profile?.user_id]);
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -579,58 +570,83 @@ export const HomeTab = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Carousel */}
+            {/* Main Image */}
             <div className="bg-gradient-card rounded-3xl border border-white/10 p-4 shadow-[var(--shadow-glow)]">
-              <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
-                <div className="relative rounded-3xl overflow-hidden min-h-[320px]">
-                  <img
-                    src={visibleCarouselPhotos[0]?.imageUrl}
-                    alt={visibleCarouselPhotos[0]?.displayName}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                  <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-white text-sm flex items-center gap-2">
-                        <span className="font-semibold">{visibleCarouselPhotos[0]?.displayName}</span>
-                        <span className="text-white/70 text-xs">{visibleCarouselPhotos[0] ? formatTimeAgo(visibleCarouselPhotos[0].createdAt) : ''}</span>
-                      </p>
-                      <p className="text-white/60 text-xs flex items-center gap-3 mt-1">
-                        <span>❤ {visibleCarouselPhotos[0]?.likes ?? 0}</span>
-                        <span>💬 {visibleCarouselPhotos[0]?.comments ?? 0}</span>
-                        <span>↗ {visibleCarouselPhotos[0]?.shares ?? 0}</span>
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className={`rounded-full ${visibleCarouselPhotos[0]?.isLiked ? 'bg-red-500 text-white' : 'bg-white/10 text-white'}`}
-                        onClick={() => visibleCarouselPhotos[0] && handleLikeMosaicPhoto(visibleCarouselPhotos[0].id)}
-                        aria-label="Curtir destaque"
-                      >
-                        <Heart className={`w-4 h-4 ${visibleCarouselPhotos[0]?.isLiked ? 'fill-current' : ''}`} />
-                      </Button>
-                    </div>
+              <div className="relative rounded-3xl overflow-hidden w-full aspect-[4/3] mb-4">
+                <img
+                  src={visibleCarouselPhotos[0]?.imageUrl}
+                  alt={visibleCarouselPhotos[0]?.displayName}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-white text-sm flex items-center gap-2">
+                      <span className="font-semibold">{visibleCarouselPhotos[0]?.displayName}</span>
+                      <span className="text-white/70 text-xs">{visibleCarouselPhotos[0] ? formatTimeAgo(visibleCarouselPhotos[0].createdAt) : ''}</span>
+                    </p>
+                    <p className="text-white/60 text-xs flex items-center gap-3 mt-1">
+                      <span>❤ {visibleCarouselPhotos[0]?.likes ?? 0}</span>
+                      <span>💬 {visibleCarouselPhotos[0]?.comments ?? 0}</span>
+                      <span>↗ {visibleCarouselPhotos[0]?.shares ?? 0}</span>
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className={`rounded-full ${visibleCarouselPhotos[0]?.isLiked ? 'bg-red-500 text-white' : 'bg-white/10 text-white'}`}
+                      onClick={() => visibleCarouselPhotos[0] && handleLikeMosaicPhoto(visibleCarouselPhotos[0].id)}
+                      aria-label="Curtir destaque"
+                    >
+                      <Heart className={`w-4 h-4 ${visibleCarouselPhotos[0]?.isLiked ? 'fill-current' : ''}`} />
+                    </Button>
                   </div>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  {visibleCarouselPhotos.slice(1).map((thumb) => (
-                    <button
-                      key={thumb.id}
-                      className="relative rounded-2xl overflow-hidden group"
-                      onClick={() => setCarouselIndex(mosaicPhotos.findIndex(photo => photo.id === thumb.id))}
-                    >
-                      <img src={thumb.imageUrl} alt={thumb.displayName} className="w-full h-full object-cover" loading="lazy" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      <div className="absolute bottom-2 left-2 right-2 text-left">
-                        <p className="text-white text-sm font-semibold truncate">{thumb.displayName}</p>
-                        <p className="text-white/70 text-xs">{formatTimeAgo(thumb.createdAt)}</p>
-                      </div>
-                    </button>
-                  ))}
+              {/* Thumbnail Carousel */}
+              <div className="mt-4 relative">
+                <div className="relative">
+                  <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {visibleCarouselPhotos.map((photo, index) => (
+                      <button
+                        key={photo.id}
+                        onClick={() => setCarouselIndex(index)}
+                        className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 ${
+                          index === carouselIndex ? 'border-primary scale-105' : 'border-transparent opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <img 
+                          src={photo.imageUrl} 
+                          alt={`Thumbnail ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Navigation Arrows */}
+                  {visibleCarouselPhotos.length > 4 && (
+                    <>
+                      <button 
+                        onClick={() => handleCarouselNavigate('prev')}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 bg-black/60 backdrop-blur-sm rounded-full p-1.5 text-white hover:bg-black/80 transition-all"
+                        aria-label="Previous thumbnails"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleCarouselNavigate('next')}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 bg-black/60 backdrop-blur-sm rounded-full p-1.5 text-white hover:bg-black/80 transition-all"
+                        aria-label="Next thumbnails"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

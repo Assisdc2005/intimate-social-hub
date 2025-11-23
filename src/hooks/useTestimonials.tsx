@@ -134,7 +134,7 @@ export const useTestimonials = (profileUserId?: string) => {
         .insert({
           user_id: destinatarioId,
           from_user_id: user.id,
-          type: 'mensagem',
+          type: 'depoimento',
           content: 'enviou um novo depoimento'
         });
 
@@ -156,6 +156,8 @@ export const useTestimonials = (profileUserId?: string) => {
         .eq('destinatario_id', user.id);
 
       if (error) throw error;
+
+      await fetchTestimonials();
 
       return { success: true };
     } catch (error) {

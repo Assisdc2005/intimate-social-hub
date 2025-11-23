@@ -66,7 +66,12 @@ interface UserPost {
 export default function Profile() {
   const { user, updatePassword, signOut } = useAuth();
   const { profile, isPremium, loading: profileLoading } = useProfile();
-  const { friends } = useFriendships();
+  const {
+    friends,
+    friendRequests,
+    sentRequests,
+    respondToFriendRequest,
+  } = useFriendships();
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [newPassword, setNewPassword] = useState('');
@@ -76,6 +81,8 @@ export default function Profile() {
   const [generatedPassword, setGeneratedPassword] = useState('');
   const [isCopied, setIsCopied] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [friendshipsModalOpen, setFriendshipsModalOpen] = useState(false);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -246,6 +253,30 @@ export default function Profile() {
 
   const age = profile?.birth_date ? calculateAge(profile.birth_date) : null;
   const friendsCount = friends.length;
+  const pendingRequestsCount = friendRequests.length;
+
+  const handleFriendRequestAction = async (requestId: string, action: 'aceito' | 'recusado') => {
+    setProcessingRequestId(`${requestId}-${action}`);
+    const response = await respondToFriendRequest(requestId, action);
+
+    if (response?.error) {
+      toast({
+        title: 'Erro',
+        description: response.error,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: action === 'aceito' ? 'Amizade confirmada' : 'Convite atualizado',
+        description:
+          action === 'aceito'
+            ? 'Agora vocês são amigos e isso aparecerá no seu perfil.'
+            : 'Convite recusado com sucesso.',
+      });
+    }
+
+    setProcessingRequestId(null);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">      
@@ -355,19 +386,169 @@ export default function Profile() {
 
       {/* Tabs Navigation */}
       <div className="w-full">
-        <div className="flex flex-wrap gap-2 bg-white/5 rounded-xl p-2 border border-white/10">
-          <NavLink to="/profile/about" className={({isActive}) => `px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Sobre</NavLink>
-          <NavLink to="/profile/testimonials" className={({isActive}) => `px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Depoimentos</NavLink>
-          <NavLink to="/profile/posts" className={({isActive}) => `px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Minhas Publicações</NavLink>
-          <NavLink to="/profile/settings" className={({isActive}) => `px-4 py-2 rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Configurações da Conta</NavLink>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-nowrap sm:flex-wrap gap-2 bg-white/5 rounded-xl p-2 border border-white/10 overflow-x-auto scrollbar-thin">
+            <NavLink to="/profile/about" className={({isActive}) => `px-4 py-2 whitespace-nowrap rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Sobre</NavLink>
+            <NavLink to="/profile/testimonials" className={({isActive}) => `px-4 py-2 whitespace-nowrap rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Depoimentos</NavLink>
+            <NavLink to="/profile/posts" className={({isActive}) => `px-4 py-2 whitespace-nowrap rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Publicações</NavLink>
+            <NavLink to="/profile/settings" className={({isActive}) => `px-4 py-2 whitespace-nowrap rounded-lg text-sm ${isActive ? 'bg-primary text-white' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>Configurações</NavLink>
+          </div>
+          <Button
+            onClick={() => setFriendshipsModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white hover:bg-white/20"
+          >
+            <Users className="h-4 w-4" />
+            Gerenciar Amizades
+            {pendingRequestsCount > 0 && (
+              <Badge className="bg-primary text-white">{pendingRequestsCount}</Badge>
+            )}
+          </Button>
         </div>
       </div>
+
+      <Card className="bg-white/5 border border-white/10 mt-4">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+              <Users className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-white/80 text-sm">Amizades aceitas</p>
+              <p className="text-3xl font-bold text-white">{friendsCount}</p>
+              <p className="text-xs text-white/60">Este número aparece publicamente no seu perfil, assim como os depoimentos.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Sub-route content */}
       <div className="mt-4">
         <Outlet />
       </div>
     </div>
+
+    <AlertDialog open={friendshipsModalOpen} onOpenChange={setFriendshipsModalOpen}>
+      <AlertDialogContent className="max-w-2xl bg-background/95 backdrop-blur border-white/20">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-white flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Suas amizades e convites
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-white/70">
+            Aprove ou recuse convites recebidos, confira envios e visualize suas conexões confirmadas.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+          <section>
+            <h3 className="text-sm font-semibold text-white mb-3">Convites recebidos ({friendRequests.length})</h3>
+            {friendRequests.length === 0 ? (
+              <p className="text-white/60 text-sm">Nenhum convite pendente.</p>
+            ) : (
+              <div className="space-y-3">
+                {friendRequests.map((request) => (
+                  <div key={request.id} className="flex items-center justify-between gap-3 border border-white/10 rounded-xl p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">
+                        {request.sender_profile?.avatar_url ? (
+                          <img src={request.sender_profile.avatar_url} alt={request.sender_profile.display_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-sm font-semibold">
+                            {request.sender_profile?.display_name?.[0] || 'U'}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{request.sender_profile?.display_name || 'Usuário'}</p>
+                        <p className="text-xs text-white/60">Quer se conectar com você</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={processingRequestId === `${request.id}-recusado`}
+                        onClick={() => handleFriendRequestAction(request.id, 'recusado')}
+                      >
+                        {processingRequestId === `${request.id}-recusado` ? '...' : 'Recusar'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-gradient-primary text-white"
+                        disabled={processingRequestId === `${request.id}-aceito`}
+                        onClick={() => handleFriendRequestAction(request.id, 'aceito')}
+                      >
+                        {processingRequestId === `${request.id}-aceito` ? '...' : 'Aceitar'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold text-white mb-3">Convites enviados ({sentRequests.length})</h3>
+            {sentRequests.length === 0 ? (
+              <p className="text-white/60 text-sm">Você ainda não enviou convites.</p>
+            ) : (
+              <div className="space-y-3">
+                {sentRequests.map((request) => (
+                  <div key={request.id} className="flex items-center justify-between gap-3 border border-white/10 rounded-xl p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">
+                        {request.receiver_profile?.avatar_url ? (
+                          <img src={request.receiver_profile.avatar_url} alt={request.receiver_profile.display_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-sm font-semibold">
+                            {request.receiver_profile?.display_name?.[0] || 'U'}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{request.receiver_profile?.display_name || 'Usuário'}</p>
+                        <p className="text-xs text-white/60 capitalize">Status: {request.status}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold text-white mb-3">Amizades aceitas ({friends.length})</h3>
+            {friends.length === 0 ? (
+              <p className="text-white/60 text-sm">Você ainda não possui amizades aceitas.</p>
+            ) : (
+              <div className="space-y-3">
+                {friends.map((friend) => (
+                  <div key={`${friend.user_id}-${friend.amigo_id}`} className="flex items-center justify-between gap-3 border border-white/10 rounded-xl p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white/10 overflow-hidden">
+                        {friend.friend_profile?.avatar_url ? (
+                          <img src={friend.friend_profile.avatar_url} alt={friend.friend_profile.display_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-sm font-semibold">
+                            {friend.friend_profile?.display_name?.[0] || 'U'}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{friend.friend_profile?.display_name || 'Usuário'}</p>
+                        <p className="text-xs text-white/60">Visível para todos no seu perfil</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">Fechar</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </div>
     </div>
   );

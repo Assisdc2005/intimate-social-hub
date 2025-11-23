@@ -8,7 +8,6 @@ import { Camera, Video, Upload, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { PremiumBlockModal } from './PremiumBlockModal';
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -16,22 +15,36 @@ interface CreatePostModalProps {
   onPostCreated?: () => void;
 }
 
+interface MediaItem {
+  id: string;
+  file: File;
+  preview: string;
+}
+
 export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreatePostModalProps) => {
   const [content, setContent] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [mediaPreviews, setMediaPreviews] = useState<string[]>([]);
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const readFileAsDataUrl = (file: File) => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    event.target.value = '';
     if (!files.length) return;
 
     // Enforce media count based on plan
     const maxFiles = isPremium ? 999 : 1;
-    if (selectedFiles.length + files.length > maxFiles) {
+    if (mediaItems.length + files.length > maxFiles) {
       toast({
         title: "Muitos arquivos",
         description: isPremium
@@ -46,8 +59,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'video/mp4', 'video/webm'];
     const maxSize = 10 * 1024 * 1024; // 10MB
     
-    const validFiles: File[] = [];
-    const previews: string[] = [];
+    const mediaEntries: MediaItem[] = [];
 
     for (const file of files) {
       if (!allowedTypes.includes(file.type)) {
@@ -68,27 +80,21 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
         continue;
       }
 
-      validFiles.push(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        previews.push(e.target?.result as string);
-        if (previews.length === validFiles.length) {
-          setMediaPreviews([...mediaPreviews, ...previews]);
-        }
-      };
-      reader.readAsDataURL(file);
+      const preview = await readFileAsDataUrl(file);
+      mediaEntries.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`,
+        file,
+        preview,
+      });
     }
 
-    setSelectedFiles([...selectedFiles, ...validFiles]);
+    if (mediaEntries.length) {
+      setMediaItems((prev) => [...prev, ...mediaEntries]);
+    }
   };
 
-  const removeFile = (index: number) => {
-    const newFiles = selectedFiles.filter((_, i) => i !== index);
-    const newPreviews = mediaPreviews.filter((_, i) => i !== index);
-    setSelectedFiles(newFiles);
-    setMediaPreviews(newPreviews);
+  const removeFile = (id: string) => {
+    setMediaItems((prev) => prev.filter((item) => item.id !== id));
   };
 
   const uploadFile = async (file: File): Promise<string | null> => {
@@ -119,7 +125,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
     // Verificar se é premium
     if (!isPremium) {
       // Non-premium: ensure at most 1 media attached
-      if (selectedFiles.length > 1) {
+      if (mediaItems.length > 1) {
         toast({
           title: "Limite de mídia",
           description: "Usuários não premium podem anexar apenas 1 mídia por publicação.",
@@ -129,7 +135,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
       }
     }
 
-    if (!content.trim() && selectedFiles.length === 0) {
+    if (!content.trim() && mediaItems.length === 0) {
       toast({
         title: "Conteúdo obrigatório",
         description: "Adicione um texto ou uma mídia para publicar",
@@ -142,8 +148,8 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
 
     try {
       // Determine tipo_midia allowed by DB constraint
-      const hasMedia = selectedFiles.length > 0;
-      const hasVideo = selectedFiles.some((f) => f.type.startsWith('video/'));
+      const hasMedia = mediaItems.length > 0;
+      const hasVideo = mediaItems.some((item) => item.file.type.startsWith('video/'));
       const tipoMidia: 'texto' | 'imagem' | 'video' = hasMedia ? (hasVideo ? 'video' : 'imagem') : 'texto';
 
       // Criar a publicação primeiro
@@ -160,10 +166,10 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
       if (publicacaoError) throw publicacaoError;
 
       // Upload e inserir mídias se existirem
-      if (selectedFiles.length > 0) {
+      if (mediaItems.length > 0) {
         let firstUploadedUrl: string | null = null;
-        const mediaUploads = selectedFiles.map(async (file, index) => {
-          const uploadedUrl = await uploadFile(file);
+        const mediaUploads = mediaItems.map(async (item, index) => {
+          const uploadedUrl = await uploadFile(item.file);
           if (!uploadedUrl) {
             throw new Error(`Erro no upload da mídia ${index + 1}`);
           }
@@ -174,7 +180,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
             .insert({
               publicacao_id: publicacao.id,
               midia_url: uploadedUrl,
-              tipo_midia: file.type.startsWith('video/') ? 'video' : 'imagem',
+              tipo_midia: item.file.type.startsWith('video/') ? 'video' : 'imagem',
               ordem: index
             });
         });
@@ -200,8 +206,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
 
       // Reset form
       setContent('');
-      setSelectedFiles([]);
-      setMediaPreviews([]);
+      setMediaItems([]);
       onOpenChange(false);
       onPostCreated?.();
 
@@ -218,17 +223,11 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
   };
 
   return (
-    <>
-      <PremiumBlockModal 
-        isOpen={showPremiumModal} 
-        onOpenChange={setShowPremiumModal}
-      />
-      
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="glass backdrop-blur-xl border-primary/20 max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-gradient">Criar Publicação</DialogTitle>
-          </DialogHeader>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="glass backdrop-blur-xl border-primary/20 max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-gradient">Criar Publicação</DialogTitle>
+        </DialogHeader>
 
         <div className="space-y-4">
           {/* Text Content */}
@@ -248,24 +247,24 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
           </div>
 
           {/* Media Previews */}
-          {mediaPreviews.length > 0 && (
+          {mediaItems.length > 0 && (
             <div className="space-y-3">
               <div className="text-sm text-muted-foreground">
-                Mídias selecionadas ({mediaPreviews.length}/5)
+                Mídias selecionadas ({mediaItems.length}{isPremium ? '' : '/1'})
               </div>
               <div className="grid grid-cols-2 gap-3">
-                {mediaPreviews.map((preview, index) => (
-                  <div key={index} className="relative">
-                    {selectedFiles[index]?.type.startsWith('video/') ? (
+                {mediaItems.map((item) => (
+                  <div key={item.id} className="relative">
+                    {item.file.type.startsWith('video/') ? (
                       <video 
-                        src={preview} 
+                        src={item.preview} 
                         controls 
                         className="w-full rounded-lg h-32 object-cover"
                       />
                     ) : (
                       <img 
-                        src={preview} 
-                        alt={`Preview ${index + 1}`} 
+                        src={item.preview} 
+                        alt="Preview" 
                         className="w-full rounded-lg h-32 object-cover"
                       />
                     )}
@@ -274,7 +273,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
                       variant="destructive"
                       size="icon"
                       className="absolute top-1 right-1 h-6 w-6"
-                      onClick={() => removeFile(index)}
+                      onClick={() => removeFile(item.id)}
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -326,7 +325,7 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
           {/* Submit Button */}
           <Button
             onClick={handleSubmit}
-            disabled={uploading || (!content.trim() && selectedFiles.length === 0)}
+            disabled={uploading || (!content.trim() && mediaItems.length === 0)}
             className="w-full bg-gradient-primary hover:opacity-90 text-white"
           >
             {uploading ? (
@@ -344,6 +343,5 @@ export const CreatePostModal = ({ isOpen, onOpenChange, onPostCreated }: CreateP
         </div>
       </DialogContent>
     </Dialog>
-    </>
   );
-};
+}

@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { PublicacaoCarrossel } from "./PublicacaoCarrossel";
 import { useAdmin } from "@/hooks/useAdmin";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 interface Publicacao {
   id: string;
@@ -500,6 +501,9 @@ export const PublicFeed = () => {
         return;
       }
 
+      // Close the reaction menu immediately to prevent UI issues
+      setReactionMenuPost(null);
+
       const { error } = await supabase
         .from('curtidas_publicacoes')
         .upsert(
@@ -539,8 +543,6 @@ export const PublicFeed = () => {
     } catch (e) {
       console.error('Erro ao reagir:', e);
       toast({ title: 'Erro', description: 'Não foi possível enviar sua reação', variant: 'destructive' });
-    } finally {
-      setReactionMenuPost(null);
     }
   };
 
@@ -591,8 +593,80 @@ export const PublicFeed = () => {
       // Refresh comments for this post
       fetchComentarios(publicacaoId);
 
+      const postAuthorId = publicacoes.find(pub => pub.id === publicacaoId)?.user_id;
+      if (postAuthorId && postAuthorId !== profile?.user_id) {
+        await supabase.from('notifications').insert({
+          user_id: postAuthorId,
+          from_user_id: profile?.user_id || null,
+          type: 'comentario',
+          content: 'comentou em sua publicação'
+        });
+      }
+
     } catch (error) {
       console.error('Erro ao comentar:', error);
+    }
+  };
+
+  const handleAddComment = async (publicacaoId: string) => {
+    if (!newComment.trim()) {
+      toast({
+        title: "Comentário vazio",
+        description: "Digite algo antes de enviar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isPremium) {
+      toast({
+        title: "Recurso Premium",
+        description: "Assine o Premium para comentar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('comentarios_publicacoes')
+        .insert({
+          publicacao_id: publicacaoId,
+          user_id: profile?.user_id,
+          comentario: newComment
+        });
+
+      if (error) throw error;
+
+      setNewComment('');
+
+      // Update local state
+      setPublicacoes(prev => prev.map(pub => 
+        pub.id === publicacaoId 
+          ? { ...pub, comentarios_count: pub.comentarios_count + 1 }
+          : pub
+      ));
+
+      // Refresh comments for this post
+      fetchComentarios(publicacaoId);
+
+      const postAuthorId = publicacoes.find(pub => pub.id === publicacaoId)?.user_id;
+      if (postAuthorId && postAuthorId !== profile?.user_id) {
+        await supabase.from('notifications').insert({
+          user_id: postAuthorId,
+          from_user_id: profile?.user_id || null,
+          type: 'comentario',
+          content: 'comentou em sua publicação'
+        });
+      }
+
+    } catch (error) {
+      console.error('Erro ao comentar:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao comentar",
+        variant: "destructive",
+      });
     }
   };
 
@@ -739,13 +813,16 @@ export const PublicFeed = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-white">Carregando publicações...</div>
-      </div>
+      <ErrorBoundary>
+        <div className="flex items-center justify-center py-8">
+          <div className="text-white">Carregando publicações...</div>
+        </div>
+      </ErrorBoundary>
     );
   }
 
-  return (
+return (
+  <ErrorBoundary>
     <div className="space-y-6">
       {/* Header com título e botão criar */}
       <div className="flex items-center justify-between">
@@ -1233,5 +1310,6 @@ export const PublicFeed = () => {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 };

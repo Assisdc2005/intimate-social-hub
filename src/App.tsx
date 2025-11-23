@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import ErrorBoundary from "@/components/ErrorBoundary";
 const Index = React.lazy(() => import("./pages/Index"));
 const Profile = React.lazy(() => import("./pages/Profile"));
 const AboutTab = React.lazy(() => import("./pages/profile-tabs/AboutTab"));
@@ -68,7 +69,8 @@ function AuthenticatedApp() {
 
   return (
     <React.Suspense fallback={<div className="min-h-screen bg-gradient-hero flex items-center justify-center"><div className="text-white text-lg">Carregando...</div></div>}>
-      <Routes>
+      <ErrorBoundary>
+        <Routes>
       {/* Rota raiz - Landing Page para todos os visitantes */}
       <Route 
         path="/" 
@@ -243,26 +245,29 @@ function AuthenticatedApp() {
       
       <Route path="*" element={<NotFound />} />
       </Routes>
+      </ErrorBoundary>
     </React.Suspense>
   );
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <ProfileProvider>
-            <FakeOnlineProvider>
-              <AuthenticatedApp />
-            </FakeOnlineProvider>
-          </ProfileProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <ProfileProvider>
+              <FakeOnlineProvider>
+                <AuthenticatedApp />
+              </FakeOnlineProvider>
+            </ProfileProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

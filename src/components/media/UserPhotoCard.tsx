@@ -24,18 +24,19 @@ export const UserPhotoCard: React.FC<Props> = ({ src, alt = "", onClick, classNa
       onClick={onClick}
       className={
         "relative overflow-hidden rounded-xl bg-black/10 select-none " +
-        "[user-select:none] [touch-action:none] " +
+        "[user-select:none] " + // Removed touch-action:none to enable touch scrolling
         className
       }
     >
-      {/* The actual image is not interactable */}
+      {/* The actual image is not interactable but allows touch events for scrolling */}
       <img
         src={src}
         alt={alt}
         loading="lazy"
-        className="block w-full h-full object-cover pointer-events-none select-none"
+        className="block w-full h-full object-cover select-none touch-pan-y"
         draggable={false}
         onDragStart={handleDragStart}
+        style={{ pointerEvents: 'none' }}
       />
 
       {/* Transparent overlay to intercept long-press, but still allow click-through */}

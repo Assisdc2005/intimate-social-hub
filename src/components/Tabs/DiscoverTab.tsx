@@ -26,6 +26,8 @@ export const DiscoverTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [sentInvites, setSentInvites] = useState<Set<string>>(new Set());
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPost, setNewPost] = useState({ content: '', media_type: 'texto', media_url: '' });
   const [filters, setFilters] = useState({
@@ -230,6 +232,12 @@ export const DiscoverTab = () => {
           description: "Solicitação de amizade enviada com sucesso",
         });
 
+        setSentInvites(prev => {
+          const next = new Set(prev);
+          next.add(userId);
+          return next;
+        });
+
         // Create notification
         await supabase
           .from('notifications')
@@ -418,7 +426,7 @@ export const DiscoverTab = () => {
 
       {/* Filters Bar */}
       <div className="glass rounded-2xl p-4 relative z-20">
-        <div className="flex gap-3 mb-4">
+        <div className="flex flex-wrap gap-3 mb-4">
           <Button
             className="bg-gradient-primary hover:opacity-90 text-white rounded-full flex items-center gap-2"
             onClick={() => setShowFilters(!showFilters)}
@@ -426,7 +434,32 @@ export const DiscoverTab = () => {
             <Filter className="h-4 w-4" />
             Filtros
           </Button>
+          <Button
+            variant="outline"
+            className={`rounded-full flex items-center gap-2 border-white/20 text-white bg-white/10 hover:bg-white/20 ${showSearch ? 'bg-white/20 border-white/40' : ''}`}
+            onClick={() => setShowSearch(!showSearch)}
+          >
+            <Search className="h-4 w-4" />
+            Pesquisar
+          </Button>
         </div>
+
+        {showSearch && (
+          <div className="mb-4 animate-slide-down">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por nome, cidade ou profissão"
+                className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
+              />
+            </div>
+            <p className="text-xs text-white/60 mt-1">
+              Digite para encontrar usuários existentes. Resultados atualizam automaticamente.
+            </p>
+          </div>
+        )}
 
         {/* Filters */}
         {showFilters && (
@@ -581,10 +614,11 @@ export const DiscoverTab = () => {
                   size="sm"
                   variant="outline"
                   onClick={() => handleAddFriend(user.user_id)}
-                  className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  disabled={sentInvites.has(user.user_id)}
+                  className={`flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20 ${sentInvites.has(user.user_id) ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Adicionar
+                  {sentInvites.has(user.user_id) ? 'Enviado' : 'Adicionar'}
                 </Button>
                 
                 <Button
