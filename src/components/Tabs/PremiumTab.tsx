@@ -133,24 +133,44 @@ export const PremiumTab = () => {
       
       console.log('Creating Cakto checkout:', { caktoLink, planId });
       
-      const { data, error } = await supabase.functions.invoke('create-cakto-checkout', {
-        body: { 
-          periodo: planId,
-          caktoLink: caktoLink
+      // Tenta chamar a Edge Function primeiro
+      try {
+        const { data, error } = await supabase.functions.invoke('create-cakto-checkout', {
+          body: { 
+            periodo: planId,
+            caktoLink: caktoLink
+          }
+        });
+
+        if (error) {
+          console.error('Checkout error:', error);
+          throw new Error(error.message || 'Erro ao criar checkout');
         }
-      });
 
-      if (error) {
-        console.error('Checkout error:', error);
-        throw new Error(error.message || 'Erro ao criar checkout');
+        if (!data) {
+          throw new Error('Resposta inválida do servidor');
+        }
+
+        // The Edge Function returns { url: caktoLink, checkoutId: checkoutId }
+        const checkoutUrl = data.url || caktoLink;
+        console.log('✅ Checkout session created, opening URL:', checkoutUrl);
+        
+        // Open the checkout URL in a new tab
+        window.open(checkoutUrl, '_blank');
+        
+      } catch (functionError) {
+        console.error('Edge Function error, using direct link:', functionError);
+        
+        // Se a Edge Function falhar, abre o link diretamente
+        console.log('Opening Cakto link directly:', caktoLink);
+        window.open(caktoLink, '_blank');
+        
+        toast({
+          title: "Redirecionando para pagamento...",
+          description: "Você será redirecionado para a página de pagamento da Cakto.",
+        });
       }
-
-      if (!data || !data.url) {
-        throw new Error('URL de checkout não recebida');
-      }
-
-      console.log('✅ Checkout session created, opening URL:', data.url);
-      window.open(data.url, '_blank');
+      
     } catch (error) {
       console.error('Error creating checkout:', error);
       toast({
@@ -317,7 +337,7 @@ export const PremiumTab = () => {
               >
                 {plan.badge && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-primary px-4 py-1 rounded-full text-sm font-bold text-white shadow-glow">
+                    <span className="bg-gradient-primary px-4 py-1 rounded-full text-sm font-bold text-white shadow-glow whitespace-nowrap">
                       {plan.badge}
                     </span>
                   </div>
