@@ -131,12 +131,12 @@ export const useTestimonials = (profileUserId?: string) => {
       // Create notification
       await supabase
         .from('notifications')
-        .insert({
+        .insert([{
           user_id: destinatarioId,
           from_user_id: user.id,
-          type: 'depoimento',
+          type: 'depoimento' as const,
           content: 'enviou um novo depoimento'
-        });
+        }]);
 
       return { success: true };
     } catch (error) {

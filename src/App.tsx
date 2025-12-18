@@ -23,6 +23,9 @@ const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard").then(m 
 import { useAuth, AuthProvider } from "./hooks/useAuth";
 import { FakeOnlineProvider } from "./hooks/useFakeOnline";
 import { useProfile, ProfileProvider } from "./hooks/useProfile";
+import { useActiveTimeRedirect } from "./hooks/useActiveTimeRedirect";
+import { useMessageNotifications } from "./hooks/useMessageNotifications";
+import { useWelcomeMessage } from "./hooks/useWelcomeMessage";
 const About = React.lazy(() => import("./pages/About").then(m => ({ default: (m as any).default ?? (m as any).About })));
 const Terms = React.lazy(() => import("./pages/Terms").then(m => ({ default: (m as any).default ?? (m as any).Terms })));
 const Privacy = React.lazy(() => import("./pages/Privacy").then(m => ({ default: (m as any).default ?? (m as any).Privacy })));
@@ -37,8 +40,12 @@ function AuthenticatedApp() {
   const { profile, loading: profileLoading } = useProfile();
   const location = useLocation();
 
+  // Use custom hooks for features
+  useActiveTimeRedirect();
+  useMessageNotifications();
+  useWelcomeMessage();
+
   // Ensure scroll resets to top on every route change
-  // This addresses UX requirement without altering layout or theme
   React.useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
   }, [location.pathname]);
@@ -46,11 +53,8 @@ function AuthenticatedApp() {
   // Helper: compute age and restrict under 18 from accessing /complete-profile
   const isUnder18 = React.useMemo(() => {
     const dob = profile?.birth_date;
-    // Se não houver data de nascimento ainda, não bloqueia.
-    // Isso permite que o usuário acesse /complete-profile justamente para preencher esses dados.
     if (!dob) return false;
     const b = new Date(dob);
-    // Se a data for inválida por algum motivo, também não bloqueia aqui.
     if (isNaN(b.getTime())) return false;
     const today = new Date();
     let age = today.getFullYear() - b.getFullYear();
@@ -125,6 +129,8 @@ function AuthenticatedApp() {
       />
       
       {/* Todas as rotas protegidas - redirecionam para /login se não autenticado */}
+      {/* Usuário pode navegar livremente mesmo sem perfil completo - hook useActiveTimeRedirect */}
+      {/* redireciona para /complete-profile após 3 minutos de uso ativo */}
       <Route 
         path="/home" 
         element={
@@ -161,11 +167,7 @@ function AuthenticatedApp() {
         path="/discover"
         element={
           user ? (
-            profile?.profile_completed ? (
-              <Index />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
+            <Index />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -176,11 +178,7 @@ function AuthenticatedApp() {
         path="/messages"
         element={
           user ? (
-            profile?.profile_completed ? (
-              <Index />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
+            <Index />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -191,11 +189,7 @@ function AuthenticatedApp() {
         path="/premium"
         element={
           user ? (
-            profile?.profile_completed ? (
-              <Index />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
+            <Index />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -206,26 +200,18 @@ function AuthenticatedApp() {
         path="/profile/edit"
         element={
           user ? (
-            profile?.profile_completed ? (
-              <Index />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
+            <Index />
           ) : (
             <Navigate to="/login" replace />
           )
-        } 
+        }
       />
       
       <Route 
         path="/profile/view/:userId"
         element={
           user ? (
-            profile?.profile_completed ? (
-              <UserProfile />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
+            <UserProfile />
           ) : (
             <Navigate to="/login" replace />
           )
