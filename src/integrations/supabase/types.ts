@@ -827,6 +827,7 @@ export type Database = {
         | "visita"
         | "mensagem"
         | "novo_amigo"
+        | "depoimento"
       orientation_type:
         | "heterossexual"
         | "homossexual"
@@ -986,6 +987,7 @@ export const Constants = {
         "visita",
         "mensagem",
         "novo_amigo",
+        "depoimento",
       ],
       orientation_type: [
         "heterossexual",
