@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useConversations } from "@/hooks/useConversations";
 import { useMessages } from "@/hooks/useMessages";
+import { useMessageLimit } from "@/hooks/useMessageLimit";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertDialog,
@@ -66,6 +67,7 @@ export const MessagesTabComplete = () => {
   // Usar os hooks customizados
   const { conversations, loading: conversationsLoading } = useConversations();
   const { messages, sending, sendMessage, markMessagesAsRead } = useMessages(selectedConversation?.id || null);
+  const { canSendMessage, hasReachedLimit, refreshCount } = useMessageLimit();
 
   useEffect(() => {
     if (!messagesContainerRef.current) return;
@@ -79,11 +81,11 @@ export const MessagesTabComplete = () => {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !profile?.user_id) return;
 
-    // Check if user is premium
-    if (!isPremium) {
+    // Check message limit for non-premium users
+    if (!canSendMessage) {
       toast({
-        title: "Recurso Premium",
-        description: "Assine o plano premium para enviar mensagens",
+        title: "Limite atingido",
+        description: "Você atingiu o limite de mensagens. Assine o Premium para continuar conversando sem limites.",
         variant: "destructive",
       });
       return;
@@ -92,6 +94,8 @@ export const MessagesTabComplete = () => {
     const success = await sendMessage(newMessage);
     if (success) {
       setNewMessage("");
+      // Refresh the count after sending
+      refreshCount();
     }
   };
 
@@ -102,10 +106,11 @@ export const MessagesTabComplete = () => {
 
     if (!file || !selectedConversation || !profile?.user_id) return;
 
-    if (!isPremium) {
+    // Check message limit for non-premium users (images count as messages)
+    if (!canSendMessage) {
       toast({
-        title: "Recurso Premium",
-        description: "Assine o plano premium para enviar mídias no chat",
+        title: "Limite atingido",
+        description: "Você atingiu o limite de mensagens. Assine o Premium para continuar conversando sem limites.",
         variant: "destructive",
       });
       return;
@@ -132,6 +137,9 @@ export const MessagesTabComplete = () => {
       if (!success) {
         throw new Error("Falha ao enviar mensagem de imagem");
       }
+
+      // Refresh the count after sending
+      refreshCount();
 
       toast({
         title: "Imagem enviada",
@@ -219,22 +227,22 @@ export const MessagesTabComplete = () => {
           </CardContent>
         </Card>
 
-        {/* Aviso Premium - only show for non-premium users */}
-        {profile && !isPremium && (
+        {/* Aviso Premium - only show when limit is reached */}
+        {profile && hasReachedLimit && (
           <Card className="glass backdrop-blur-xl border-accent/20">
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
                 <Lock className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-lg font-bold text-gradient mb-2">
-                Chat Premium Bloqueado
+                Limite de Mensagens Atingido
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Upgrade para Premium para enviar mensagens ilimitadas
+                Você atingiu o limite de mensagens. Assine o Premium para continuar conversando sem limites.
               </p>
               <Button className="bg-gradient-primary hover:opacity-90 text-white" onClick={() => navigate('/premium')}>
                 <Crown className="w-4 h-4 mr-2" />
-                Tornar-se Premium
+                Desbloquear Mensagens Ilimitadas
               </Button>
             </CardContent>
           </Card>
@@ -446,16 +454,16 @@ export const MessagesTabComplete = () => {
       {/* Input de mensagem fica acima da bottom nav, mas não alcança o footer */}
       <div className="sticky bottom-24 left-0 right-0 z-40 mt-4 bg-background/95 backdrop-blur-xl border-t border-primary/20 p-4 rounded-2xl shadow-[var(--shadow-glass)]">
         <div className="max-w-md mx-auto">
-          {!isPremium ? (
+          {hasReachedLimit ? (
             <div className="flex items-center justify-center p-4 text-center">
               <div className="flex items-center gap-3">
                 <Lock className="w-5 h-5 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  Upgrade para Premium para enviar mensagens
+                  Limite de mensagens atingido
                 </span>
                 <Button size="sm" className="bg-gradient-primary hover:opacity-90 text-white" onClick={() => navigate('/premium')}>
                   <Crown className="w-3 h-3 mr-1" />
-                  Premium
+                  Desbloquear
                 </Button>
               </div>
             </div>
