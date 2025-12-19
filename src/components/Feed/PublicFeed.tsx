@@ -49,10 +49,11 @@ interface Comentario {
 }
 
 export const PublicFeed = () => {
-  const { profile, isPremium } = useProfile();
+  const { profile, isPremium, loading: profileLoading } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
+  const isVisitor = !profile?.user_id;
 
   const [publicacoes, setPublicacoes] = useState<Publicacao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,16 +143,21 @@ export const PublicFeed = () => {
   };
 
   useEffect(() => {
-    if (!profile?.user_id) return;
-    
-    // Execute all initial fetches in parallel
-    Promise.all([
-      fetchPublicacoes(),
-      fetchUserLikes(),
-      fetchUserCommentsCount()
-    ]);
+    if (profileLoading) return;
 
-    // Set up real-time subscription
+    const tasks = [fetchPublicacoes()];
+    if (profile?.user_id) {
+      tasks.push(fetchUserLikes(), fetchUserCommentsCount());
+    } else {
+      setUserLikes(new Set());
+      setUserLikeCount(0);
+      setUserCommentCount(0);
+    }
+
+    Promise.all(tasks).catch((error) => {
+      console.error('Erro nas operações iniciais do feed:', error);
+    });
+
     const channel = supabase
       .channel('publicacoes_feed')
       .on('postgres_changes', 
@@ -173,7 +179,7 @@ export const PublicFeed = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.user_id]);
+  }, [profile?.user_id, profileLoading]);
 
   // Check if the current user can create a new post.
   // Premium: unlimited. Non-premium: allow at most 1 post.
@@ -465,7 +471,7 @@ export const PublicFeed = () => {
 
   const handleLike = async (publicacaoId: string, index: number) => {
     // Verificar se a publicação está bloqueada (index >= 5 e não é premium)
-    if (!isPremium && index >= FREE_POSTS_LIMIT) {
+    if (!isPremium && !isVisitor && index >= FREE_POSTS_LIMIT) {
       setShowPremiumModal(true);
       return;
     }
@@ -548,7 +554,7 @@ export const PublicFeed = () => {
 
   const handleComment = async (publicacaoId: string, index: number) => {
     // Verificar se a publicação está bloqueada (index >= 5 e não é premium)
-    if (!isPremium && index >= FREE_POSTS_LIMIT) {
+    if (!isPremium && !isVisitor && index >= FREE_POSTS_LIMIT) {
       setShowPremiumModal(true);
       return;
     }
@@ -672,7 +678,7 @@ export const PublicFeed = () => {
 
   const toggleComments = (publicacaoId: string, index: number) => {
     // Verificar se a publicação está bloqueada (index >= 5 e não é premium)
-    if (!isPremium && index >= FREE_POSTS_LIMIT) {
+    if (!isPremium && !isVisitor && index >= FREE_POSTS_LIMIT) {
       setShowPremiumModal(true);
       return;
     }
@@ -821,35 +827,33 @@ export const PublicFeed = () => {
     );
   }
 
-return (
-  <ErrorBoundary>
-    <div className="space-y-6">
-      {/* Header com título e botão criar */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gradient">Publicações Recentes</h2>
-        
-        <Button
-          className="bg-gradient-primary hover:opacity-90 text-white rounded-full px-6 py-2"
-          onClick={() => handleOpenCreateDialog(true)}
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Criar Publicação
-        </Button>
-        <CreatePostModal
-          isOpen={showCreatePost}
-          onOpenChange={setShowCreatePost}
-          onPostCreated={() => {
-            setShowCreatePost(false);
-            fetchPublicacoes();
-          }}
-        />
-      </div>
-
-      {/* Feed de publicações */}
+  return (
+    <ErrorBoundary>
       <div className="space-y-6">
-        {publicacoes.map((publicacao, index) => {
-          const isBlocked = !isPremium && index >= FREE_POSTS_LIMIT;
+        {/* Header com título e botão criar */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gradient">Publicações Recentes</h2>
           
+          <Button
+            className="bg-gradient-primary hover:opacity-90 text-white rounded-full px-6 py-2"
+            onClick={() => handleOpenCreateDialog(true)}
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Criar Publicação
+          </Button>
+          <CreatePostModal
+            isOpen={showCreatePost}
+            onOpenChange={setShowCreatePost}
+            onPostCreated={() => {
+              setShowCreatePost(false);
+              fetchPublicacoes();
+            }}
+          />
+        </div>
+
+        {publicacoes.map((publicacao, index) => {
+          const isBlocked = !isPremium && !isVisitor && index >= FREE_POSTS_LIMIT;
+
           return (
             <div 
               key={publicacao.id} 
@@ -870,26 +874,31 @@ return (
                   </div>
                 </div>
               )}
+
               {/* Header da publicação */}
               <div className="flex items-center gap-3 p-4">
                 <div 
-                  className="w-12 h-12 rounded-full bg-gradient-secondary overflow-hidden cursor-pointer"
+                  className="relative w-12 h-12 cursor-pointer"
                   onClick={() => handleViewProfile(publicacao.user_id)}
                 >
-                  {publicacao.profiles?.avatar_url ? (
-                    <img 
-                      src={publicacao.profiles.avatar_url} 
-                      alt={publicacao.profiles.display_name} 
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                      key={publicacao.profiles.avatar_url}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white font-bold">
-                      {publicacao.profiles?.display_name?.[0] || 'U'}
-                    </div>
-                  )}
+                  <div className="w-full h-full rounded-full bg-gradient-secondary overflow-hidden">
+                    {publicacao.profiles?.avatar_url ? (
+                      <img 
+                        src={publicacao.profiles.avatar_url} 
+                        alt={publicacao.profiles.display_name} 
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        key={publicacao.profiles.avatar_url}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white font-bold">
+                        {publicacao.profiles?.display_name?.[0] || 'U'}
+                      </div>
+                    )}
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-background shadow-[0_0_8px_rgba(16,185,129,0.6)] z-10"></span>
                 </div>
+
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p 
@@ -931,7 +940,7 @@ return (
                     </Button>
                   </div>
                 )}
-                
+
                 {/* Photo Grid */}
                 <div className="ml-2">
                   <PhotoGrid userId={publicacao.user_id} className="w-20" />

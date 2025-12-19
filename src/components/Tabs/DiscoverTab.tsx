@@ -562,9 +562,7 @@ export const DiscoverTab = () => {
                       </div>
                     )}
                   </div>
-                  {isOnlineOrFake(user) && (
-                    <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-green-500 ring-2 ring-black/60" />
-                  )}
+                  <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 ring-2 ring-black/70 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
                   {user.subscription_type === 'premium' && (
                     <div className="absolute -top-1 -right-1 w-6 h-6 bg-accent rounded-full flex items-center justify-center">
                       <span className="text-white text-xs">★</span>

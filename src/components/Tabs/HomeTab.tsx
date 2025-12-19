@@ -70,7 +70,7 @@ const formatTimeAgo = (isoDate: string) => {
 };
 
 export const HomeTab = () => {
-  const { profile, isPremium } = useProfile();
+  const { profile, isPremium, loading: profileLoading } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isOnlineOrFake, registerCandidates } = useFakeOnline();
@@ -84,11 +84,10 @@ export const HomeTab = () => {
   const [carouselIndex, setCarouselIndex] = useState(0);
 
   useEffect(() => {
-    if (profile?.user_id) {
-      fetchData();
-      loadMosaicPhotos();
-    }
-  }, [profile]);
+    if (profileLoading) return;
+    fetchData();
+    loadMosaicPhotos();
+  }, [profileLoading, profile?.user_id]);
 
   const fetchData = async () => {
     try {
@@ -104,12 +103,16 @@ export const HomeTab = () => {
       // Base profiles query builders (select minimal fields)
       const LIMIT_POOL = 20; // fetch a pool to randomize from
       const FEMALE_GENDER_FILTER = 'fem%'; // handle 'feminino' variations
-      const commonFilters = (query: any) =>
-        query
+      const commonFilters = (query: any) => {
+        let builder = query
           .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
-          .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
+        if (profile?.user_id) {
+          builder = builder.neq('user_id', profile.user_id);
+        }
+        return builder;
+      };
 
       // Run independent queries in parallel
       const femalesQuery = commonFilters(supabase.from('profiles')).ilike('gender', FEMALE_GENDER_FILTER);
@@ -195,12 +198,15 @@ export const HomeTab = () => {
       // If still less than 5 (database has few matches), fetch a broader pool to fill (still prefer with photo)
       if (selected.length < 5) {
         const remaining = 5 - selected.length;
-        const { data: fallbackPool } = await supabase
+        let fallbackQuery = supabase
           .from('profiles')
           .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
-          .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
+        if (profile?.user_id) {
+          fallbackQuery = fallbackQuery.neq('user_id', profile.user_id);
+        }
+        const { data: fallbackPool } = await fallbackQuery;
 
         const fallback = sortByOnline(dedupeById(fallbackPool || []).filter(
           (p) => !selected.find((s) => s.user_id === p.user_id)
@@ -211,12 +217,15 @@ export const HomeTab = () => {
       // Final safeguard: if still less than 5, allow filling with any completed profiles (even without photo)
       if (selected.length < 5) {
         const remaining = 5 - selected.length;
-        const { data: broadPool } = await supabase
+        let broadQuery = supabase
           .from('profiles')
           .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
-          .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
+        if (profile?.user_id) {
+          broadQuery = broadQuery.neq('user_id', profile.user_id);
+        }
+        const { data: broadPool } = await broadQuery;
         const broad = sortByOnline(dedupeById(broadPool || []).filter(
           (p) => !selected.find((s) => s.user_id === p.user_id)
         ));
@@ -328,7 +337,6 @@ export const HomeTab = () => {
   };
 
   const loadMosaicPhotos = async () => {
-    if (!profile?.user_id) return;
     try {
       const { data: photoRows, error } = await supabase
         .from('publicacoes')
@@ -478,12 +486,13 @@ export const HomeTab = () => {
                     )}
 
                     {/* Online Badge */}
-                    {isOnlineOrFake(user) && (
-                      <div className="absolute top-2 left-2 flex items-center gap-1 bg-green-500/90 backdrop-blur-sm px-2 py-1 rounded-full">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                        <span className="text-white text-xs font-semibold">LIVE</span>
-                      </div>
-                    )}
+                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-green-500/90 backdrop-blur-sm px-2 py-1 rounded-full">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                      <span className="text-white text-xs font-semibold">LIVE</span>
+                    </div>
+
+                    {/* Persistent Online Dot */}
+                    <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 ring-2 ring-black/70 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
 
                     {/* Premium Crown */}
                     {user.tipo_assinatura === 'premium' && (
