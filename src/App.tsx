@@ -75,10 +75,10 @@ function AuthenticatedApp() {
     <React.Suspense fallback={<div className="min-h-screen bg-gradient-hero flex items-center justify-center"><div className="text-white text-lg">Carregando...</div></div>}>
       <ErrorBoundary>
         <Routes>
-      {/* Rota raiz - apenas redireciona para /home */}
+      {/* Rota raiz - Landing Page para todos os visitantes */}
       <Route 
         path="/" 
-        element={<Navigate to="/home" replace />}
+        element={<LandingPage />}
       />
       
       {/* Páginas de autenticação - sempre acessíveis */}
@@ -133,7 +133,9 @@ function AuthenticatedApp() {
       {/* redireciona para /complete-profile após 3 minutos de uso ativo */}
       <Route 
         path="/home" 
-        element={<Index />} 
+        element={
+          <Index />
+        } 
       />
       
       <Route 

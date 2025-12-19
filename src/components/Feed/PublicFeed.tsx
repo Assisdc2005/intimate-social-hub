@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { PublicacaoCarrossel } from "./PublicacaoCarrossel";
 import { useAdmin } from "@/hooks/useAdmin";
-import ErrorBoundary from "@/components/ErrorBoundary";
 
 interface Publicacao {
   id: string;
@@ -819,506 +818,501 @@ export const PublicFeed = () => {
 
   if (loading) {
     return (
-      <ErrorBoundary>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-white">Carregando publicações...</div>
-        </div>
-      </ErrorBoundary>
+      <div className="flex items-center justify-center py-8">
+        <div className="text-white">Carregando publicações...</div>
+      </div>
     );
   }
 
   return (
-    <ErrorBoundary>
-      <div className="space-y-6">
-        {/* Header com título e botão criar */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gradient">Publicações Recentes</h2>
-          
-          <Button
-            className="bg-gradient-primary hover:opacity-90 text-white rounded-full px-6 py-2"
-            onClick={() => handleOpenCreateDialog(true)}
+    <div className="space-y-6">
+      {/* Header com título e botão criar */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gradient">Publicações Recentes</h2>
+        
+        <Button
+          className="bg-gradient-primary hover:opacity-90 text-white rounded-full px-6 py-2"
+          onClick={() => handleOpenCreateDialog(true)}
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Criar Publicação
+        </Button>
+        <CreatePostModal
+          isOpen={showCreatePost}
+          onOpenChange={setShowCreatePost}
+          onPostCreated={() => {
+            setShowCreatePost(false);
+            fetchPublicacoes();
+          }}
+        />
+      </div>
+
+      {publicacoes.map((publicacao, index) => {
+        const isBlocked = !isPremium && !isVisitor && index >= FREE_POSTS_LIMIT;
+
+        return (
+          <div 
+            key={publicacao.id} 
+            className={`bg-white/5 rounded-2xl border border-white/10 overflow-hidden relative ${
+              isBlocked ? 'cursor-pointer' : ''
+            }`}
+            onClick={isBlocked ? handleBlockedInteraction : undefined}
           >
-            <Plus className="h-5 w-5 mr-2" />
-            Criar Publicação
-          </Button>
-          <CreatePostModal
-            isOpen={showCreatePost}
-            onOpenChange={setShowCreatePost}
-            onPostCreated={() => {
-              setShowCreatePost(false);
-              fetchPublicacoes();
-            }}
-          />
-        </div>
+            {/* Overlay de bloqueio */}
+            {isBlocked && (
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
+                <div className="text-center space-y-3 p-6">
+                  <div className="w-16 h-16 mx-auto bg-gradient-primary rounded-full flex items-center justify-center shadow-glow animate-pulse">
+                    <Lock className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Conteúdo Premium</h3>
+                  <p className="text-white/80">Torne-se Premium para ver</p>
+                </div>
+              </div>
+            )}
 
-        {publicacoes.map((publicacao, index) => {
-          const isBlocked = !isPremium && !isVisitor && index >= FREE_POSTS_LIMIT;
-
-          return (
-            <div 
-              key={publicacao.id} 
-              className={`bg-white/5 rounded-2xl border border-white/10 overflow-hidden relative ${
-                isBlocked ? 'cursor-pointer' : ''
-              }`}
-              onClick={isBlocked ? handleBlockedInteraction : undefined}
-            >
-              {/* Overlay de bloqueio */}
-              {isBlocked && (
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
-                  <div className="text-center space-y-3 p-6">
-                    <div className="w-16 h-16 mx-auto bg-gradient-primary rounded-full flex items-center justify-center shadow-glow animate-pulse">
-                      <Lock className="w-8 h-8 text-white" />
+            {/* Header da publicação */}
+            <div className="flex items-center gap-3 p-4">
+              <div 
+                className="relative w-12 h-12 cursor-pointer"
+                onClick={() => handleViewProfile(publicacao.user_id)}
+              >
+                <div className="w-full h-full rounded-full bg-gradient-secondary overflow-hidden">
+                  {publicacao.profiles?.avatar_url ? (
+                    <img 
+                      src={publicacao.profiles.avatar_url} 
+                      alt={publicacao.profiles.display_name} 
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      key={publicacao.profiles.avatar_url}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white font-bold">
+                      {publicacao.profiles?.display_name?.[0] || 'U'}
                     </div>
-                    <h3 className="text-xl font-bold text-white">Conteúdo Premium</h3>
-                    <p className="text-white/80">Torne-se Premium para ver</p>
-                  </div>
+                  )}
                 </div>
-              )}
+                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-background shadow-[0_0_8px_rgba(16,185,129,0.6)] z-10"></span>
+              </div>
 
-              {/* Header da publicação */}
-              <div className="flex items-center gap-3 p-4">
-                <div 
-                  className="relative w-12 h-12 cursor-pointer"
-                  onClick={() => handleViewProfile(publicacao.user_id)}
-                >
-                  <div className="w-full h-full rounded-full bg-gradient-secondary overflow-hidden">
-                    {publicacao.profiles?.avatar_url ? (
-                      <img 
-                        src={publicacao.profiles.avatar_url} 
-                        alt={publicacao.profiles.display_name} 
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        key={publicacao.profiles.avatar_url}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white font-bold">
-                        {publicacao.profiles?.display_name?.[0] || 'U'}
-                      </div>
-                    )}
-                  </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-background shadow-[0_0_8px_rgba(16,185,129,0.6)] z-10"></span>
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p 
-                      className="font-semibold text-white cursor-pointer hover:text-primary"
-                      onClick={() => handleViewProfile(publicacao.user_id)}
-                    >
-                      {publicacao.profiles?.display_name || 'Usuário'}
-                    </p>
-                    {publicacao.profiles?.tipo_assinatura === 'premium' && (
-                      <Crown className="w-4 h-4 text-yellow-500" />
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {new Date(publicacao.created_at).toLocaleString('pt-BR')}
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p 
+                    className="font-semibold text-white cursor-pointer hover:text-primary"
+                    onClick={() => handleViewProfile(publicacao.user_id)}
+                  >
+                    {publicacao.profiles?.display_name || 'Usuário'}
                   </p>
+                  {publicacao.profiles?.tipo_assinatura === 'premium' && (
+                    <Crown className="w-4 h-4 text-yellow-500" />
+                  )}
                 </div>
+                <p className="text-sm text-gray-400 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {new Date(publicacao.created_at).toLocaleString('pt-BR')}
+                </p>
+              </div>
 
-                {/* Botões de editar e deletar (dono ou admin) */}
-                {(profile?.user_id === publicacao.user_id || isAdmin) && (
-                  <div className="flex items-center gap-2">
-                    {profile?.user_id === publicacao.user_id && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEditPost(publicacao.id, publicacao.descricao || '')}
-                        className="text-gray-400 hover:text-white hover:bg-white/10"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    )}
+              {/* Botões de editar e deletar (dono ou admin) */}
+              {(profile?.user_id === publicacao.user_id || isAdmin) && (
+                <div className="flex items-center gap-2">
+                  {profile?.user_id === publicacao.user_id && (
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => setDeletePostId(publicacao.id)}
-                      className="text-gray-400 hover:text-red-500 hover:bg-white/10"
+                      onClick={() => handleEditPost(publicacao.id, publicacao.descricao || '')}
+                      className="text-gray-400 hover:text-white hover:bg-white/10"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Edit2 className="h-4 w-4" />
                     </Button>
-                  </div>
-                )}
-
-                {/* Photo Grid */}
-                <div className="ml-2">
-                  <PhotoGrid userId={publicacao.user_id} className="w-20" />
-                </div>
-              </div>
-
-              {/* Conteúdo da publicação */}
-              {publicacao.descricao && (
-                <div className="px-4 pb-3 space-y-1">
-                  <p className="text-white">
-                    {expandedPosts[publicacao.id] || publicacao.descricao.length <= MAX_TEXT
-                      ? publicacao.descricao
-                      : `${publicacao.descricao.slice(0, MAX_TEXT)}...`}
-                  </p>
-                  {publicacao.descricao.length > MAX_TEXT && (
-                    <button
-                      className="text-primary text-sm hover:underline"
-                      onClick={() =>
-                        setExpandedPosts((prev) => ({
-                          ...prev,
-                          [publicacao.id]: !prev[publicacao.id],
-                        }))
-                      }
-                    >
-                      {expandedPosts[publicacao.id] ? 'ver menos' : 'ver mais'}
-                    </button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDeletePostId(publicacao.id)}
+                    className="text-gray-400 hover:text-red-500 hover:bg-white/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               )}
 
-              {/* Mídia (carrossel ou fallback para única mídia) */}
-              <div className={`relative ${isBlocked ? 'blur-lg pointer-events-none' : ''}`}>
+              {/* Photo Grid */}
+              <div className="ml-2">
+                <PhotoGrid userId={publicacao.user_id} className="w-20" />
+              </div>
+            </div>
+
+            {/* Conteúdo da publicação */}
+            {publicacao.descricao && (
+              <div className="px-4 pb-3 space-y-1">
+                <p className="text-white">
+                  {expandedPosts[publicacao.id] || publicacao.descricao.length <= MAX_TEXT
+                    ? publicacao.descricao
+                    : `${publicacao.descricao.slice(0, MAX_TEXT)}...`}
+                </p>
+                {publicacao.descricao.length > MAX_TEXT && (
+                  <button
+                    className="text-primary text-sm hover:underline"
+                    onClick={() =>
+                      setExpandedPosts((prev) => ({
+                        ...prev,
+                        [publicacao.id]: !prev[publicacao.id],
+                      }))
+                    }
+                  >
+                    {expandedPosts[publicacao.id] ? 'ver menos' : 'ver mais'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Mídia (carrossel ou fallback para única mídia) */}
+            <div className={`relative ${isBlocked ? 'blur-lg pointer-events-none' : ''}`}>
+              <PublicacaoCarrossel
+                publicacaoId={publicacao.id}
+                isPremium={isPremium || index < FREE_POSTS_LIMIT}
+                fallbackMidia={publicacao.midia_url ? {
+                  url: publicacao.midia_url,
+                  tipo: publicacao.tipo_midia === 'video' ? 'video' : 'image'
+                } : undefined}
+                onMediaClick={(media) => {
+                  if (!isBlocked) {
+                    openMediaModal(media);
+                  }
+                }}
+              />
+
+              {/* Múltiplas Mídias - buscar da nova tabela */}
+              {publicacao.tipo_midia === 'multipla' && (
                 <PublicacaoCarrossel
                   publicacaoId={publicacao.id}
                   isPremium={isPremium || index < FREE_POSTS_LIMIT}
-                  fallbackMidia={publicacao.midia_url ? {
-                    url: publicacao.midia_url,
-                    tipo: publicacao.tipo_midia === 'video' ? 'video' : 'image'
-                  } : undefined}
                   onMediaClick={(media) => {
                     if (!isBlocked) {
                       openMediaModal(media);
                     }
                   }}
                 />
+              )}
+            </div>
 
-                {/* Múltiplas Mídias - buscar da nova tabela */}
-                {publicacao.tipo_midia === 'multipla' && (
-                  <PublicacaoCarrossel
-                    publicacaoId={publicacao.id}
-                    isPremium={isPremium || index < FREE_POSTS_LIMIT}
-                    onMediaClick={(media) => {
-                      if (!isBlocked) {
-                        openMediaModal(media);
+            {/* Actions */}
+            <div className={`px-4 pb-3 ${isBlocked ? 'blur-sm pointer-events-none' : ''}`}>
+              <div className="flex items-center gap-4 mb-3">
+                <Popover 
+                  open={reactionMenuPost === publicacao.id}
+                  onOpenChange={(o) => {
+                    if (o) {
+                      if (!isPremium) {
+                        setShowPremiumModal(true);
+                        return;
                       }
-                    }}
-                  />
+                      setReactionMenuPost(publicacao.id);
+                    } else {
+                      setReactionMenuPost(null);
+                    }
+                  }}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike(publicacao.id, index);
+                      }}
+                      disabled={isBlocked}
+                      className={`text-gray-400 hover:text-red-500 hover:bg-white/10 ${
+                        userLikes.has(publicacao.id) ? 'text-red-500' : ''
+                      }`}
+                    >
+                      {getReactionEmoji(userReactions[publicacao.id] ?? getDominantReaction(publicacao.id)) ? (
+                        <span className="text-lg mr-2">{getReactionEmoji(userReactions[publicacao.id] ?? getDominantReaction(publicacao.id))}</span>
+                      ) : (
+                        <Heart className={`w-5 h-5 mr-2 ${userLikes.has(publicacao.id) ? 'fill-current' : ''}`} />
+                      )}
+                      {likeBadges[publicacao.id] ?? publicacao.curtidas_count}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" sideOffset={8} className="w-auto p-2 bg-background/95 backdrop-blur border-white/20 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="text-xl hover:scale-110 transition"
+                        onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'hot'); }}
+                        title="Foguinho"
+                      >🔥</button>
+                      <button
+                        className="text-xl hover:scale-110 transition"
+                        onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'desire'); }}
+                        title="Babando"
+                      >🤤</button>
+                      <button
+                        className="text-xl hover:scale-110 transition"
+                        onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'flirty'); }}
+                        title="Olhar safado"
+                      >😏</button>
+                      <button
+                        className="text-xl hover:scale-110 transition"
+                        onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'kiss'); }}
+                        title="Beijo sexy"
+                      >💋</button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleComments(publicacao.id, index);
+                  }}
+                  disabled={isBlocked}
+                  className="text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  {publicacao.comentarios_count}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewProfile(publicacao.user_id);
+                  }}
+                  disabled={isBlocked}
+                  className="text-gray-400 hover:text-white hover:bg-white/10"
+                >
+                  <User className="w-5 h-5 mr-2" />
+                  Ver Perfil
+                </Button>
+              </div>
+            </div>
+
+            {/* Comentários */}
+            {showComments[publicacao.id] && !isBlocked && (
+              <div className="px-4 pb-4">
+                <div className="space-y-3 mt-4">
+                  {comentarios[publicacao.id]?.map((comentario) => (
+                    <div key={comentario.id} className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
+                        {comentario.profiles?.avatar_url ? (
+                          <img src={comentario.profiles.avatar_url} alt={comentario.profiles.display_name} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                            {comentario.profiles?.display_name?.[0] || 'U'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white">
+                          <span className="font-semibold">{comentario.profiles?.display_name || 'Usuário'}</span>
+                          {' '}
+                          {comentario.comentario}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(comentario.created_at).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Adicionar comentário */}
+                <div className="flex items-center gap-3 mt-4">
+                  <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
+                      {profile?.avatar_url ? (
+                      <img 
+                        src={profile.avatar_url} 
+                        alt={profile.display_name} 
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        key={profile.avatar_url}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                        {profile?.display_name?.[0] || 'U'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 flex gap-2">
+                    <Input
+                      placeholder={isPremium ? "Adicione um comentário..." : "Seja Premium para comentar"}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      disabled={!isPremium}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                      onKeyPress={(e) => e.key === 'Enter' && handleComment(publicacao.id, index)}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleComment(publicacao.id, index)}
+                      disabled={!isPremium || !newComment.trim()}
+                      className="bg-gradient-primary hover:opacity-90"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {!isPremium && (
+                  <div className="mt-3 p-3 bg-gradient-primary/20 rounded-lg border border-primary/30">
+                    <p className="text-sm text-primary">
+                      ⭐ Seja Premium para curtir e comentar publicações! 
+                      <Button 
+                        variant="link" 
+                        className="text-primary underline p-0 ml-1 h-auto"
+                        onClick={() => navigate('/premium')}
+                      >
+                        Faça upgrade
+                      </Button>
+                    </p>
+                  </div>
                 )}
               </div>
-
-              {/* Actions */}
-              <div className={`px-4 pb-3 ${isBlocked ? 'blur-sm pointer-events-none' : ''}`}>
-                <div className="flex items-center gap-4 mb-3">
-                  <Popover 
-                    open={reactionMenuPost === publicacao.id}
-                    onOpenChange={(o) => {
-                      if (o) {
-                        if (!isPremium) {
-                          setShowPremiumModal(true);
-                          return;
-                        }
-                        setReactionMenuPost(publicacao.id);
-                      } else {
-                        setReactionMenuPost(null);
-                      }
-                    }}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleLike(publicacao.id, index);
-                        }}
-                        disabled={isBlocked}
-                        className={`text-gray-400 hover:text-red-500 hover:bg-white/10 ${
-                          userLikes.has(publicacao.id) ? 'text-red-500' : ''
-                        }`}
-                      >
-                        {getReactionEmoji(userReactions[publicacao.id] ?? getDominantReaction(publicacao.id)) ? (
-                          <span className="text-lg mr-2">{getReactionEmoji(userReactions[publicacao.id] ?? getDominantReaction(publicacao.id))}</span>
-                        ) : (
-                          <Heart className={`w-5 h-5 mr-2 ${userLikes.has(publicacao.id) ? 'fill-current' : ''}`} />
-                        )}
-                        {likeBadges[publicacao.id] ?? publicacao.curtidas_count}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" sideOffset={8} className="w-auto p-2 bg-background/95 backdrop-blur border-white/20 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <button
-                          className="text-xl hover:scale-110 transition"
-                          onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'hot'); }}
-                          title="Foguinho"
-                        >🔥</button>
-                        <button
-                          className="text-xl hover:scale-110 transition"
-                          onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'desire'); }}
-                          title="Babando"
-                        >🤤</button>
-                        <button
-                          className="text-xl hover:scale-110 transition"
-                          onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'flirty'); }}
-                          title="Olhar safado"
-                        >😏</button>
-                        <button
-                          className="text-xl hover:scale-110 transition"
-                          onClick={(e) => { e.stopPropagation(); handleSelectReaction(publicacao.id, index, 'kiss'); }}
-                          title="Beijo sexy"
-                        >💋</button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleComments(publicacao.id, index);
-                    }}
-                    disabled={isBlocked}
-                    className="text-gray-400 hover:text-white hover:bg-white/10"
-                  >
-                    <MessageCircle className="w-5 h-5 mr-2" />
-                    {publicacao.comentarios_count}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleViewProfile(publicacao.user_id);
-                    }}
-                    disabled={isBlocked}
-                    className="text-gray-400 hover:text-white hover:bg-white/10"
-                  >
-                    <User className="w-5 h-5 mr-2" />
-                    Ver Perfil
-                  </Button>
-                </div>
-              </div>
-
-              {/* Comentários */}
-              {showComments[publicacao.id] && !isBlocked && (
-                <div className="px-4 pb-4">
-                  <div className="space-y-3 mt-4">
-                    {comentarios[publicacao.id]?.map((comentario) => (
-                      <div key={comentario.id} className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
-                          {comentario.profiles?.avatar_url ? (
-                            <img src={comentario.profiles.avatar_url} alt={comentario.profiles.display_name} className="w-full h-full object-cover" loading="lazy" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                              {comentario.profiles?.display_name?.[0] || 'U'}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-white">
-                            <span className="font-semibold">{comentario.profiles?.display_name || 'Usuário'}</span>
-                            {' '}
-                            {comentario.comentario}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(comentario.created_at).toLocaleString('pt-BR')}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Adicionar comentário */}
-                  <div className="flex items-center gap-3 mt-4">
-                    <div className="w-8 h-8 rounded-full bg-gradient-secondary overflow-hidden">
-                        {profile?.avatar_url ? (
-                        <img 
-                          src={profile.avatar_url} 
-                          alt={profile.display_name} 
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                          key={profile.avatar_url}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                          {profile?.display_name?.[0] || 'U'}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 flex gap-2">
-                      <Input
-                        placeholder={isPremium ? "Adicione um comentário..." : "Seja Premium para comentar"}
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        disabled={!isPremium}
-                        className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                        onKeyPress={(e) => e.key === 'Enter' && handleComment(publicacao.id, index)}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => handleComment(publicacao.id, index)}
-                        disabled={!isPremium || !newComment.trim()}
-                        className="bg-gradient-primary hover:opacity-90"
-                      >
-                        <Send className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {!isPremium && (
-                    <div className="mt-3 p-3 bg-gradient-primary/20 rounded-lg border border-primary/30">
-                      <p className="text-sm text-primary">
-                        ⭐ Seja Premium para curtir e comentar publicações! 
-                        <Button 
-                          variant="link" 
-                          className="text-primary underline p-0 ml-1 h-auto"
-                          onClick={() => navigate('/premium')}
-                        >
-                          Faça upgrade
-                        </Button>
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Ver mais button */}
-      {hasMore && (
-        <div className="flex justify-center py-6">
-          <Button
-            onClick={loadMorePosts}
-            disabled={loadingMore}
-            className="bg-gradient-primary hover:opacity-90 text-white px-8 py-3 rounded-xl"
-          >
-            {loadingMore ? 'Carregando...' : 'Ver mais publicações'}
-          </Button>
-        </div>
-      )}
-
-      {publicacoes.length === 0 && (
-        <div className="text-center py-8 text-gray-400">
-          <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p>Nenhuma publicação encontrada</p>
-          <p className="text-sm">Seja o primeiro a publicar algo!</p>
-        </div>
-      )}
-
-      {/* Modal de Edição */}
-      <Dialog open={!!editingPost} onOpenChange={() => setEditingPost(null)}>
-        <DialogContent className="bg-background/95 backdrop-blur border-white/20">
-          <DialogHeader>
-            <DialogTitle className="text-gradient">Editar Publicação</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Atualize sua publicação..."
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
-              rows={4}
-              maxLength={500}
-            />
-            <div className="flex gap-2 justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setEditingPost(null)}
-                className="border-white/20 text-white hover:bg-white/10"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveEdit}
-                className="bg-gradient-primary hover:opacity-90"
-              >
-                Salvar
-              </Button>
-            </div>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
+        );
+      })}
 
-      {/* Modal Premium */}
-      <PremiumContentModal 
-        isOpen={showPremiumModal}
-        onOpenChange={setShowPremiumModal}
-      />
-
-      {/* Modal de Confirmação de Exclusão */}
-      <AlertDialog open={!!deletePostId} onOpenChange={() => setDeletePostId(null)}>
-        <AlertDialogContent className="bg-background/95 backdrop-blur border-white/20">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Excluir Publicação</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              Tem certeza que deseja excluir esta publicação? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeletePost}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Modal de visualização de mídia em tela cheia (responsivo, sem corte vertical) */}
-      {selectedMedia && (
-        <div
-          className="fixed inset-0 z-50 md:z-[60] flex items-center justify-center bg-black/80"
-          onClick={closeMediaModal}
+    {/* Ver mais button */}
+    {hasMore && (
+      <div className="flex justify-center py-6">
+        <Button
+          onClick={loadMorePosts}
+          disabled={loadingMore}
+          className="bg-gradient-primary hover:opacity-90 text-white px-8 py-3 rounded-xl"
         >
-          <div
-            className="relative w-full max-w-sm md:max-w-2xl max-h-[90vh] px-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={closeMediaModal}
-              className="absolute -top-10 right-4 text-white/80 hover:text-white"
-            >
-              Fechar
-            </button>
+          {loadingMore ? 'Carregando...' : 'Ver mais publicações'}
+        </Button>
+      </div>
+    )}
 
-            <div className="w-full max-h-[80vh] rounded-2xl overflow-hidden bg-black flex items-center justify-center">
-              {selectedMedia.tipo === 'video' ? (
-                <BlurredMedia
+    {publicacoes.length === 0 && (
+      <div className="text-center py-8 text-gray-400">
+        <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
+        <p>Nenhuma publicação encontrada</p>
+        <p className="text-sm">Seja o primeiro a publicar algo!</p>
+      </div>
+    )}
+
+    {/* Modal de Edição */}
+    <Dialog open={!!editingPost} onOpenChange={() => setEditingPost(null)}>
+      <DialogContent className="bg-background/95 backdrop-blur border-white/20">
+        <DialogHeader>
+          <DialogTitle className="text-gradient">Editar Publicação</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Textarea
+            placeholder="Atualize sua publicação..."
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
+            rows={4}
+            maxLength={500}
+          />
+          <div className="flex gap-2 justify-end">
+            <Button 
+              variant="outline" 
+              onClick={() => setEditingPost(null)}
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveEdit}
+              className="bg-gradient-primary hover:opacity-90"
+            >
+              Salvar
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Modal Premium */}
+    <PremiumContentModal 
+      isOpen={showPremiumModal}
+      onOpenChange={setShowPremiumModal}
+    />
+
+    {/* Modal de Confirmação de Exclusão */}
+    <AlertDialog open={!!deletePostId} onOpenChange={() => setDeletePostId(null)}>
+      <AlertDialogContent className="bg-background/95 backdrop-blur border-white/20">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-white">Excluir Publicação</AlertDialogTitle>
+          <AlertDialogDescription className="text-gray-300">
+            Tem certeza que deseja excluir esta publicação? Esta ação não pode ser desfeita.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="border-white/20 text-white hover:bg-white/10">
+            Cancelar
+          </AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={handleDeletePost}
+            className="bg-red-500 hover:bg-red-600 text-white"
+          >
+            Excluir
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Modal de visualização de mídia em tela cheia (responsivo, sem corte vertical) */}
+    {selectedMedia && (
+      <div
+        className="fixed inset-0 z-50 md:z-[60] flex items-center justify-center bg-black/80"
+        onClick={closeMediaModal}
+      >
+        <div
+          className="relative w-full max-w-sm md:max-w-2xl max-h-[90vh] px-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={closeMediaModal}
+            className="absolute -top-10 right-4 text-white/80 hover:text-white"
+          >
+            Fechar
+          </button>
+
+          <div className="w-full max-h-[80vh] rounded-2xl overflow-hidden bg-black flex items-center justify-center">
+            {selectedMedia.tipo === 'video' ? (
+              <BlurredMedia
+                src={selectedMedia.url}
+                alt="Mídia da publicação"
+                type="video"
+                isPremium={true}
+                controls={true}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="relative w-full flex items-center justify-center">
+                <img
                   src={selectedMedia.url}
                   alt="Mídia da publicação"
-                  type="video"
-                  isPremium={true}
-                  controls={true}
-                  className="w-full h-full object-contain"
+                  className="max-h-[80vh] max-w-full w-auto h-auto object-contain mx-auto rounded-2xl"
                 />
-              ) : (
-                <div className="relative w-full flex items-center justify-center">
-                  <img
-                    src={selectedMedia.url}
-                    alt="Mídia da publicação"
-                    className="max-h-[80vh] max-w-full w-auto h-auto object-contain mx-auto rounded-2xl"
-                  />
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 grid place-items-center"
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 grid place-items-center"
+                >
+                  <span
+                    className="opacity-25 text-white text-[6vw] md:text-3xl font-bold tracking-widest whitespace-nowrap select-none"
+                    style={{
+                      textShadow: '2px 2px 8px rgba(0,0,0,0.6)',
+                      transform: 'rotate(-18deg)',
+                    }}
                   >
-                    <span
-                      className="opacity-25 text-white text-[6vw] md:text-3xl font-bold tracking-widest whitespace-nowrap select-none"
-                      style={{
-                        textShadow: '2px 2px 8px rgba(0,0,0,0.6)',
-                        transform: 'rotate(-18deg)',
-                      }}
-                    >
-                      Sensual Nexus
-                    </span>
-                  </div>
+                    Sensual Nexus
+                  </span>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
-    </div>
-    </ErrorBoundary>
+      </div>
+    )}
+  </div>
   );
 };

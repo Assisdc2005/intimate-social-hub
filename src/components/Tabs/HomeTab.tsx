@@ -70,7 +70,7 @@ const formatTimeAgo = (isoDate: string) => {
 };
 
 export const HomeTab = () => {
-  const { profile, isPremium, loading: profileLoading } = useProfile();
+  const { profile, isPremium } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isOnlineOrFake, registerCandidates } = useFakeOnline();
@@ -84,10 +84,11 @@ export const HomeTab = () => {
   const [carouselIndex, setCarouselIndex] = useState(0);
 
   useEffect(() => {
-    if (profileLoading) return;
-    fetchData();
-    loadMosaicPhotos();
-  }, [profileLoading, profile?.user_id]);
+    if (profile?.user_id) {
+      fetchData();
+      loadMosaicPhotos();
+    }
+  }, [profile]);
 
   const fetchData = async () => {
     try {
@@ -103,16 +104,12 @@ export const HomeTab = () => {
       // Base profiles query builders (select minimal fields)
       const LIMIT_POOL = 20; // fetch a pool to randomize from
       const FEMALE_GENDER_FILTER = 'fem%'; // handle 'feminino' variations
-      const commonFilters = (query: any) => {
-        let builder = query
+      const commonFilters = (query: any) =>
+        query
           .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
+          .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
-        if (profile?.user_id) {
-          builder = builder.neq('user_id', profile.user_id);
-        }
-        return builder;
-      };
 
       // Run independent queries in parallel
       const femalesQuery = commonFilters(supabase.from('profiles')).ilike('gender', FEMALE_GENDER_FILTER);
@@ -198,15 +195,12 @@ export const HomeTab = () => {
       // If still less than 5 (database has few matches), fetch a broader pool to fill (still prefer with photo)
       if (selected.length < 5) {
         const remaining = 5 - selected.length;
-        let fallbackQuery = supabase
+        const { data: fallbackPool } = await supabase
           .from('profiles')
           .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
+          .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
-        if (profile?.user_id) {
-          fallbackQuery = fallbackQuery.neq('user_id', profile.user_id);
-        }
-        const { data: fallbackPool } = await fallbackQuery;
 
         const fallback = sortByOnline(dedupeById(fallbackPool || []).filter(
           (p) => !selected.find((s) => s.user_id === p.user_id)
@@ -217,15 +211,12 @@ export const HomeTab = () => {
       // Final safeguard: if still less than 5, allow filling with any completed profiles (even without photo)
       if (selected.length < 5) {
         const remaining = 5 - selected.length;
-        let broadQuery = supabase
+        const { data: broadPool } = await supabase
           .from('profiles')
           .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
+          .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
-        if (profile?.user_id) {
-          broadQuery = broadQuery.neq('user_id', profile.user_id);
-        }
-        const { data: broadPool } = await broadQuery;
         const broad = sortByOnline(dedupeById(broadPool || []).filter(
           (p) => !selected.find((s) => s.user_id === p.user_id)
         ));
@@ -337,6 +328,7 @@ export const HomeTab = () => {
   };
 
   const loadMosaicPhotos = async () => {
+    if (!profile?.user_id) return;
     try {
       const { data: photoRows, error } = await supabase
         .from('publicacoes')

@@ -53,7 +53,7 @@ class ErrorBoundary extends Component<Props, State> {
             <Button onClick={this.handleRetry} variant="outline" className="border-red-500 text-red-400 hover:bg-red-950/30">
               Tentar novamente
             </Button>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="mt-4 text-sm text-gray-400">
                 <summary>Detalhes do erro (desenvolvimento)</summary>
                 <pre className="mt-2 p-2 bg-black/50 rounded overflow-auto">
