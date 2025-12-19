@@ -170,6 +170,19 @@ FOR SELECT USING (
 );
 CREATE POLICY "Users can send messages" ON public.messages 
 FOR INSERT WITH CHECK (auth.uid() = sender_id);
+CREATE POLICY "Luna Sato can send welcome message" ON public.messages
+FOR INSERT WITH CHECK (
+  sender_id = 'luna-sato-bot'::uuid
+  AND EXISTS (
+    SELECT 1
+    FROM public.conversations c
+    WHERE c.id = conversation_id
+      AND (
+        (c.participant1_id = auth.uid() OR c.participant2_id = auth.uid())
+        AND (c.participant1_id = sender_id OR c.participant2_id = sender_id)
+      )
+  )
+);
 
 -- Create RLS policies for notifications
 CREATE POLICY "Users can view their own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);

@@ -1,15 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Crown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 
 export const PromotionalPopup = () => {
-  const { isPremium } = useProfile();
+  const { profile, isPremium } = useProfile();
+  const isVisitor = !profile?.user_id;
   const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
-  const [closedCount, setClosedCount] = useState(0);
   const [currentMessage, setCurrentMessage] = useState(0);
+  const [nextAllowed, setNextAllowed] = useState(() => {
+    const stored = localStorage.getItem("promoPopupNextAllowed");
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const messages = [
     {
@@ -25,59 +30,40 @@ export const PromotionalPopup = () => {
   ];
 
   useEffect(() => {
-    if (isPremium) return;
+    if (!isVisitor || isPremium) {
+      setIsVisible(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      return;
+    }
 
-    // Primeiro popup após 5 segundos
-    const initialTimer = setTimeout(() => {
-      setIsVisible(true);
-    }, 5000);
-
-    return () => clearTimeout(initialTimer);
-  }, [isPremium]);
-
-  useEffect(() => {
-    if (isPremium || !isVisible) return;
-
-    let timer: NodeJS.Timeout;
-
-    if (currentMessage === 1) {
-      // Popup urgente desaparece automaticamente após 10 segundos
-      timer = setTimeout(() => {
-        setIsVisible(false);
-      }, 10000);
+    const now = Date.now();
+    if (now >= nextAllowed && !isVisible && !timeoutRef.current) {
+      timeoutRef.current = setTimeout(() => {
+        setIsVisible(true);
+        timeoutRef.current = null;
+      }, 5000);
     }
 
     return () => {
-      if (timer) clearTimeout(timer);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     };
-  }, [isVisible, currentMessage, isPremium]);
+  }, [isVisitor, isPremium, isVisible, nextAllowed]);
 
   useEffect(() => {
-    if (isPremium) return;
-
-    // Repetir popup a cada 4 minutos se não fechou ou não assinou
-    const intervalTimer = setInterval(() => {
-      if (!isVisible && closedCount < 3) {
-        setIsVisible(true);
-      }
-    }, 240000); // 4 minutos
-
-    return () => clearInterval(intervalTimer);
-  }, [isVisible, closedCount, isPremium]);
+    if (!isVisible) return;
+    const target = Date.now() + 8 * 60 * 1000;
+    setNextAllowed(target);
+    localStorage.setItem("promoPopupNextAllowed", target.toString());
+  }, [isVisible]);
 
   const handleClose = () => {
-    const newClosedCount = closedCount + 1;
-    setClosedCount(newClosedCount);
     setIsVisible(false);
-
-    // Se fechou 3 vezes, mostrar versão agressiva
-    if (newClosedCount >= 3) {
-      setCurrentMessage(1);
-      // Mostrar novamente após 1 segundo
-      setTimeout(() => {
-        setIsVisible(true);
-      }, 1000);
-    }
   };
 
   const handleActivatePremium = () => {

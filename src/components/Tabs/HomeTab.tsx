@@ -74,6 +74,8 @@ export const HomeTab = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isOnlineOrFake, registerCandidates } = useFakeOnline();
+  const isVisitor = !profile?.user_id;
+  const supabaseAny = supabase as any;
   const [posts, setPosts] = useState<any[]>([]);
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,11 +85,212 @@ export const HomeTab = () => {
   const [mosaicPhotos, setMosaicPhotos] = useState<MosaicPhoto[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
+  const demoTopUsers = useMemo(() => {
+    return [
+      {
+        user_id: 'demo-user-1',
+        display_name: 'Conexão Online',
+        avatar_url: 'https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=600&q=80',
+        city: 'São Paulo',
+        state: 'SP',
+        tipo_assinatura: 'premium',
+        simulated_online: true,
+      },
+      {
+        user_id: 'demo-user-2',
+        display_name: 'Nova Sensual',
+        avatar_url: 'https://images.unsplash.com/photo-1520975693416-35a9d51ec4bb?auto=format&fit=crop&w=600&q=80',
+        city: 'Rio de Janeiro',
+        state: 'RJ',
+        tipo_assinatura: 'gratuito',
+        simulated_online: true,
+      },
+      {
+        user_id: 'demo-user-3',
+        display_name: 'Visitante Curioso',
+        avatar_url: 'https://images.unsplash.com/photo-1520975633235-8ff86f42a0a1?auto=format&fit=crop&w=600&q=80',
+        city: 'Belo Horizonte',
+        state: 'MG',
+        tipo_assinatura: 'premium',
+        simulated_online: false,
+      },
+    ];
+  }, []);
+
+  const demoMosaicPhotos = useMemo<MosaicPhoto[]>(() => {
+    const now = Date.now();
+    const items = [
+      {
+        id: 'demo-m-1',
+        userId: 'demo-user-1',
+        imageUrl: 'https://images.unsplash.com/photo-1520975693416-35a9d51ec4bb?auto=format&fit=crop&w=1200&q=80',
+        displayName: 'Top Sensual',
+        avatarUrl: null,
+        createdAt: new Date(now - 1000 * 60 * 20).toISOString(),
+      },
+      {
+        id: 'demo-m-2',
+        userId: 'demo-user-2',
+        imageUrl: 'https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=1200&q=80',
+        displayName: 'Nova Conexão',
+        avatarUrl: null,
+        createdAt: new Date(now - 1000 * 60 * 45).toISOString(),
+      },
+      {
+        id: 'demo-m-3',
+        userId: 'demo-user-3',
+        imageUrl: 'https://images.unsplash.com/photo-1520975633235-8ff86f42a0a1?auto=format&fit=crop&w=1200&q=80',
+        displayName: 'Membro Sensual',
+        avatarUrl: null,
+        createdAt: new Date(now - 1000 * 60 * 70).toISOString(),
+      },
+      {
+        id: 'demo-m-4',
+        userId: 'demo-user-4',
+        imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1200&q=80',
+        displayName: 'Sensual',
+        avatarUrl: null,
+        createdAt: new Date(now - 1000 * 60 * 95).toISOString(),
+      },
+      {
+        id: 'demo-m-5',
+        userId: 'demo-user-5',
+        imageUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80',
+        displayName: 'Conexão',
+        avatarUrl: null,
+        createdAt: new Date(now - 1000 * 60 * 140).toISOString(),
+      },
+      {
+        id: 'demo-m-6',
+        userId: 'demo-user-6',
+        imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1200&q=80',
+        displayName: 'Top',
+        avatarUrl: null,
+        createdAt: new Date(now - 1000 * 60 * 180).toISOString(),
+      },
+    ];
+
+    return items.map((it, idx) => ({
+      ...it,
+      size: assignSize(idx),
+      likes: Math.floor(Math.random() * 800) + 120,
+      comments: Math.floor(Math.random() * 120),
+      shares: Math.floor(Math.random() * 90),
+      isLiked: false,
+    }));
+  }, []);
+
   useEffect(() => {
+    // Visitors should still be able to browse /home.
+    // Keep heavier personalized sections for logged-in users only.
     if (profile?.user_id) {
       fetchData();
       loadMosaicPhotos();
+      return;
     }
+
+    // For visitors, load public-facing sections without requiring auth.
+    const fetchVisitorSections = async () => {
+      try {
+        const LIMIT_POOL = 20;
+
+        const { data: topPool, error: topErr } = await supabaseAny
+          .from('profiles')
+          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
+          .eq('profile_completed', true)
+          .not('avatar_url', 'is', null)
+          .limit(LIMIT_POOL);
+
+        if (!topErr) {
+          const pool = (topPool as any[]) || [];
+          const hasAvatar = (p: any) => typeof p?.avatar_url === 'string' && p.avatar_url.trim() !== '';
+          const deduped = (() => {
+            const seen = new Set<string>();
+            const out: any[] = [];
+            for (const item of pool) {
+              if (!item?.user_id) continue;
+              if (seen.has(item.user_id)) continue;
+              if (!hasAvatar(item)) continue;
+              seen.add(item.user_id);
+              out.push(item);
+            }
+            return out;
+          })();
+
+          const shuffle = (arr: any[]) => arr.sort(() => Math.random() - 0.5);
+          const selected = shuffle(deduped).slice(0, 5).map((u: any) => ({
+            ...u,
+            simulated_online: isOnlineOrFake(u),
+          }));
+
+          setTopUsers(selected.length ? selected : demoTopUsers);
+
+          const candidates = deduped.map((u: any) => ({
+            user_id: u.user_id,
+            isRealOnline: (u?.status_online === true || u?.status_online === 'true'),
+          }));
+          if (candidates.length) registerCandidates(candidates);
+        } else {
+          setTopUsers(demoTopUsers);
+        }
+      } catch (e) {
+        console.error('Erro ao carregar seções para visitante:', e);
+        setTopUsers(demoTopUsers);
+        setMosaicPhotos(demoMosaicPhotos);
+      }
+
+      try {
+        const { data: photoRows, error } = await supabaseAny
+          .from('publicacoes')
+          .select('id, user_id, midia_url, tipo_midia, created_at')
+          .eq('is_public', true)
+          .eq('tipo_midia', 'imagem')
+          .not('midia_url', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(MOSAIC_PAGE_SIZE * 2);
+
+        if (error) throw error;
+        const rows = (photoRows as MosaicFeedRow[]) || [];
+        if (!rows.length) {
+          setMosaicPhotos(demoMosaicPhotos);
+          return;
+        }
+
+        const userIds = [...new Set(rows.map((row) => row.user_id).filter(Boolean))] as string[];
+        let profilesMap: Record<string, { display_name: string | null; avatar_url?: string | null }> = {};
+        if (userIds.length) {
+          const { data: profilesData } = await supabaseAny
+            .from('profiles')
+            .select('user_id, display_name, avatar_url')
+            .in('user_id', userIds);
+          if (profilesData?.length) {
+            profilesMap = (profilesData as any[]).reduce((acc: any, item: any) => {
+              acc[item.user_id] = { display_name: item.display_name, avatar_url: item.avatar_url };
+              return acc;
+            }, {});
+          }
+        }
+
+        const rowsWithProfiles: MosaicFeedRow[] = rows.map((row) => ({
+          ...row,
+          profiles: {
+            user_id: row.user_id,
+            display_name: profilesMap[row.user_id]?.display_name ?? 'Membro Sensual',
+            avatar_url: profilesMap[row.user_id]?.avatar_url ?? null,
+          },
+        }));
+
+        const nextPhotos = buildMosaicPhotos(rowsWithProfiles);
+        setMosaicPhotos(nextPhotos.length ? nextPhotos : demoMosaicPhotos);
+      } catch (e) {
+        console.error('Erro ao carregar mosaico para visitante:', e);
+        setMosaicPhotos(demoMosaicPhotos);
+      }
+    };
+
+    fetchVisitorSections().finally(() => {
+      setLoading(false);
+    });
   }, [profile]);
 
   const fetchData = async () => {
@@ -95,7 +298,7 @@ export const HomeTab = () => {
       setLoading(true);
 
       // Fetch latest posts (select only necessary columns)
-      const postsPromise = supabase
+      const postsPromise = supabaseAny
         .from('publicacoes')
         .select('id, user_id, conteudo, midia_url, tipo_midia, created_at')
         .order('created_at', { ascending: false })
@@ -112,8 +315,8 @@ export const HomeTab = () => {
           .limit(LIMIT_POOL);
 
       // Run independent queries in parallel
-      const femalesQuery = commonFilters(supabase.from('profiles')).ilike('gender', FEMALE_GENDER_FILTER);
-      const othersQuery = commonFilters(supabase.from('profiles')).not('gender', 'ilike', FEMALE_GENDER_FILTER);
+      const femalesQuery = commonFilters(supabaseAny.from('profiles')).ilike('gender', FEMALE_GENDER_FILTER);
+      const othersQuery = commonFilters(supabaseAny.from('profiles')).not('gender', 'ilike', FEMALE_GENDER_FILTER);
       const [
         { data: postsData },
         { data: femalesPool },
@@ -128,7 +331,7 @@ export const HomeTab = () => {
       const userIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
       let postsWithProfiles = postsData || [];
       if (userIds.length) {
-        const { data: profilesData } = await supabase
+        const { data: profilesData } = await supabaseAny
           .from('profiles')
           .select('user_id, display_name, avatar_url')
           .in('user_id', userIds);
@@ -195,7 +398,7 @@ export const HomeTab = () => {
       // If still less than 5 (database has few matches), fetch a broader pool to fill (still prefer with photo)
       if (selected.length < 5) {
         const remaining = 5 - selected.length;
-        const { data: fallbackPool } = await supabase
+        const { data: fallbackPool } = await supabaseAny
           .from('profiles')
           .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
@@ -211,7 +414,7 @@ export const HomeTab = () => {
       // Final safeguard: if still less than 5, allow filling with any completed profiles (even without photo)
       if (selected.length < 5) {
         const remaining = 5 - selected.length;
-        const { data: broadPool } = await supabase
+        const { data: broadPool } = await supabaseAny
           .from('profiles')
           .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
           .eq('profile_completed', true)
@@ -330,9 +533,10 @@ export const HomeTab = () => {
   const loadMosaicPhotos = async () => {
     if (!profile?.user_id) return;
     try {
-      const { data: photoRows, error } = await supabase
+      const { data: photoRows, error } = await supabaseAny
         .from('publicacoes')
         .select('id, user_id, midia_url, tipo_midia, created_at')
+        .eq('is_public', true)
         .eq('tipo_midia', 'imagem')
         .order('created_at', { ascending: false })
         .limit(MOSAIC_PAGE_SIZE * 2);
@@ -344,7 +548,7 @@ export const HomeTab = () => {
       const userIds = [...new Set(rows.map(row => row.user_id))];
       let profilesMap: Record<string, { display_name: string | null; avatar_url?: string | null }> = {};
       if (userIds.length) {
-        const { data: profilesData } = await supabase
+        const { data: profilesData } = await supabaseAny
           .from('profiles')
           .select('user_id, display_name, avatar_url')
           .in('user_id', userIds);
@@ -412,29 +616,57 @@ export const HomeTab = () => {
 
   return (
     <div className="space-y-6 pb-4 animate-fade-in">
-      {/* Hero Banner - Persuasive CTA */}
-      <div className="relative overflow-hidden rounded-2xl glass">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-secondary opacity-20"></div>
-        <div className="relative p-6 text-center">
-          <Crown className="w-10 h-10 mx-auto text-primary mb-2" />
-          <h1 className="text-xl font-bold text-gradient mb-1">
-            Encontre quem te quer!
-          </h1>
-          <p className="text-foreground/80 text-sm mb-3">
-            Veja quem já mandou convite — mas só membros Premium podem responder.
-          </p>
-          
-          {!isPremium && (
-            <Button
-              onClick={() => navigate('/premium')}
-              className="bg-gradient-primary hover:opacity-90 text-white font-semibold px-5 py-2 rounded-xl text-sm shadow-[var(--shadow-glow)] transition-all duration-300 hover:scale-105"
-            >
-              <Crown className="w-4 h-4 mr-2" />
-              Ser premium!
-            </Button>
-          )}
+      {isVisitor && (
+        <div className="sticky top-20 z-40">
+          <div className="glass border border-primary/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="text-sm text-foreground/90">
+              Crie uma conta ou faça login para curtir, comentar e acessar recursos Premium.
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate('/login')}
+                className="border-primary/30"
+              >
+                Entrar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => navigate('/signup')}
+                className="bg-gradient-primary text-white"
+              >
+                Criar conta
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {!isVisitor && (
+        <div className="relative overflow-hidden rounded-2xl glass">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-secondary opacity-20"></div>
+          <div className="relative p-6 text-center">
+            <Crown className="w-10 h-10 mx-auto text-primary mb-2" />
+            <h1 className="text-xl font-bold text-gradient mb-1">
+              Encontre quem te quer!
+            </h1>
+            <p className="text-foreground/80 text-sm mb-3">
+              Veja quem já mandou convite — mas só membros Premium podem responder.
+            </p>
+            
+            {!isPremium && (
+              <Button
+                onClick={() => navigate('/premium')}
+                className="bg-gradient-primary hover:opacity-90 text-white font-semibold px-5 py-2 rounded-xl text-sm shadow-[var(--shadow-glow)] transition-all duration-300 hover:scale-105"
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Ser premium!
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Online Now Section - Horizontal Scroll */}
       <div className="space-y-4">
@@ -454,63 +686,86 @@ export const HomeTab = () => {
             className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {topUsers.map((user) => (
-              <div
-                key={user.user_id}
-                onClick={() => navigate(`/profile/view/${user.user_id}`)}
-                className="flex-shrink-0 w-[160px] snap-start cursor-pointer group"
-              >
-                <div className="relative rounded-2xl overflow-hidden bg-gradient-card border border-primary/20 transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:shadow-[var(--shadow-glow)]">
-                  {/* Avatar/Image */}
-                  <div className="relative h-[200px] overflow-hidden bg-gradient-secondary">
-                    {user.avatar_url ? (
-                      <img
-                        src={user.avatar_url}
-                        alt={user.display_name}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-4xl">
-                        {user.display_name?.[0]?.toUpperCase() || 'S'}
-                      </div>
-                    )}
+            {topUsers.map((user, index) => {
+              const isBlurred = isVisitor && index >= 4;
+              return (
+                <div
+                  key={user.user_id}
+                  onClick={() => navigate(`/profile/view/${user.user_id}`)}
+                  className="flex-shrink-0 w-[160px] snap-start cursor-pointer group"
+                >
+                  <div
+                    className={`relative rounded-2xl overflow-hidden bg-gradient-card border border-primary/20 transition-all duration-300 hover:scale-105 hover:border-primary/40 hover:shadow-[var(--shadow-glow)] ${isBlurred ? 'filter blur-sm saturate-0' : ''}`}
+                  >
+                    {/* Avatar/Image */}
+                    <div className="relative h-[200px] overflow-hidden bg-gradient-secondary">
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.display_name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            const img = e.currentTarget;
+                            if (!img.src.endsWith('/placeholder.svg')) img.src = '/placeholder.svg';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white font-bold text-4xl">
+                          {user.display_name?.[0]?.toUpperCase() || 'S'}
+                        </div>
+                      )}
 
-                    {/* Online Badge */}
-                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-green-500/90 backdrop-blur-sm px-2 py-1 rounded-full">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                      <span className="text-white text-xs font-semibold">LIVE</span>
+                      {/* Online Badge */}
+                      <div className="absolute top-2 left-2 flex items-center gap-1 bg-green-500/90 backdrop-blur-sm px-2 py-1 rounded-full">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                        <span className="text-white text-xs font-semibold">LIVE</span>
+                      </div>
+
+                      {/* Persistent Online Dot */}
+                      <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 ring-2 ring-black/70 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+
+                      {/* Premium Crown */}
+                      {user.tipo_assinatura === 'premium' && (
+                        <div className="absolute top-2 right-2 bg-accent/90 backdrop-blur-sm p-1.5 rounded-full">
+                          <Crown className="w-4 h-4 text-white" />
+                        </div>
+                      )}
                     </div>
 
-                    {/* Persistent Online Dot */}
-                    <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 ring-2 ring-black/70 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-
-                    {/* Premium Crown */}
-                    {user.tipo_assinatura === 'premium' && (
-                      <div className="absolute top-2 right-2 bg-accent/90 backdrop-blur-sm p-1.5 rounded-full">
-                        <Crown className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="p-3 space-y-1">
-                    <h3 className="font-semibold text-foreground text-sm truncate">
-                      {user.display_name}
-                    </h3>
-                    {(user.city || user.state) && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <MapPin className="w-3 h-3" />
-                        <span className="truncate">
-                          {user.city}{user.city && user.state && ', '}{user.state}
-                        </span>
+                    {/* Info */}
+                    <div className="p-3 space-y-1 relative">
+                      <h3 className="font-semibold text-foreground text-sm truncate">
+                        {user.display_name}
+                      </h3>
+                      {(user.city || user.state) && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate">
+                            {user.city}{user.city && user.state && ', '}{user.state}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {isBlurred && (
+                      <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center px-3 space-y-2">
+                        <p className="text-sm font-semibold text-white">Crie sua conta para ver o resto</p>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('/signup');
+                          }}
+                          className="px-3 py-1 text-xs font-semibold uppercase tracking-wide rounded-full border border-white/50 text-white"
+                        >
+                          Criar conta
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Ver Mais Card */}
             <div
@@ -579,6 +834,10 @@ export const HomeTab = () => {
                   alt={visibleCarouselPhotos[0]?.displayName}
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (!img.src.endsWith('/placeholder.svg')) img.src = '/placeholder.svg';
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-between">
@@ -624,6 +883,10 @@ export const HomeTab = () => {
                           alt={`Thumbnail ${index + 1}`}
                           className="w-full h-full object-cover"
                           loading="lazy"
+                          onError={(e) => {
+                            const img = e.currentTarget;
+                            if (!img.src.endsWith('/placeholder.svg')) img.src = '/placeholder.svg';
+                          }}
                         />
                       </button>
                     ))}

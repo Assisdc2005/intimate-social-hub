@@ -11,10 +11,13 @@ import { PremiumTab } from "../Tabs/PremiumTab";
 import { ProfileTab } from "../Tabs/ProfileTab";
 import { EditProfileTab } from "../Tabs/EditProfileTab";
 import { PromotionalPopup } from "../Modals/PromotionalPopup";
+import { useProfile } from "@/hooks/useProfile";
 
 export const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { profile } = useProfile();
+  const isVisitor = !profile?.user_id;
   
   // Set active tab based on current route
   const getActiveTabFromPath = () => {
@@ -34,17 +37,42 @@ export const MainLayout = () => {
   }, [location.pathname]);
 
   const renderActiveTab = () => {
+    const visitorGateContent = (
+      <div className="glass rounded-2xl border border-primary/20 px-6 py-8 text-center space-y-4">
+        <p className="text-lg font-semibold text-white">
+          Você precisa criar uma conta para acessar esta aba e marcar encontros.
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => navigate('/signup')}
+            className="px-4 py-2 rounded-lg bg-gradient-primary text-white text-sm font-semibold"
+          >
+            Criar conta
+          </button>
+          <button
+            onClick={() => navigate('/login')}
+            className="px-4 py-2 rounded-lg border border-white/30 text-white text-sm font-semibold"
+          >
+            Entrar
+          </button>
+        </div>
+        <p className="text-xs text-foreground/70">
+          A navegação continua funcionando. Faça login para liberar o conteúdo completo.
+        </p>
+      </div>
+    );
+
     switch (activeTab) {
       case 'home':
         return <HomeTab />;
       case 'discover':
-        return <DiscoverTab />;
+        return isVisitor ? visitorGateContent : <DiscoverTab />;
       case 'messages':
-        return <MessagesTabComplete />;
+        return isVisitor ? visitorGateContent : <MessagesTabComplete />;
       case 'premium':
-        return <PremiumTab />;
+        return isVisitor ? visitorGateContent : <PremiumTab />;
       case 'profile':
-        return <ProfileTab />;
+        return isVisitor ? visitorGateContent : <ProfileTab />;
       case 'edit':
         return <EditProfileTab />;
       default:

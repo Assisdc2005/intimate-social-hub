@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Heart, MessageCircle, Plus, Send, User, Clock, Crown, Trash2, Edit2, Lock, ArrowLeft } from "lucide-react";
 import { PhotoGrid } from "@/components/Profile/PhotoGrid";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,64 @@ export const PublicFeed = () => {
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
   const isVisitor = !profile?.user_id;
+  const supabaseAny = supabase as any;
+
+  const demoPublicacoes = useMemo<Publicacao[]>(() => {
+    const now = Date.now();
+    return [
+      {
+        id: 'demo-1',
+        user_id: 'demo-user-1',
+        tipo_midia: 'imagem',
+        descricao: 'Bem-vindo(a)! Explore o feed público enquanto decide criar sua conta.',
+        midia_url: 'https://images.unsplash.com/photo-1520975693416-35a9d51ec4bb?auto=format&fit=crop&w=1200&q=80',
+        created_at: new Date(now - 1000 * 60 * 25).toISOString(),
+        curtidas_count: 73,
+        comentarios_count: 12,
+        profiles: {
+          display_name: 'Membro Sensual',
+          avatar_url: undefined,
+          city: 'São Paulo',
+          state: 'SP',
+          tipo_assinatura: 'premium',
+        },
+      },
+      {
+        id: 'demo-2',
+        user_id: 'demo-user-2',
+        tipo_midia: 'texto',
+        descricao: 'Este é um exemplo de postagem pública. Faça login para interagir.',
+        midia_url: undefined,
+        created_at: new Date(now - 1000 * 60 * 55).toISOString(),
+        curtidas_count: 58,
+        comentarios_count: 6,
+        profiles: {
+          display_name: 'Visitante Curioso',
+          avatar_url: undefined,
+          city: 'Rio de Janeiro',
+          state: 'RJ',
+          tipo_assinatura: 'gratuito',
+        },
+      },
+      {
+        id: 'demo-3',
+        user_id: 'demo-user-3',
+        tipo_midia: 'imagem',
+        descricao: 'Conteúdo demonstrativo para evitar tela vazia quando não houver posts.',
+        midia_url: 'https://images.unsplash.com/photo-1520975661595-6453be3f7070?auto=format&fit=crop&w=1200&q=80',
+        created_at: new Date(now - 1000 * 60 * 120).toISOString(),
+        curtidas_count: 91,
+        comentarios_count: 19,
+        profiles: {
+          display_name: 'Nova Conexão',
+          avatar_url: undefined,
+          city: 'Belo Horizonte',
+          state: 'MG',
+          tipo_assinatura: 'premium',
+        },
+      },
+    ];
+  }, []);
 
   const [publicacoes, setPublicacoes] = useState<Publicacao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +133,8 @@ export const PublicFeed = () => {
   const [likeBadges, setLikeBadges] = useState<Record<string, number>>({});
   const [userLikeCount, setUserLikeCount] = useState<number>(0);
   const [userCommentCount, setUserCommentCount] = useState<number>(0);
+  const VISITOR_VISIBLE_POSTS = 3;
+
   const MAX_TEXT = 190;
   const FREE_POSTS_LIMIT = 5; // Primeiras 5 publicações gratuitas
 
@@ -122,7 +182,7 @@ export const PublicFeed = () => {
   const fetchReactionStats = async (postIds: string[]) => {
     if (!postIds.length) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAny
         .from('curtidas_publicacoes')
         .select('publicacao_id, reaction')
         .in('publicacao_id', postIds);
@@ -157,7 +217,10 @@ export const PublicFeed = () => {
       console.error('Erro nas operações iniciais do feed:', error);
     });
 
-    const channel = supabase
+    // For visitors, avoid realtime subscriptions that may rely on auth/session.
+    if (!profile?.user_id) return;
+
+    const channel = supabaseAny
       .channel('publicacoes_feed')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'publicacoes' },
@@ -176,7 +239,7 @@ export const PublicFeed = () => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabaseAny.removeChannel(channel);
     };
   }, [profile?.user_id, profileLoading]);
 
@@ -186,7 +249,7 @@ export const PublicFeed = () => {
     if (isPremium) return true;
     if (!profile?.user_id) return false;
 
-    const { count, error } = await supabase
+    const { count, error } = await supabaseAny
       .from('publicacoes')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', profile.user_id);
@@ -238,10 +301,16 @@ export const PublicFeed = () => {
 
   const fetchPublicacoes = async (offset = 0) => {
     try {
+      if (offset === 0) {
+        setLoading(true);
+        setHasMore(true);
+      }
+
       // Execute all queries in parallel for better performance
-      const publicacoesQuery = supabase
+      const publicacoesQuery = supabaseAny
         .from('publicacoes')
-        .select('*')
+        .select('id, user_id, midia_url, tipo_midia, descricao, created_at, updated_at, curtidas_count, comentarios_count, is_public')
+        .eq('is_public', true)
         .order('created_at', { ascending: false })
         .range(offset, offset + 19);
 
@@ -250,17 +319,20 @@ export const PublicFeed = () => {
       if (publicacoesError) throw publicacoesError;
 
       if (!publicacoesData || publicacoesData.length === 0) {
-        if (offset === 0) setPublicacoes([]);
-        if (publicacoesData?.length < 20) setHasMore(false);
+        if (offset === 0) {
+          setPublicacoes(demoPublicacoes);
+          setLikeBadges(assignRandomLikeCounts(demoPublicacoes));
+        }
+        setHasMore(false);
         return;
       }
 
       // Get unique user IDs
-      const userIds = [...new Set(publicacoesData.map(pub => pub.user_id))];
-      
+      const userIds = [...new Set(((publicacoesData as any[]) || []).map((pub: any) => pub?.user_id).filter(Boolean))] as string[];
+
       // Fetch profiles and user reactions in parallel
       const [{ data: profilesData }] = await Promise.all([
-        supabase
+        supabaseAny
           .from('profiles')
           .select('user_id, display_name, avatar_url, city, state, tipo_assinatura')
           .in('user_id', userIds)
@@ -280,6 +352,13 @@ export const PublicFeed = () => {
         // Exclude generic placeholder names like 'Usuário'
         return dn.toLowerCase() !== 'usuário' && dn.toLowerCase() !== 'usuario';
       });
+
+      if (offset === 0 && filteredPublicacoes.length === 0) {
+        setPublicacoes(demoPublicacoes);
+        setLikeBadges(assignRandomLikeCounts(demoPublicacoes));
+        setHasMore(false);
+        return;
+      }
 
       if (offset === 0) {
         setPublicacoes(filteredPublicacoes);
@@ -304,6 +383,11 @@ export const PublicFeed = () => {
       }
     } catch (error) {
       console.error('Erro ao buscar publicações:', error);
+      if (offset === 0) {
+        setPublicacoes(demoPublicacoes);
+        setLikeBadges(assignRandomLikeCounts(demoPublicacoes));
+        setHasMore(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -849,6 +933,7 @@ export const PublicFeed = () => {
 
       {publicacoes.map((publicacao, index) => {
         const isBlocked = !isPremium && !isVisitor && index >= FREE_POSTS_LIMIT;
+        const isVisitorBlurred = isVisitor && index >= VISITOR_VISIBLE_POSTS;
 
         return (
           <div 
@@ -859,20 +944,46 @@ export const PublicFeed = () => {
             onClick={isBlocked ? handleBlockedInteraction : undefined}
           >
             {/* Overlay de bloqueio */}
-            {isBlocked && (
+            {(isBlocked || isVisitorBlurred) && (
               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
                 <div className="text-center space-y-3 p-6">
                   <div className="w-16 h-16 mx-auto bg-gradient-primary rounded-full flex items-center justify-center shadow-glow animate-pulse">
-                    <Lock className="w-8 h-8 text-white" />
+                    {isBlocked ? <Lock className="w-8 h-8 text-white" /> : <ArrowLeft className="w-8 h-8 text-white" />}
                   </div>
-                  <h3 className="text-xl font-bold text-white">Conteúdo Premium</h3>
-                  <p className="text-white/80">Torne-se Premium para ver</p>
+                  <h3 className="text-xl font-bold text-white">{isBlocked ? 'Conteúdo Premium' : 'Crie uma conta para ver mais'}</h3>
+                  <p className="text-white/80">
+                    {isBlocked
+                      ? 'Torne-se Premium para acessar este post.'
+                      : 'Veja apenas 3 publicações completas. Crie uma conta ou entre para ver o resto.'}
+                  </p>
+                  {!isBlocked && (
+                    <div className="flex items-center justify-center gap-3 pt-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/signup');
+                        }}
+                        className="px-4 py-2 rounded-lg bg-gradient-primary text-white text-sm font-semibold"
+                      >
+                        Criar conta
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/login');
+                        }}
+                        className="px-4 py-2 rounded-lg border border-white/30 text-white text-sm font-semibold"
+                      >
+                        Entrar
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Header da publicação */}
-            <div className="flex items-center gap-3 p-4">
+            <div className="flex items-center gap-3 p-4 relative z-20">
               <div 
                 className="relative w-12 h-12 cursor-pointer"
                 onClick={() => handleViewProfile(publicacao.user_id)}
@@ -968,7 +1079,7 @@ export const PublicFeed = () => {
             )}
 
             {/* Mídia (carrossel ou fallback para única mídia) */}
-            <div className={`relative ${isBlocked ? 'blur-lg pointer-events-none' : ''}`}>
+            <div className={`relative ${(isBlocked || isVisitorBlurred) ? 'blur-lg pointer-events-none' : ''}`}>
               <PublicacaoCarrossel
                 publicacaoId={publicacao.id}
                 isPremium={isPremium || index < FREE_POSTS_LIMIT}
@@ -977,7 +1088,7 @@ export const PublicFeed = () => {
                   tipo: publicacao.tipo_midia === 'video' ? 'video' : 'image'
                 } : undefined}
                 onMediaClick={(media) => {
-                  if (!isBlocked) {
+                  if (!isBlocked && !isVisitorBlurred) {
                     openMediaModal(media);
                   }
                 }}
@@ -989,7 +1100,7 @@ export const PublicFeed = () => {
                   publicacaoId={publicacao.id}
                   isPremium={isPremium || index < FREE_POSTS_LIMIT}
                   onMediaClick={(media) => {
-                    if (!isBlocked) {
+                    if (!isBlocked && !isVisitorBlurred) {
                       openMediaModal(media);
                     }
                   }}
@@ -998,7 +1109,7 @@ export const PublicFeed = () => {
             </div>
 
             {/* Actions */}
-            <div className={`px-4 pb-3 ${isBlocked ? 'blur-sm pointer-events-none' : ''}`}>
+            <div className={`px-4 pb-3 ${(isBlocked || isVisitorBlurred) ? 'blur-sm pointer-events-none' : ''}`}>
               <div className="flex items-center gap-4 mb-3">
                 <Popover 
                   open={reactionMenuPost === publicacao.id}

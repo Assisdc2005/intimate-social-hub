@@ -18,6 +18,8 @@ export const DiscoverTab = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isOnlineOrFake, registerCandidates } = useFakeOnline();
+  const isVisitor = !profile?.user_id;
+  const supabaseAny = supabase as any;
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
@@ -43,6 +45,37 @@ export const DiscoverTab = () => {
   const [hasMoreUsers, setHasMoreUsers] = useState(true);
   const USERS_PER_PAGE = 10;
 
+  const demoUsers = [
+    {
+      id: 'demo-1',
+      user_id: 'demo-user-1',
+      display_name: 'Nova Conexão',
+      city: 'São Paulo',
+      state: 'SP',
+      gender: 'feminino',
+      sexual_orientation: 'hetero',
+      subscription_type: 'premium',
+      avatar_url: null,
+      bio: 'Explore perfis públicos. Crie uma conta para interagir e ver recursos Premium.',
+      profile_completed: true,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'demo-2',
+      user_id: 'demo-user-2',
+      display_name: 'Visitante Curioso',
+      city: 'Rio de Janeiro',
+      state: 'RJ',
+      gender: 'masculino',
+      sexual_orientation: 'hetero',
+      subscription_type: 'gratuito',
+      avatar_url: null,
+      bio: 'Conteúdo demonstrativo para evitar tela vazia quando não houver perfis disponíveis.',
+      profile_completed: true,
+      updated_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    },
+  ];
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -50,17 +83,18 @@ export const DiscoverTab = () => {
         await loadUsers(1, true);
 
         // Fetch posts
-        const { data: postsData, error: postsError } = await supabase
+        const { data: postsData, error: postsError } = await supabaseAny
           .from('posts')
           .select('*')
+          .eq('is_public', true)
           .order('created_at', { ascending: false })
           .limit(10);
 
         // Merge profiles manually to avoid FK alias issues
-        const postUserIds = [...new Set((postsData || []).map((p: any) => p.user_id))];
+        const postUserIds = [...new Set(((postsData as any[]) || []).map((p: any) => p?.user_id).filter(Boolean))] as string[];
         let postsWithProfiles = postsData || [];
         if (postUserIds.length) {
-          const { data: profs } = await supabase
+          const { data: profs } = await supabaseAny
             .from('profiles')
             .select('user_id, display_name, avatar_url, city, state')
             .in('user_id', postUserIds);
@@ -82,10 +116,8 @@ export const DiscoverTab = () => {
       }
     };
 
-    if (profile?.user_id) {
-      fetchData();
-    }
-  }, [profile?.user_id]);
+    fetchData();
+  }, []);
 
   const loadUsers = async (page: number = 1, isInitialLoad: boolean = false) => {
     try {
@@ -93,20 +125,39 @@ export const DiscoverTab = () => {
       
       const offset = (page - 1) * USERS_PER_PAGE;
       
-      const { data: usersData, error: usersError } = await supabase
+      let usersQuery: any = supabaseAny
         .from('profiles')
         .select('*')
         .eq('profile_completed', true)
-        .neq('user_id', profile?.user_id)
         .order('updated_at', { ascending: false })
         .range(offset, offset + USERS_PER_PAGE - 1);
 
+      if (profile?.user_id) {
+        usersQuery = usersQuery.neq('user_id', profile.user_id);
+      }
+
+      const { data: usersData, error: usersError } = await usersQuery;
+
       if (usersError) {
         console.error('Error fetching users:', usersError);
+        if (isInitialLoad || page === 1) {
+          setUsers(demoUsers);
+          setFilteredUsers(demoUsers);
+          setHasMoreUsers(false);
+          setCurrentPage(1);
+        }
         return;
       }
 
       const newUsers = usersData || [];
+
+      if ((isInitialLoad || page === 1) && newUsers.length === 0) {
+        setUsers(demoUsers);
+        setFilteredUsers(demoUsers);
+        setHasMoreUsers(false);
+        setCurrentPage(1);
+        return;
+      }
       
       if (isInitialLoad || page === 1) {
         setUsers(newUsers);
@@ -121,6 +172,12 @@ export const DiscoverTab = () => {
       setCurrentPage(page);
     } catch (error) {
       console.error('Error loading users:', error);
+      if (isInitialLoad || page === 1) {
+        setUsers(demoUsers);
+        setFilteredUsers(demoUsers);
+        setHasMoreUsers(false);
+        setCurrentPage(1);
+      }
     } finally {
       if (!isInitialLoad) setLoadingMore(false);
     }

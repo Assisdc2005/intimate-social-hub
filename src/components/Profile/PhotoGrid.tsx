@@ -8,6 +8,7 @@ interface PhotoGridProps {
 
 export const PhotoGrid = ({ userId, className = "" }: PhotoGridProps) => {
   const [photos, setPhotos] = useState<string[]>([]);
+  const supabaseAny = supabase as any;
 
   useEffect(() => {
     fetchUserPhotos();
@@ -15,10 +16,11 @@ export const PhotoGrid = ({ userId, className = "" }: PhotoGridProps) => {
 
   const fetchUserPhotos = async () => {
     try {
-      const { data } = await supabase
+      const { data } = await supabaseAny
         .from('publicacoes')
         .select('midia_url, tipo_midia')
         .eq('user_id', userId)
+        .eq('is_public', true)
         .eq('tipo_midia', 'imagem')
         .not('midia_url', 'is', null)
         .order('created_at', { ascending: false })

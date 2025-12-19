@@ -78,7 +78,7 @@ function AuthenticatedApp() {
       {/* Rota raiz - Landing Page para todos os visitantes */}
       <Route 
         path="/" 
-        element={<LandingPage />}
+        element={<Navigate to="/home" replace />}
       />
       
       {/* Páginas de autenticação - sempre acessíveis */}
@@ -138,81 +138,14 @@ function AuthenticatedApp() {
         } 
       />
       
-      <Route 
-        path="/profile"
-        element={
-          user ? (
-            profile?.profile_completed ? (
-              <Profile />
-            ) : (
-              <Navigate to="/complete-profile" replace />
-            )
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      >
-        <Route index element={<Navigate to="about" replace />} />
-        <Route path="about" element={<AboutTab />} />
-        <Route path="testimonials" element={<TestimonialsTab />} />
-        <Route path="posts" element={<PostsTab />} />
-        <Route path="settings" element={<SettingsTab />} />
-      </Route>
+      <Route path="/profile" element={<Index />} />
       
-      <Route 
-        path="/discover"
-        element={
-          user ? (
-            <Index />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } 
-      />
+      <Route path="/discover" element={<Index />} />
+      <Route path="/messages" element={<Index />} />
+      <Route path="/premium" element={<Index />} />
+      <Route path="/profile/edit" element={<Index />} />
       
-      <Route 
-        path="/messages"
-        element={
-          user ? (
-            <Index />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } 
-      />
-      
-      <Route 
-        path="/premium"
-        element={
-          user ? (
-            <Index />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } 
-      />
-      
-      <Route 
-        path="/profile/edit"
-        element={
-          user ? (
-            <Index />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-      
-      <Route 
-        path="/profile/view/:userId"
-        element={
-          user ? (
-            <UserProfile />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } 
-      />
+      <Route path="/profile/view/:userId" element={<UserProfile />} />
 
       {/* Rotas institucionais - acessíveis para todos */}
       <Route path="/about" element={<About />} />
