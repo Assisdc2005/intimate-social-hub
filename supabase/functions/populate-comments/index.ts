@@ -111,14 +111,12 @@ serve(async (req) => {
 
     console.log("Iniciando população de comentários...");
 
-    // 1. Buscar publicações com fotos que não têm comentários
+    // 1. Buscar TODAS as publicações que não têm comentários (com ou sem mídia)
     const { data: publicacoes, error: pubError } = await supabase
       .from("publicacoes")
       .select(`id, user_id, midia_url, tipo_midia, comentarios_count`)
-      .not("midia_url", "is", null)
-      .or("tipo_midia.eq.imagem,tipo_midia.is.null")
       .eq("comentarios_count", 0)
-      .limit(50);
+      .limit(200);
 
     if (pubError) {
       console.error("Erro ao buscar publicações:", pubError);
