@@ -933,7 +933,8 @@ export const PublicFeed = () => {
 
       {publicacoes.map((publicacao, index) => {
         const isBlocked = !isPremium && !isVisitor && index >= FREE_POSTS_LIMIT;
-        const isVisitorBlurred = isVisitor && index >= VISITOR_VISIBLE_POSTS;
+        const hasMediaAttachment = Boolean(publicacao.midia_url);
+        const isVisitorBlurred = isVisitor && index >= VISITOR_VISIBLE_POSTS && hasMediaAttachment;
 
         return (
           <div 

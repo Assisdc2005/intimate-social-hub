@@ -71,7 +71,7 @@ export const PromotionalPopup = () => {
     navigate('/premium');
   };
 
-  if (isPremium || !isVisible) return null;
+  if (isPremium || !isVisible || isVisitor) return null;
 
   const message = messages[currentMessage];
 
