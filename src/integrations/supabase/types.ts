@@ -397,6 +397,7 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          is_public: boolean
           likes_count: number | null
           media_type: Database["public"]["Enums"]["post_type"]
           media_url: string | null
@@ -408,6 +409,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          is_public?: boolean
           likes_count?: number | null
           media_type?: Database["public"]["Enums"]["post_type"]
           media_url?: string | null
@@ -419,6 +421,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          is_public?: boolean
           likes_count?: number | null
           media_type?: Database["public"]["Enums"]["post_type"]
           media_url?: string | null
@@ -592,6 +595,7 @@ export type Database = {
           curtidas_count: number | null
           descricao: string | null
           id: string
+          is_public: boolean
           midia_url: string | null
           tipo_midia: string | null
           updated_at: string
@@ -603,6 +607,7 @@ export type Database = {
           curtidas_count?: number | null
           descricao?: string | null
           id?: string
+          is_public?: boolean
           midia_url?: string | null
           tipo_midia?: string | null
           updated_at?: string
@@ -614,6 +619,7 @@ export type Database = {
           curtidas_count?: number | null
           descricao?: string | null
           id?: string
+          is_public?: boolean
           midia_url?: string | null
           tipo_midia?: string | null
           updated_at?: string
