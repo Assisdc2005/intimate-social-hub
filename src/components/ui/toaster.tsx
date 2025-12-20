@@ -48,7 +48,7 @@ export function Toaster() {
                     </p>
                   )}
                   {description && (
-                    <ToastDescription className="mt-0.5 text-xs text-white/85 leading-snug truncate">
+                    <ToastDescription className="mt-0.5 text-xs text-white/85 leading-snug break-words max-h-20 overflow-y-auto text-left">
                       {description}
                     </ToastDescription>
                   )}

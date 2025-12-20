@@ -265,6 +265,46 @@ export const UserProfile = () => {
     }
   };
 
+  // Gate for visitors (usuários não logados): não permitir acesso a perfis
+  if (!currentUser?.user_id) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <Card className="glass backdrop-blur-xl border-primary/20 max-w-md w-full">
+          <CardContent className="p-6 space-y-4 text-center">
+            <h2 className="text-xl font-bold text-gradient mb-1">Crie sua conta para ver perfis</h2>
+            <p className="text-sm text-white/80">
+              Perfis completos, fotos e publicações são exclusivos para membros. Crie uma conta gratuita ou faça login para continuar.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-2">
+              <Button
+                onClick={() => navigate('/signup')}
+                className="bg-gradient-primary text-white flex-1"
+              >
+                Criar conta
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/login')}
+                className="border-white/30 text-white flex-1"
+              >
+                Fazer login
+              </Button>
+            </div>
+            <div className="flex justify-center mt-2">
+              <Button
+                variant="ghost"
+                onClick={() => navigate(-1)}
+                className="text-white/70 hover:text-white hover:bg-white/10 text-xs"
+              >
+                Voltar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -429,6 +469,56 @@ export const UserProfile = () => {
 
       {/* Testimonials Section */}
       <TestimonialsSection profileUserId={userId || ''} />
+
+      {/* User Publications Section */}
+      {userPosts.length > 0 && (
+        <Card className="glass backdrop-blur-xl border-primary/20">
+          <CardContent className="p-4 space-y-4">
+            <h2 className="text-lg font-semibold text-gradient flex items-center gap-2">
+              <Camera className="w-4 h-4" />
+              Publicações de {userProfile.display_name}
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {userPosts.map((post) => (
+                <Card key={post.id} className="bg-white/5 border-white/10">
+                  <CardContent className="p-3 space-y-2">
+                    {post.midia_url && (
+                      <div className="aspect-square rounded-lg overflow-hidden mb-2">
+                        <BlurredMedia
+                          src={post.midia_url}
+                          alt={post.descricao || 'Publicação'}
+                          type={post.tipo_midia === 'video' ? 'video' : 'image'}
+                          isPremium={!!isPremium}
+                          className="w-full h-full"
+                        />
+                      </div>
+                    )}
+
+                    {post.descricao && (
+                      <p className="text-sm text-white line-clamp-3">{post.descricao}</p>
+                    )}
+
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                      <span>
+                        {new Date(post.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleLike(post.id)}
+                        className="inline-flex items-center gap-1 text-xs text-white/80 hover:text-white"
+                      >
+                        <Heart className="w-3 h-3" />
+                        <span>{Math.floor(Math.random() * 90) + 10}</span>
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Friends list modal */}
       <AlertDialog open={friendsListOpen} onOpenChange={setFriendsListOpen}>

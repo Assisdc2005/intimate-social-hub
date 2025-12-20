@@ -22,11 +22,18 @@ export const BlurredMedia: React.FC<BlurredMediaProps> = ({
   controls = false
 }) => {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const navigate = useNavigate();
 
   const handleMediaClick = () => {
     if (!isPremium) {
       setShowPremiumModal(true);
+      return;
+    }
+
+    // Para imagens já liberadas, abrir visualização maior
+    if (type === 'image') {
+      setShowPreview(true);
     }
   };
 
@@ -49,7 +56,7 @@ export const BlurredMedia: React.FC<BlurredMediaProps> = ({
             <div className="absolute inset-0 bg-black/30 flex items-center justify-center cursor-pointer">
               <div className="text-center text-white">
                 <Crown className="w-8 h-8 mx-auto mb-2" />
-               <p className="text-sm font-semibold">Conteúdo Premium – Clique para ver</p>
+                <p className="text-sm font-semibold">Conteúdo Premium – Clique para ver</p>
               </div>
             </div>
           )}
@@ -105,11 +112,32 @@ export const BlurredMedia: React.FC<BlurredMediaProps> = ({
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center cursor-pointer">
             <div className="text-center text-white">
               <Crown className="w-8 h-8 mx-auto mb-2" />
-               <p className="text-sm font-semibold">Conteúdo Premium – Clique para ver</p>
+              <p className="text-sm font-semibold">Conteúdo Premium – Clique para ver</p>
             </div>
           </div>
         )}
       </div>
+
+      {/* Modal de visualização da imagem em tamanho maior (apenas quando já liberada) */}
+      {isPremium && type === 'image' && (
+        <Dialog open={showPreview} onOpenChange={setShowPreview}>
+          <DialogContent className="bg-background/95 backdrop-blur border-white/20 max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <Eye className="w-4 h-4" />
+                Visualizar imagem
+              </DialogTitle>
+            </DialogHeader>
+            <div className="w-full max-h-[70vh] flex items-center justify-center">
+              <img
+                src={src}
+                alt={alt}
+                className="max-h-[70vh] max-w-full w-auto h-auto rounded-xl object-contain"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={showPremiumModal} onOpenChange={setShowPremiumModal}>
         <DialogContent className="bg-background/95 backdrop-blur border-white/20">

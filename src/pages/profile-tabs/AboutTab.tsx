@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProfile } from "@/hooks/useProfile";
-import { User, MapPin, Heart, Users, Target, Calendar, Briefcase } from "lucide-react";
+import { User, MapPin, Heart, Users, Target, Calendar, Flame } from "lucide-react";
 
 export const AboutTab = () => {
   const { profile } = useProfile();
@@ -47,7 +47,7 @@ export const AboutTab = () => {
           )}
           {profile?.profession && (
             <div className="flex items-center gap-2 text-sm">
-              <Briefcase className="h-4 w-4 text-primary" />
+              <Flame className="h-4 w-4 text-primary" />
               <span>{profile.profession}</span>
             </div>
           )}

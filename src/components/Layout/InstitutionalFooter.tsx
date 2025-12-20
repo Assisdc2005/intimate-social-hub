@@ -9,6 +9,13 @@ export const InstitutionalFooter = () => {
     window.location.href = "mailto:suporte@sensualconnect.com.br";
   };
 
+  const seekingOptions = [
+    { label: "Encontros casuais", value: "encontros_casuais" },
+    { label: "Amizade", value: "amizade" },
+    { label: "Relacionamento sério", value: "relacionamento_serio" },
+    { label: "Aventura discreta", value: "aventura_discreta" },
+  ];
+
   const footerLinks = [
     { label: "Sobre o Site", path: "/about" },
     { label: "Termos de Uso", path: "/terms" },
@@ -40,6 +47,25 @@ export const InstitutionalFooter = () => {
               <p className="text-xs text-muted-foreground">
                 Desenvolvido com responsabilidade e segurança para maiores de 18 anos.
               </p>
+            </div>
+
+            {/* Em busca de... */}
+            <div className="mt-3 space-y-1 text-center md:text-left">
+              <p className="text-xs font-semibold text-foreground/90 uppercase tracking-wide">
+                Em busca de...
+              </p>
+              <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground justify-center md:justify-start">
+                {seekingOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => navigate(`/discover?seeking=${opt.value}`)}
+                    className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:text-primary transition-colors duration-150"
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

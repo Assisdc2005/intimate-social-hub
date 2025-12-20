@@ -371,14 +371,18 @@ export default function Profile() {
                     Editar Perfil
                   </Button>
                 </div>
-                {profile.interests.map((interest, index) => (
-                  <Badge 
-                    key={index}
-                    className="bg-primary/20 text-primary border border-primary/30"
-                  >
-                    {interest}
-                  </Badge>
-                ))}
+                {profile?.interests?.length ? (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {profile.interests.map((interest, index) => (
+                      <Badge 
+                        key={index}
+                        className="bg-primary/20 text-primary border border-primary/30"
+                      >
+                        {interest}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             
           </CardContent>

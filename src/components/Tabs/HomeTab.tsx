@@ -196,7 +196,7 @@ export const HomeTab = () => {
 
         const { data: topPool, error: topErr } = await supabaseAny
           .from('profiles')
-          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
+          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura, looking_for')
           .eq('profile_completed', true)
           .not('avatar_url', 'is', null)
           .limit(LIMIT_POOL);
@@ -309,7 +309,7 @@ export const HomeTab = () => {
       const FEMALE_GENDER_FILTER = 'fem%'; // handle 'feminino' variations
       const commonFilters = (query: any) =>
         query
-          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
+          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura, looking_for')
           .eq('profile_completed', true)
           .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
@@ -400,7 +400,7 @@ export const HomeTab = () => {
         const remaining = 5 - selected.length;
         const { data: fallbackPool } = await supabaseAny
           .from('profiles')
-          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
+          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura, looking_for')
           .eq('profile_completed', true)
           .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
@@ -416,7 +416,7 @@ export const HomeTab = () => {
         const remaining = 5 - selected.length;
         const { data: broadPool } = await supabaseAny
           .from('profiles')
-          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura')
+          .select('user_id, display_name, avatar_url, city, state, gender, status_online, last_seen, tipo_assinatura, looking_for')
           .eq('profile_completed', true)
           .neq('user_id', profile?.user_id)
           .limit(LIMIT_POOL);
@@ -643,30 +643,28 @@ export const HomeTab = () => {
         </div>
       )}
 
-      {!isVisitor && (
-        <div className="relative overflow-hidden rounded-2xl glass">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-secondary opacity-20"></div>
-          <div className="relative p-6 text-center">
-            <Crown className="w-10 h-10 mx-auto text-primary mb-2" />
-            <h1 className="text-xl font-bold text-gradient mb-1">
-              Encontre quem te quer!
-            </h1>
-            <p className="text-foreground/80 text-sm mb-3">
-              Descubra quem te deseja e veja onde a noite pode levar…
-            </p>
-            
-            {!isPremium && (
-              <Button
-                onClick={() => navigate('/discover')}
-                className="bg-gradient-primary hover:opacity-90 text-white font-semibold px-5 py-2 rounded-xl text-sm shadow-[var(--shadow-glow)] transition-all duration-300 hover:scale-105"
-              >
-                <Crown className="w-4 h-4 mr-2" />
-                Encontrar alguém agora! 🔥
-              </Button>
-            )}
-          </div>
+      <div className="relative overflow-hidden rounded-2xl glass">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-secondary opacity-20"></div>
+        <div className="relative p-6 text-center">
+          <Crown className="w-10 h-10 mx-auto text-primary mb-2" />
+          <h1 className="text-xl font-bold text-gradient mb-1">
+            Encontre quem te quer!
+          </h1>
+          <p className="text-foreground/80 text-sm mb-3">
+            Descubra quem te deseja e veja onde a noite pode levar…
+          </p>
+          
+          {!isPremium && (
+            <Button
+              onClick={() => navigate('/discover')}
+              className="bg-gradient-primary hover:opacity-90 text-white font-semibold px-5 py-2 rounded-xl text-sm shadow-[var(--shadow-glow)] transition-all duration-300 hover:scale-105"
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              Encontrar alguém agora! 🔥
+            </Button>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Online Now Section - Horizontal Scroll */}
       <div className="space-y-4">
@@ -725,6 +723,16 @@ export const HomeTab = () => {
 
                       {/* Persistent Online Dot */}
                       <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 ring-2 ring-black/70 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+
+                      {/* Em busca de badge - bottom-left over photo */}
+                      {user.looking_for && (
+                        <div className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/75 border border-primary/40 px-2 py-0.5 shadow-[0_0_10px_rgba(239,68,68,0.5)] backdrop-blur-sm">
+                          <Flame className="w-3 h-3 text-primary" />
+                          <span className="text-[10px] font-medium text-white/90 truncate max-w-[110px]">
+                            {user.looking_for}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Premium Crown */}
                       {user.tipo_assinatura === 'premium' && (

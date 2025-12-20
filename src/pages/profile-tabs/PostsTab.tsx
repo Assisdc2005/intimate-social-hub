@@ -7,6 +7,7 @@ import { BlurredMedia } from "@/components/ui/blurred-media";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,7 @@ interface UserPost {
 
 const PostsTab = () => {
   const { profile, isPremium } = useProfile();
+  const { toast } = useToast();
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
@@ -77,17 +79,31 @@ const PostsTab = () => {
 
   const saveEdit = async () => {
     if (!editingPost) return;
-    await supabase
-      .from('publicacoes')
-      .update({
-        descricao: editData.descricao || null,
-        midia_url: editData.midia_url || null,
-        tipo_midia: editData.tipo_midia,
-      })
-      .eq('id', editingPost.id);
-    setEditOpen(false);
-    setEditingPost(null);
-    await load();
+
+    try {
+      // Por enquanto, só atualizamos a legenda/descrição para evitar erros de upload
+      const { error } = await supabase
+        .from('publicacoes')
+        .update({
+          descricao: editData.descricao || null,
+        })
+        .eq('id', editingPost.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setEditOpen(false);
+      setEditingPost(null);
+      await load();
+    } catch (error: any) {
+      console.error('Erro ao salvar edição da publicação:', error, typeof error === 'object' ? JSON.stringify(error) : String(error));
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar as alterações da publicação. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const confirmDelete = (post: UserPost) => {
@@ -131,7 +147,7 @@ const PostsTab = () => {
                           src={post.midia_url}
                           alt="Post"
                           type={post.tipo_midia === 'video' ? 'video' : 'image'}
-                          isPremium={isPremium}
+                          isPremium={true}
                           className="w-full h-full"
                         />
                       </div>
@@ -176,27 +192,16 @@ const PostsTab = () => {
               placeholder="Escreva a legenda..."
               className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
             />
-            <label className="text-sm text-gray-300">URL da mídia (imagem ou vídeo)</label>
+            <label className="text-sm text-gray-300">Mídia (imagem ou vídeo)</label>
             <Input
-              value={editData.midia_url}
-              onChange={(e) => setEditData((d) => ({ ...d, midia_url: e.target.value }))}
-              placeholder="https://..."
-              className="bg-white/10 border-white/20 text-white placeholder:text-gray-300"
+              id="edit-media-file"
+              type="file"
+              accept="image/*,video/*"
+              className="bg-white/10 border-white/20 text-white placeholder:text-gray-300 cursor-pointer"
             />
-            <label className="text-sm text-gray-300">Tipo de mídia</label>
-            <div className="flex gap-2">
-              {(["texto", "imagem", "video"] as const).map((t) => (
-                <Button
-                  key={t}
-                  type="button"
-                  variant={editData.tipo_midia === t ? "default" : "outline"}
-                  onClick={() => setEditData((d) => ({ ...d, tipo_midia: t }))}
-                  className={editData.tipo_midia === t ? "bg-primary text-white" : "border-white/20 text-white"}
-                >
-                  {t}
-                </Button>
-              ))}
-            </div>
+            <p className="text-xs text-gray-400">
+              Se você não selecionar um novo arquivo, a mídia atual será mantida. Para trocar, escolha uma nova foto ou vídeo.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>

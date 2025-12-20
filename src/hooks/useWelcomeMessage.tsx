@@ -131,7 +131,7 @@ export const useWelcomeMessage = () => {
         }
 
         // Send the welcome message (conteúdo fixo da Luna Sato para novos usuários)
-        const welcomeMessage = 'Oiii 😍 se quiser conversar, é só me chamar';
+        const welcomeMessage = 'Oii, tudo bemm? podemos conversar';
 
         const { error: msgError } = await supabase
           .from('messages')
@@ -151,13 +151,11 @@ export const useWelcomeMessage = () => {
             .update({ last_message_at: new Date().toISOString() })
             .eq('id', conversationId);
 
-          // Após 30 segundos de uso, avisar o usuário sobre a nova mensagem da Luna Sato
-          setTimeout(() => {
-            toast({
-              title: 'Nova mensagem',
-              description: 'Você recebeu uma mensagem da Luna Sato. Acesse suas mensagens e veja. 🔥',
-            });
-          }, 30 * 1000);
+          // Avisar imediatamente o usuário sobre a nova mensagem da Luna Sato
+          toast({
+            title: 'Nova mensagem',
+            description: 'Você recebeu uma mensagem da Luna Sato. Acesse suas mensagens e veja. 🔥',
+          });
         }
 
         sentRef.current = true;

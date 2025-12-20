@@ -229,7 +229,8 @@ export const CompleteProfile = () => {
   }, [formData.state]);
 
   // Campos obrigatórios
-  const requiredFields = ['birth_date', 'gender', 'sexual_orientation', 'state', 'city', 'profession', 'relationship_status', 'bio'];
+  // Troca 'profession' por 'looking_for' para usar o campo "Em busca de"
+  const requiredFields = ['birth_date', 'gender', 'sexual_orientation', 'state', 'city', 'looking_for', 'relationship_status', 'bio'];
 
   // Função para retornar à página de autenticação
   const handleBackToAuth = async () => {
@@ -566,21 +567,19 @@ export const CompleteProfile = () => {
                   <label className="text-white text-sm">Em busca de *</label>
                   <div className="relative">
                     <select
-                      value={formData.profession}
-                      onChange={(e) => handleFieldChange('profession', e.target.value)}
-                      className={`appearance-none bg-white/10 border border-primary/40 ${!formData.profession ? 'text-gray-300' : 'text-white'} w-full h-11 rounded-lg px-3 pr-10 py-2 text-sm backdrop-blur-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 focus:shadow-[0_0_30px_rgba(255,54,164,0.15)] hover:bg-white/15 ${
-                        errors.profession ? 'border-red-500 border-2' : ''
+                      value={formData.looking_for}
+                      onChange={(e) => handleFieldChange('looking_for', e.target.value)}
+                      className={`appearance-none bg-white/10 border border-primary/40 ${!formData.looking_for ? 'text-gray-300' : 'text-white'} w-full h-11 rounded-lg px-3 pr-10 py-2 text-sm backdrop-blur-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 focus:shadow-[0_0_30px_rgba(255,54,164,0.15)] hover:bg-white/15 ${
+                        errors.looking_for ? 'border-red-500 border-2' : ''
                       }`}
                     >
                       <option value="" disabled>Selecione uma opção</option>
                       <option value="Encontros casuais">Encontros casuais</option>
-                      <option value="Namoro sério / relacionamento">Namoro sério / relacionamento</option>
-                      <option value="Amizade / novos amigos">Amizade / novos amigos</option>
-                      <option value="Conversas e flertes">Conversas e flertes</option>
+                      <option value="Relacionamento sério">Relacionamento sério</option>
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
                   </div>
-                  {errors.profession && <p className="text-red-400 text-xs mt-1">Campo obrigatório</p>}
+                  {errors.looking_for && <p className="text-red-400 text-xs mt-1">Campo obrigatório</p>}
                 </div>
                 
                 <div>

@@ -133,12 +133,17 @@ function AuthenticatedApp() {
       {/* redireciona para /complete-profile após 3 minutos de uso ativo */}
       <Route 
         path="/home" 
-        element={
-          <Index />
-        } 
+        element={<Index />} 
       />
-      
-      <Route path="/profile" element={<Index />} />
+
+      {/* Perfil do próprio usuário com abas internas (Sobre, Depoimentos, Publicações, Configurações) */}
+      <Route path="/profile" element={<Profile />}>
+        <Route index element={<Navigate to="/profile/about" replace />} />
+        <Route path="about" element={<AboutTab />} />
+        <Route path="testimonials" element={<TestimonialsTab />} />
+        <Route path="posts" element={<PostsTab />} />
+        <Route path="settings" element={<SettingsTab />} />
+      </Route>
       
       <Route path="/discover" element={<Index />} />
       <Route path="/messages" element={<Index />} />

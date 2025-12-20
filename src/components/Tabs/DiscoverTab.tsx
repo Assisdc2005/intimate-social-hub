@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+
 import { Search, Filter, MapPin, Heart, MessageCircle, UserPlus, Plus, Play, Clock, User, Camera } from "lucide-react";
 import { PhotoGrid } from "@/components/Profile/PhotoGrid";
 import { Button } from "@/components/ui/button";
@@ -11,15 +12,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useFakeOnline } from "@/hooks/useFakeOnline";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export const DiscoverTab = () => {
   const { profile, isPremium } = useProfile();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
   const { isOnlineOrFake, registerCandidates } = useFakeOnline();
   const isVisitor = !profile?.user_id;
   const supabaseAny = supabase as any;
+
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
@@ -38,6 +42,8 @@ export const DiscoverTab = () => {
     relationship_status: 'all',
     subscription_type: 'all',
   });
+  const [seekingFilter, setSeekingFilter] = useState<string | null>(null);
+
   const [debouncedCity, setDebouncedCity] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -193,6 +199,27 @@ export const DiscoverTab = () => {
     return () => clearTimeout(t);
   }, [filters.city]);
 
+  // Handler centralizado para alterar o filtro "Em busca de" e manter URL em sincronia
+  const handleSeekingChange = (value: string) => {
+    const nextSeeking = value === 'all' ? null : value;
+    setSeekingFilter(nextSeeking);
+
+    const params = new URLSearchParams(location.search);
+    if (nextSeeking) {
+      params.set('seeking', nextSeeking);
+    } else {
+      params.delete('seeking');
+    }
+
+    navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const seeking = params.get('seeking');
+    setSeekingFilter(seeking);
+  }, [location.search]);
+
   useEffect(() => {
     let filtered = users;
 
@@ -219,6 +246,21 @@ export const DiscoverTab = () => {
       filtered = filtered.filter(user => user.subscription_type === filters.subscription_type);
     }
 
+    // Apply "Em busca de" filter (looking_for) se vier do rodapé
+    if (seekingFilter) {
+      const labelMap: Record<string, string> = {
+        encontros_casuais: 'encontros casuais',
+        amizade: 'amizade',
+        relacionamento_serio: 'relacionamento sério',
+        aventura_discreta: 'aventura discreta',
+      };
+      const needle = (labelMap[seekingFilter] || seekingFilter).toLowerCase();
+      filtered = filtered.filter((user) =>
+        typeof user.looking_for === 'string' &&
+        user.looking_for.toLowerCase().includes(needle)
+      );
+    }
+
     // Advanced filter logic
     if (advancedFilter === 'online') {
       filtered = filtered.filter((u: any) => isOnlineOrFake(u));
@@ -239,8 +281,8 @@ export const DiscoverTab = () => {
     }
 
     setFilteredUsers(filtered);
-    setListKey(`list-${advancedFilter}-${debouncedSearch}-${debouncedCity}-${filters.gender}-${filters.relationship_status}-${filters.subscription_type}`);
-  }, [debouncedSearch, debouncedCity, filters.gender, filters.relationship_status, filters.subscription_type, users, posts, advancedFilter]);
+    setListKey(`list-${advancedFilter}-${debouncedSearch}-${debouncedCity}-${filters.gender}-${filters.relationship_status}-${filters.subscription_type}-${seekingFilter || ''}`);
+  }, [debouncedSearch, debouncedCity, filters.gender, filters.relationship_status, filters.subscription_type, users, posts, advancedFilter, seekingFilter]);
 
   // Register all currently loaded users as candidates for rotation
   useEffect(() => {
@@ -575,32 +617,35 @@ export const DiscoverTab = () => {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="all">Relacionamento</SelectItem>
                 <SelectItem value="solteiro">Solteiro(a)</SelectItem>
                 <SelectItem value="casado">Casado(a)</SelectItem>
                 <SelectItem value="relacionamento">Em relacionamento</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={filters.subscription_type} onValueChange={(value) => setFilters({...filters, subscription_type: value === 'all' ? '' : value})}>
+            {/* Filtro "Em busca de" (looking_for) */}
+            <Select
+              value={seekingFilter || 'all'}
+              onValueChange={handleSeekingChange}
+            >
               <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                <SelectValue placeholder="Tipo" />
+                <SelectValue placeholder="Em busca de" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
-                <SelectItem value="gratuito">Gratuito</SelectItem>
+                <SelectItem value="all">Em busca de</SelectItem>
+                <SelectItem value="encontros_casuais">Encontros casuais</SelectItem>
+                <SelectItem value="amizade">Amizade</SelectItem>
+                <SelectItem value="relacionamento_serio">Relacionamento sério</SelectItem>
               </SelectContent>
             </Select>
           </div>
         )}
       </div>
 
-
       {/* Users Cards Grid */}
       <div className="card-premium relative z-0">
         <h3 className="text-xl font-semibold text-gradient mb-6">Perfis Recomendados</h3>
-        
         <div key={listKey} className="space-y-4 animate-fade-in">
           {filteredUsers.map((user) => (
             <div key={user.id} className="bg-white/5 rounded-2xl p-6 border border-white/10">

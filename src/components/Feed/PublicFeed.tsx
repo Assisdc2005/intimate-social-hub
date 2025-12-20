@@ -566,11 +566,6 @@ export const PublicFeed = () => {
         setShowPremiumModal(true);
         return;
       }
-      toast({
-        title: "Seja Premium para curtir publicações",
-        description: "Faça upgrade para o Premium e libere curtidas ilimitadas",
-        variant: "destructive",
-      });
       // Não retorna aqui, abre o popover para selecionar a reação da primeira curtida
     }
     // Abre o menu de reações
@@ -636,6 +631,7 @@ export const PublicFeed = () => {
   };
 
   const handleComment = async (publicacaoId: string, index: number) => {
+
     // Verificar se a publicação está bloqueada (index >= 5 e não é premium)
     if (!isPremium && !isVisitor && index >= FREE_POSTS_LIMIT) {
       setShowPremiumModal(true);
@@ -648,12 +644,7 @@ export const PublicFeed = () => {
         setShowPremiumModal(true);
         return;
       }
-      toast({
-        title: "Seja Premium para comentar publicações",
-        description: "Faça upgrade para o Premium e libere comentários ilimitados",
-        variant: "destructive",
-      });
-      return;
+      // Permite o primeiro comentário normalmente; comentários extras serão bloqueados
     }
 
     if (!newComment.trim()) return;
@@ -932,7 +923,9 @@ export const PublicFeed = () => {
       </div>
 
       {publicacoes.map((publicacao, index) => {
-        const isBlocked = !isPremium && !isVisitor && index >= FREE_POSTS_LIMIT;
+        const isOwnerPost = profile?.user_id && publicacao.user_id === profile.user_id;
+        const isBlocked = !isPremium && !isVisitor && !isOwnerPost && index >= FREE_POSTS_LIMIT;
+
         const hasMediaAttachment = Boolean(publicacao.midia_url);
         const isVisitorBlurred = isVisitor && index >= VISITOR_VISIBLE_POSTS && hasMediaAttachment;
 
@@ -1083,7 +1076,7 @@ export const PublicFeed = () => {
             <div className={`relative ${(isBlocked || isVisitorBlurred) ? 'blur-lg pointer-events-none' : ''}`}>
               <PublicacaoCarrossel
                 publicacaoId={publicacao.id}
-                isPremium={isPremium || index < FREE_POSTS_LIMIT}
+                isPremium={isPremium || isOwnerPost || index < FREE_POSTS_LIMIT}
                 fallbackMidia={publicacao.midia_url ? {
                   url: publicacao.midia_url,
                   tipo: publicacao.tipo_midia === 'video' ? 'video' : 'image'
@@ -1099,7 +1092,7 @@ export const PublicFeed = () => {
               {publicacao.tipo_midia === 'multipla' && (
                 <PublicacaoCarrossel
                   publicacaoId={publicacao.id}
-                  isPremium={isPremium || index < FREE_POSTS_LIMIT}
+                  isPremium={isPremium || isOwnerPost || index < FREE_POSTS_LIMIT}
                   onMediaClick={(media) => {
                     if (!isBlocked && !isVisitorBlurred) {
                       openMediaModal(media);
@@ -1116,7 +1109,9 @@ export const PublicFeed = () => {
                   open={reactionMenuPost === publicacao.id}
                   onOpenChange={(o) => {
                     if (o) {
-                      if (!isPremium) {
+                      // Respeitar a mesma regra de 1 curtida total para não-premium
+                      const alreadyLikedThisPost = userLikes.has(publicacao.id);
+                      if (!isPremium && !alreadyLikedThisPost && userLikeCount >= 1) {
                         setShowPremiumModal(true);
                         return;
                       }
@@ -1223,7 +1218,7 @@ export const PublicFeed = () => {
                           {comentario.comentario}
                         </p>
                         <p className="text-xs text-gray-400">
-                          {new Date(comentario.created_at).toLocaleString('pt-BR')}
+                          {new Date(comentario.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </div>
@@ -1249,17 +1244,23 @@ export const PublicFeed = () => {
                   </div>
                   <div className="flex-1 flex gap-2">
                     <Input
-                      placeholder={isPremium ? "Adicione um comentário..." : "Seja Premium para comentar"}
+                      placeholder={
+                        isPremium
+                          ? "Adicione um comentário..."
+                          : userCommentCount < 1
+                            ? "Seu primeiro comentário é gratuito"
+                            : "Seja Premium para comentar mais"
+                      }
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                      disabled={!isPremium}
+                      disabled={!isPremium && userCommentCount >= 1}
                       className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                       onKeyPress={(e) => e.key === 'Enter' && handleComment(publicacao.id, index)}
                     />
                     <Button
                       size="sm"
                       onClick={() => handleComment(publicacao.id, index)}
-                      disabled={!isPremium || !newComment.trim()}
+                      disabled={(!isPremium && userCommentCount >= 1) || !newComment.trim()}
                       className="bg-gradient-primary hover:opacity-90"
                     >
                       <Send className="w-4 h-4" />
