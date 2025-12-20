@@ -116,8 +116,18 @@ export const Header = () => {
           </h1>
         </div>
         
-        {/* Notificações à direita */}
-        <NotificationButton />
+        {/* Indicador Live Cam + Notificações à direita */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="flex items-center gap-1 px-2 py-1 rounded-full bg-purple-600/80 text-white text-[10px] font-semibold shadow-[0_0_12px_rgba(147,51,234,0.7)] uppercase tracking-wide hover:bg-purple-500/90 transition-colors"
+            onClick={() => navigate('/live')}
+          >
+            <span className="w-2 h-2 rounded-full bg-white/90" />
+            <span>Live cam</span>
+          </button>
+          <NotificationButton />
+        </div>
       </div>
     </header>
   );

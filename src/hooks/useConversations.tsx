@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "./useProfile";
 
+// UID fixo da Luna Sato (mesmo usado no useWelcomeMessage e nas policies de RLS)
+const LUNA_SATO_USER_ID = 'b709dee7-283c-4b89-a16e-f2fbbda5ea87';
+
 interface Conversation {
   id: string;
   participant1_id: string;
@@ -56,11 +59,25 @@ export const useConversations = () => {
             ? conv.participant2_id 
             : conv.participant1_id;
 
-          const { data: otherUser } = await supabase
+          let otherUser: { display_name: string; avatar_url?: string; city?: string; state?: string } | null = null;
+
+          const { data: otherUserData } = await supabase
             .from('profiles')
             .select('display_name, avatar_url, city, state')
             .eq('user_id', otherUserId)
-            .single();
+            .maybeSingle();
+
+          if (otherUserData) {
+            otherUser = otherUserData as any;
+          } else if (otherUserId === LUNA_SATO_USER_ID) {
+            // Fallback para garantir que a conversa com a Luna apareça mesmo sem profile row
+            otherUser = {
+              display_name: 'Luna Sato',
+              avatar_url: undefined,
+              city: undefined,
+              state: undefined,
+            };
+          }
 
            // Última mensagem (ordenar por created_at)
            const lastMessage = conv.messages?.sort((a, b) => 
@@ -74,7 +91,7 @@ export const useConversations = () => {
 
            return {
              ...conv,
-             other_user: otherUser,
+             other_user: otherUser || undefined,
              last_message: lastMessage,
              unread_count: unreadMessages?.length || 0
            };

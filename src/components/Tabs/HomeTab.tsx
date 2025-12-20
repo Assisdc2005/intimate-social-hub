@@ -652,16 +652,16 @@ export const HomeTab = () => {
               Encontre quem te quer!
             </h1>
             <p className="text-foreground/80 text-sm mb-3">
-              Veja quem já mandou convite — mas só membros Premium podem responder.
+              Descubra quem te deseja e veja onde a noite pode levar…
             </p>
             
             {!isPremium && (
               <Button
-                onClick={() => navigate('/premium')}
+                onClick={() => navigate('/discover')}
                 className="bg-gradient-primary hover:opacity-90 text-white font-semibold px-5 py-2 rounded-xl text-sm shadow-[var(--shadow-glow)] transition-all duration-300 hover:scale-105"
               >
                 <Crown className="w-4 h-4 mr-2" />
-                Ser premium!
+                Encontrar alguém agora! 🔥
               </Button>
             )}
           </div>

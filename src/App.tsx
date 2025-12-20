@@ -143,7 +143,10 @@ function AuthenticatedApp() {
       <Route path="/discover" element={<Index />} />
       <Route path="/messages" element={<Index />} />
       <Route path="/premium" element={<Index />} />
+      <Route path="/live" element={<Index />} />
+      <Route path="/plans" element={<Index />} />
       <Route path="/profile/edit" element={<Index />} />
+      <Route path="/settings" element={<SettingsTab />} />
       
       <Route path="/profile/view/:userId" element={<UserProfile />} />
 

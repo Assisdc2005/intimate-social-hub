@@ -74,7 +74,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
+    // Efetua o logout no Supabase e também limpa o estado local imediatamente
     await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
   };
 
   const updatePassword = async (newPassword: string) => {

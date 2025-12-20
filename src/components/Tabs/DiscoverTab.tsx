@@ -477,7 +477,7 @@ export const DiscoverTab = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-display font-bold text-gradient">Descobrir</h1>
+        <h1 className="text-3xl font-display font-bold text-gradient">Descobrir 🔥</h1>
         <p className="text-lg text-foreground/80">Encontre pessoas incríveis perto de você</p>
       </div>
 

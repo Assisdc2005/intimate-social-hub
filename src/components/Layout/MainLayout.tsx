@@ -10,6 +10,7 @@ import { MessagesTabComplete } from "../Tabs/MessagesTabComplete";
 import { PremiumTab } from "../Tabs/PremiumTab";
 import { ProfileTab } from "../Tabs/ProfileTab";
 import { EditProfileTab } from "../Tabs/EditProfileTab";
+import { LiveTab } from "../Tabs/LiveTab";
 import { PromotionalPopup } from "../Modals/PromotionalPopup";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -25,6 +26,7 @@ export const MainLayout = () => {
     if (path === '/discover') return 'discover';
     if (path === '/messages') return 'messages';
     if (path === '/premium') return 'premium';
+    if (path === '/live') return 'live';
     if (path === '/profile') return 'profile';
     if (path === '/profile/edit') return 'edit';
     return 'home';
@@ -71,6 +73,8 @@ export const MainLayout = () => {
         return isVisitor ? visitorGateContent : <MessagesTabComplete />;
       case 'premium':
         return isVisitor ? visitorGateContent : <PremiumTab />;
+      case 'live':
+        return isVisitor ? visitorGateContent : <LiveTab />;
       case 'profile':
         return isVisitor ? visitorGateContent : <ProfileTab />;
       case 'edit':
@@ -87,6 +91,7 @@ export const MainLayout = () => {
       discover: '/discover',
       messages: '/messages',
       premium: '/premium',
+      live: '/live',
       profile: '/profile'
     };
     

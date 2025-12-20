@@ -359,7 +359,7 @@ export const UserProfile = () => {
                   </p>
                 )}
                 {userProfile.profession && (
-                  <p>Profissão: {userProfile.profession}</p>
+                  <p>Em busca de: {userProfile.profession}</p>
                 )}
                 {userProfile.relationship_status && (
                   <p>Status: {userProfile.relationship_status}</p>

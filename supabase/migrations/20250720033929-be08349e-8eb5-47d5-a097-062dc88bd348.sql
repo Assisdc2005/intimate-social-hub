@@ -172,7 +172,7 @@ CREATE POLICY "Users can send messages" ON public.messages
 FOR INSERT WITH CHECK (auth.uid() = sender_id);
 CREATE POLICY "Luna Sato can send welcome message" ON public.messages
 FOR INSERT WITH CHECK (
-  sender_id = 'luna-sato-bot'::uuid
+  sender_id = 'b709dee7-283c-4b89-a16e-f2fbbda5ea87'::uuid
   AND EXISTS (
     SELECT 1
     FROM public.conversations c

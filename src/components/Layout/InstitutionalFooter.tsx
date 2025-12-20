@@ -18,7 +18,7 @@ export const InstitutionalFooter = () => {
   ];
 
   return (
-    <footer className="bg-gradient-to-r from-background via-card to-background border-t border-primary/20 mt-auto">
+    <footer className="bg-gradient-to-r from-background via-card to-background border-t border-primary/20 mt-auto pb-24">
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Logo e Marca */}

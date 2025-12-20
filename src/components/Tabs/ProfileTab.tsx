@@ -3,12 +3,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+
 import { 
   User, 
   MapPin, 
   Calendar, 
-  Briefcase, 
+  Flame, 
   Heart, 
   Settings, 
   LogOut,
@@ -24,9 +26,21 @@ export const ProfileTab = () => {
   const { user, signOut } = useAuth();
   const { profile, isPremium } = useProfile();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleLogout = async () => {
-    await signOut();
+    try {
+      await signOut();
+      // Forçar recarregamento completo para garantir que todo estado seja limpo
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: 'Erro ao sair da conta',
+        description: 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const calculateAge = (birthDate: string) => {
@@ -143,9 +157,9 @@ export const ProfileTab = () => {
           <div className="space-y-4">
             {profile.profession && (
               <div className="flex items-center gap-3">
-                <Briefcase className="h-5 w-5 text-primary" />
+                <Flame className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-sm text-gray-400">Profissão</p>
+                  <p className="text-sm text-gray-400">Em busca de</p>
                   <p className="text-white">{profile.profession}</p>
                 </div>
               </div>
@@ -242,6 +256,7 @@ export const ProfileTab = () => {
             <Button 
               variant="ghost" 
               className="w-full justify-start text-gray-300 hover:text-white hover:bg-primary/20"
+              onClick={() => navigate('/settings')}
             >
               <Settings className="h-5 w-5 mr-3" />
               Configurações

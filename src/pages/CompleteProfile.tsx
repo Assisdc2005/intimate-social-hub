@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { Heart, ArrowLeft, ChevronDown } from 'lucide-react';
+import { Heart, ArrowLeft, ChevronDown, Camera } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export const CompleteProfile = () => {
   const { user, signOut } = useAuth();
@@ -38,6 +39,7 @@ export const CompleteProfile = () => {
   
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: boolean}>({});
+  const [savingAvatar, setSavingAvatar] = useState(false);
 
   // IBGE dependent selects state
   type UF = { id: number; sigla: string; nome: string };
@@ -95,6 +97,71 @@ export const CompleteProfile = () => {
     { id: 53, sigla: 'DF', nome: 'Distrito Federal' },
   ];
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile?.user_id) return;
+
+    try {
+      setSavingAvatar(true);
+      const bucket = 'fotos_perfil';
+      const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const filePath = `${profile.user_id}/avatar.${fileExt}`;
+
+      // Remover avatar antigo, se existir (usando a URL pública atual)
+      if (profile.avatar_url) {
+        const marker = `/object/public/${bucket}/`;
+        const idx = profile.avatar_url.indexOf(marker);
+        if (idx !== -1) {
+          const oldRelPath = profile.avatar_url.substring(idx + marker.length).split('?')[0];
+          if (oldRelPath) {
+            await supabase.storage.from(bucket).remove([oldRelPath]);
+          }
+        }
+      }
+
+      // Upload do novo avatar (permitindo overwrite)
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file, { upsert: true, contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(filePath);
+
+      const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
+      const result = await updateProfile({
+        avatar_url: cacheBustedUrl,
+        display_name: fallbackDisplayName,
+      });
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      await refreshProfile();
+
+      toast({
+        title: 'Foto atualizada!',
+        description: 'Sua foto de perfil foi atualizada com sucesso.',
+      });
+    } catch (error) {
+      console.error('Error uploading avatar on CompleteProfile:', error);
+      const errorMessage = error instanceof Error ? error.message :
+        typeof error === 'object' && error !== null ? JSON.stringify(error) :
+        'Erro ao atualizar foto de perfil';
+
+      toast({
+        title: 'Erro ao atualizar foto',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingAvatar(false);
+    }
+  };
+
   // Fetch UFs from IBGE with fallback to BrasilAPI then local
   useEffect(() => {
     const loadUFs = async () => {
@@ -121,6 +188,7 @@ export const CompleteProfile = () => {
         setUfsLoading(false);
       }
     };
+
     loadUFs();
   }, []);
 
@@ -334,6 +402,46 @@ export const CompleteProfile = () => {
             <p className="text-sm text-yellow-300 mt-2">* Campos obrigatórios</p>
           </CardHeader>
           <CardContent>
+            {/* Foto de perfil */}
+            {profile && (
+              <div className="flex flex-col items-center mb-6">
+                <div className="relative inline-block">
+                  <div className="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center text-white font-bold text-2xl mx-auto mb-3">
+                    {profile.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="Avatar"
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      (fallbackDisplayName[0] || 'U').toUpperCase()
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-gradient-primary hover:opacity-90"
+                    onClick={() => document.getElementById('complete-avatar-upload')?.click()}
+                    disabled={savingAvatar}
+                  >
+                    {savingAvatar ? (
+                      <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Camera className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <input
+                    id="complete-avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                </div>
+                <p className="text-xs text-gray-300 mt-1">Escolha sua foto de perfil. Ela será usada em todas as áreas do app.</p>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -455,15 +563,23 @@ export const CompleteProfile = () => {
                 </div>
                 
                 <div>
-                  <label className="text-white text-sm">Profissão *</label>
-                  <Input
-                    value={formData.profession}
-                    onChange={(e) => handleFieldChange('profession', e.target.value)}
-                    placeholder="Ex: Designer"
-                    className={`bg-white/10 border-primary/30 text-white placeholder:text-gray-400 ${
-                      errors.profession ? 'border-red-500 border-2' : ''
-                    }`}
-                  />
+                  <label className="text-white text-sm">Em busca de *</label>
+                  <div className="relative">
+                    <select
+                      value={formData.profession}
+                      onChange={(e) => handleFieldChange('profession', e.target.value)}
+                      className={`appearance-none bg-white/10 border border-primary/40 ${!formData.profession ? 'text-gray-300' : 'text-white'} w-full h-11 rounded-lg px-3 pr-10 py-2 text-sm backdrop-blur-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 focus:shadow-[0_0_30px_rgba(255,54,164,0.15)] hover:bg-white/15 ${
+                        errors.profession ? 'border-red-500 border-2' : ''
+                      }`}
+                    >
+                      <option value="" disabled>Selecione uma opção</option>
+                      <option value="Encontros casuais">Encontros casuais</option>
+                      <option value="Namoro sério / relacionamento">Namoro sério / relacionamento</option>
+                      <option value="Amizade / novos amigos">Amizade / novos amigos</option>
+                      <option value="Conversas e flertes">Conversas e flertes</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-300" />
+                  </div>
                   {errors.profession && <p className="text-red-400 text-xs mt-1">Campo obrigatório</p>}
                 </div>
                 

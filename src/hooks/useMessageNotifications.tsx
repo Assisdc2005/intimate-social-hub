@@ -70,24 +70,21 @@ export const useMessageNotifications = () => {
             .eq('user_id', newMessage.sender_id)
             .single();
 
-          const senderName = senderProfile?.display_name || 'Alguém';
+          const senderName = senderProfile?.display_name || 'usuário';
 
-          // Show toast notification
+          // Notificação em tempo real de nova mensagem
+          // O layout e o avatar são controlados em `Toaster` via props extras.
           toast({
-            title: `${senderName} te enviou uma mensagem`,
-            description: newMessage.content.length > 50 
-              ? newMessage.content.substring(0, 50) + '...' 
+            title: `Você recebeu uma mensagem de @${senderName}`,
+            description: newMessage.content.length > 50
+              ? newMessage.content.substring(0, 50) + '...'
               : newMessage.content,
             duration: 5000,
-            action: (
-              <button
-                onClick={() => navigate('/messages')}
-                className="text-primary hover:text-primary/80 font-medium underline"
-              >
-                Ver
-              </button>
-            ),
-          });
+            // Props extras consumidas por Toaster para montar o card bonito
+            username: senderName,
+            avatarUrl: senderProfile?.avatar_url,
+            onClick: () => navigate('/messages'),
+          } as any);
         }
       )
       .subscribe();

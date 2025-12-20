@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface Notification {
   id: string;
   user_id: string;
   from_user_id?: string;
-  type: 'curtida' | 'novo_amigo' | 'visita' | 'comentario' | 'mensagem';
+  type: 'curtida' | 'novo_amigo' | 'visita' | 'comentario' | 'mensagem' | 'depoimento';
   content?: string;
   read_at?: string;
   created_at: string;
+
   from_user_profile?: {
     display_name: string;
     avatar_url?: string;
@@ -21,12 +23,31 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const initialPopupShownRef = useRef(false);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchNotifications();
-      setupRealtimeSubscriptions();
-    }
+    if (!user?.id) return;
+
+    let cleanup: (() => void) | undefined;
+
+    const init = async () => {
+      const data = await fetchNotifications();
+
+      // Ao abrir o app, mostrar popups para notificações recentes (até 2 minutos) de visita/depoimento
+      if (!initialPopupShownRef.current && data && data.length > 0) {
+        showRecentImportantPopups(data as Notification[]);
+        initialPopupShownRef.current = true;
+      }
+
+      cleanup = setupRealtimeSubscriptions();
+    };
+
+    init();
+
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, [user?.id]);
 
   const fetchNotifications = async () => {
@@ -46,10 +67,12 @@ export const useNotifications = () => {
         .limit(50);
 
       setNotifications((notificationsData as any) || []);
-      
+
       // Count unread notifications
       const unread = notificationsData?.filter(n => !n.read_at).length || 0;
       setUnreadCount(unread);
+
+      return (notificationsData as any) || [];
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -67,14 +90,56 @@ export const useNotifications = () => {
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${user.id}`
-      }, () => {
+      }, (payload: any) => {
+        const newNotification = payload.new as Notification;
+
+        // Atualiza lista normalmente
         fetchNotifications();
+
+        // Popup em tempo real apenas para visitas de perfil e depoimentos
+        if (newNotification && (newNotification.type === 'visita' || newNotification.type === 'depoimento')) {
+          const createdAt = new Date(newNotification.created_at).getTime();
+          const now = Date.now();
+          const diffMs = now - createdAt;
+          const TWO_MIN_MS = 2 * 60 * 1000;
+
+          if (diffMs >= 0 && diffMs <= TWO_MIN_MS) {
+            const baseMessage = newNotification.type === 'visita'
+              ? 'Você recebeu uma nova visita no seu perfil.'
+              : 'Você recebeu um novo depoimento.';
+
+            toast({
+              title: 'Nova atividade',
+              description: baseMessage,
+            });
+          }
+        }
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
+  };
+
+  const showRecentImportantPopups = (list: Notification[]) => {
+    const TWO_MIN_MS = 2 * 60 * 1000;
+    const now = Date.now();
+
+    list
+      .filter((n) =>
+        !n.read_at &&
+        (n.type === 'visita' || n.type === 'depoimento') &&
+        now - new Date(n.created_at).getTime() <= TWO_MIN_MS &&
+        now - new Date(n.created_at).getTime() >= 0
+      )
+      .forEach((n) => {
+        const msg = getNotificationMessage(n as any);
+        toast({
+          title: 'Nova atividade',
+          description: msg,
+        });
+      });
   };
 
   const markAsRead = async (notificationId: string) => {
