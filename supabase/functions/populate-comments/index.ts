@@ -94,7 +94,6 @@ function getRandomComments(
     pool = comentariosFemininoParaFeminino;
   }
 
-  // Shuffle and pick unique comments
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
@@ -110,24 +109,23 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    console.log("Iniciando população de comentários...");
+
     // 1. Buscar publicações com fotos que não têm comentários
     const { data: publicacoes, error: pubError } = await supabase
       .from("publicacoes")
-      .select(`
-        id,
-        user_id,
-        midia_url,
-        tipo_midia,
-        comentarios_count
-      `)
+      .select(`id, user_id, midia_url, tipo_midia, comentarios_count`)
       .not("midia_url", "is", null)
       .or("tipo_midia.eq.imagem,tipo_midia.is.null")
       .eq("comentarios_count", 0)
       .limit(50);
 
     if (pubError) {
+      console.error("Erro ao buscar publicações:", pubError);
       throw new Error(`Erro ao buscar publicações: ${pubError.message}`);
     }
+
+    console.log(`Publicações encontradas: ${publicacoes?.length || 0}`);
 
     if (!publicacoes || publicacoes.length === 0) {
       return new Response(
@@ -136,7 +134,7 @@ serve(async (req) => {
       );
     }
 
-    // 2. Buscar todos os perfis reais para usar como comentaristas
+    // 2. Buscar todos os perfis reais
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select("user_id, gender, display_name")
@@ -144,8 +142,11 @@ serve(async (req) => {
       .limit(100);
 
     if (profilesError) {
+      console.error("Erro ao buscar perfis:", profilesError);
       throw new Error(`Erro ao buscar perfis: ${profilesError.message}`);
     }
+
+    console.log(`Perfis encontrados: ${profiles?.length || 0}`);
 
     if (!profiles || profiles.length < 5) {
       return new Response(
@@ -154,11 +155,7 @@ serve(async (req) => {
       );
     }
 
-    // 3. Separar perfis por gênero
-    const perfisMasculinos = profiles.filter(p => p.gender === "masculino");
-    const perfisFemininos = profiles.filter(p => !["masculino"].includes(p.gender || ""));
-
-    // 4. Para cada publicação, gerar comentários
+    // 3. Para cada publicação, gerar comentários
     let totalComentarios = 0;
     const comentariosParaInserir: Array<{
       publicacao_id: string;
@@ -166,8 +163,9 @@ serve(async (req) => {
       comentario: string;
     }> = [];
 
+    const comentariosPorPublicacao: Record<string, number> = {};
+
     for (const pub of publicacoes) {
-      // Buscar o gênero do dono da publicação
       const { data: ownerProfile } = await supabase
         .from("profiles")
         .select("gender")
@@ -175,14 +173,13 @@ serve(async (req) => {
         .single();
 
       const ownerGender = ownerProfile?.gender || "feminino";
-      
-      // Gerar entre 1 e 5 comentários
       const numComentarios = Math.floor(Math.random() * 5) + 1;
       
-      // Selecionar comentaristas aleatórios (não pode ser o dono da publicação)
       const potentialCommenters = profiles.filter(p => p.user_id !== pub.user_id);
       const shuffledCommenters = [...potentialCommenters].sort(() => Math.random() - 0.5);
       const selectedCommenters = shuffledCommenters.slice(0, numComentarios);
+
+      comentariosPorPublicacao[pub.id] = 0;
 
       for (const commenter of selectedCommenters) {
         const commenterGender = commenter.gender || "feminino";
@@ -195,19 +192,41 @@ serve(async (req) => {
             comentario: comments[0],
           });
           totalComentarios++;
+          comentariosPorPublicacao[pub.id]++;
         }
       }
     }
 
-    // 5. Inserir todos os comentários
+    console.log(`Comentários a inserir: ${comentariosParaInserir.length}`);
+
+    // 4. Inserir todos os comentários
     if (comentariosParaInserir.length > 0) {
       const { error: insertError } = await supabase
         .from("comentarios_publicacoes")
         .insert(comentariosParaInserir);
 
       if (insertError) {
+        console.error("Erro ao inserir comentários:", insertError);
         throw new Error(`Erro ao inserir comentários: ${insertError.message}`);
       }
+
+      console.log("Comentários inseridos com sucesso!");
+
+      // 5. Atualizar os contadores de comentários nas publicações
+      for (const [pubId, count] of Object.entries(comentariosPorPublicacao)) {
+        if (count > 0) {
+          const { error: updateError } = await supabase
+            .from("publicacoes")
+            .update({ comentarios_count: count })
+            .eq("id", pubId);
+
+          if (updateError) {
+            console.error(`Erro ao atualizar contador da publicação ${pubId}:`, updateError);
+          }
+        }
+      }
+
+      console.log("Contadores atualizados!");
     }
 
     return new Response(
