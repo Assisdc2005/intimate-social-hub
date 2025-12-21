@@ -31,6 +31,8 @@ export interface Profile {
   assinatura_id?: string; // Novo campo
   created_at: string;
   updated_at: string;
+  account_status?: string;
+  freeze_reason?: string | null;
 }
 
 type ProfileContextValue = {
@@ -106,6 +108,8 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
             tipo_assinatura: tipoAssinatura,
             subscription_expires_at: (created as any).subscription_expires_at,
             assinatura_id: (created as any).assinatura_id,
+            account_status: (created as any).account_status,
+            freeze_reason: (created as any).freeze_reason,
             created_at: created.created_at,
             updated_at: created.updated_at
           };
@@ -158,6 +162,8 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
           tipo_assinatura: tipoAssinatura, // CAMPO PRINCIPAL
           subscription_expires_at: (data as any).subscription_expires_at, // Safe access to new field
           assinatura_id: (data as any).assinatura_id, // Safe access to new field
+          account_status: (data as any).account_status,
+          freeze_reason: (data as any).freeze_reason,
           created_at: data.created_at,
           updated_at: data.updated_at
         };
@@ -299,6 +305,8 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
             tipo_assinatura: tipoAssinatura,
             subscription_expires_at: (existing as any).subscription_expires_at,
             assinatura_id: (existing as any).assinatura_id,
+            account_status: (existing as any).account_status,
+            freeze_reason: (existing as any).freeze_reason,
             created_at: existing.created_at,
             updated_at: existing.updated_at
           };
@@ -339,6 +347,8 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
           tipo_assinatura: tipoAssinatura,
           subscription_expires_at: (data as any).subscription_expires_at,
           assinatura_id: (data as any).assinatura_id,
+          account_status: (data as any).account_status,
+          freeze_reason: (data as any).freeze_reason,
           created_at: data.created_at,
           updated_at: data.updated_at
         };
@@ -394,6 +404,8 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         tipo_assinatura: tipoAssinatura,
         subscription_expires_at: (existing as any).subscription_expires_at,
         assinatura_id: (existing as any).assinatura_id,
+        account_status: (existing as any).account_status,
+        freeze_reason: (existing as any).freeze_reason,
         created_at: existing.created_at,
         updated_at: existing.updated_at
       };

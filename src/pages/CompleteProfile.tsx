@@ -283,6 +283,15 @@ export const CompleteProfile = () => {
       return;
     }
 
+    if (!profile?.avatar_url) {
+      toast({
+        title: 'Foto de perfil obrigatória',
+        description: 'Adicione uma foto de perfil antes de completar seu cadastro.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -405,7 +414,10 @@ export const CompleteProfile = () => {
           <CardContent>
             {/* Foto de perfil */}
             {profile && (
-              <div className="flex flex-col items-center mb-6">
+              <div className="flex flex-col items-center mb-6 text-center">
+                <p className="text-xs text-yellow-300 font-medium mb-3">
+                  * O envio de uma foto de perfil é obrigatório para completar seu cadastro.
+                </p>
                 <div className="relative inline-block">
                   <div className="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center text-white font-bold text-2xl mx-auto mb-3">
                     {profile.avatar_url ? (
@@ -439,7 +451,9 @@ export const CompleteProfile = () => {
                     onChange={handleAvatarUpload}
                   />
                 </div>
-                <p className="text-xs text-gray-300 mt-1">Escolha sua foto de perfil. Ela será usada em todas as áreas do app.</p>
+                <p className="text-xs text-gray-300 mt-1">
+                  Escolha sua foto de perfil. Ela será usada em todas as áreas do app.
+                </p>
               </div>
             )}
 

@@ -20,6 +20,19 @@ export const Signup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const trimmedName = displayName.trim();
+      const hasLetter = /[A-Za-zÀ-ÿ]/.test(trimmedName);
+      const hasNumber = /[0-9]/.test(trimmedName);
+
+      if (!hasLetter || !hasNumber) {
+        toast({
+          title: "Nome de exibição inválido",
+          description: "Seu nome de exibição deve conter letras e números (não pode ser apenas números).",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (!acceptedConsent) {
         toast({
           title: "Aceite necessário",
@@ -28,7 +41,7 @@ export const Signup = () => {
         });
         return;
       }
-      const { error } = await signUp(email, password, displayName);
+      const { error } = await signUp(email, password, trimmedName);
       if (error) {
         toast({
           title: "Erro ao criar conta",

@@ -277,7 +277,9 @@ RETURNS TABLE(
   last_seen TIMESTAMP WITH TIME ZONE,
   birth_date DATE,
   city TEXT,
-  state TEXT
+  state TEXT,
+  account_status TEXT,
+  freeze_reason TEXT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -301,7 +303,9 @@ BEGIN
     p.last_seen,
     p.birth_date,
     p.city,
-    p.state
+    p.state,
+    p.account_status,
+    p.freeze_reason
   FROM profiles p
   LEFT JOIN auth.users u ON p.user_id = u.id
   WHERE 

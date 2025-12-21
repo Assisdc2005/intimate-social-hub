@@ -617,7 +617,7 @@ export const HomeTab = () => {
   return (
     <div className="space-y-6 pb-4 animate-fade-in">
       {isVisitor && (
-        <div className="sticky top-20 z-40">
+        <div className="sticky top-[116px] z-40">
           <div className="glass border border-primary/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
             <div className="text-sm text-foreground/90">
               Crie uma conta ou faça login para curtir, comentar e acessar recursos Premium.

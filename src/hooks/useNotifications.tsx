@@ -96,23 +96,21 @@ export const useNotifications = () => {
         // Atualiza lista normalmente
         fetchNotifications();
 
-        // Popup em tempo real apenas para visitas de perfil e depoimentos
-        if (newNotification && (newNotification.type === 'visita' || newNotification.type === 'depoimento')) {
-          const createdAt = new Date(newNotification.created_at).getTime();
-          const now = Date.now();
-          const diffMs = now - createdAt;
-          const TWO_MIN_MS = 2 * 60 * 1000;
+        const isAdminMessage = newNotification.type === 'mensagem' && !newNotification.from_user_id;
 
-          if (diffMs >= 0 && diffMs <= TWO_MIN_MS) {
-            const baseMessage = newNotification.type === 'visita'
-              ? 'Você recebeu uma nova visita no seu perfil.'
-              : 'Você recebeu um novo depoimento.';
-
-            toast({
-              title: 'Nova atividade',
-              description: baseMessage,
-            });
-          }
+        if (newNotification.type === 'mensagem') {
+          toast({
+            title: isAdminMessage ? 'Mensagem da Administração' : 'Nova mensagem',
+            description: newNotification.content || getRealtimeDescription(newNotification),
+            className: isAdminMessage
+              ? 'border border-purple-400 bg-gradient-to-r from-purple-700 to-pink-600 text-white'
+              : undefined,
+          });
+        } else {
+          toast({
+            title: 'Nova notificação',
+            description: getRealtimeDescription(newNotification),
+          });
         }
       })
       .subscribe();
@@ -129,14 +127,13 @@ export const useNotifications = () => {
     list
       .filter((n) =>
         !n.read_at &&
-        (n.type === 'visita' || n.type === 'depoimento') &&
         now - new Date(n.created_at).getTime() <= TWO_MIN_MS &&
         now - new Date(n.created_at).getTime() >= 0
       )
       .forEach((n) => {
         const msg = getNotificationMessage(n as any);
         toast({
-          title: 'Nova atividade',
+          title: 'Nova notificação',
           description: msg,
         });
       });
@@ -225,6 +222,27 @@ export const useNotifications = () => {
         return `${name} enviou uma mensagem`;
       default:
         return notification.content || 'Nova notificação';
+    }
+  };
+
+  const getRealtimeDescription = (notification: Notification) => {
+    if (notification.content) return notification.content;
+
+    switch (notification.type) {
+      case 'curtida':
+        return 'Você recebeu uma nova curtida.';
+      case 'novo_amigo':
+        return 'Você recebeu uma nova solicitação de amizade.';
+      case 'visita':
+        return 'Alguém visitou seu perfil.';
+      case 'comentario':
+        return 'Você recebeu um novo comentário.';
+      case 'depoimento':
+        return 'Você recebeu um novo depoimento.';
+      case 'mensagem':
+        return 'Você recebeu uma nova mensagem.';
+      default:
+        return 'Você recebeu uma nova notificação.';
     }
   };
 

@@ -808,9 +808,9 @@ export const PublicFeed = () => {
 
       if (error) throw error;
 
-      setPublicacoes(prev => prev.map(pub => 
-        pub.id === editingPost ? { ...pub, descricao: editContent } : pub
-      ));
+      setPublicacoes(prev =>
+        prev.map(pub => (pub.id === editingPost ? { ...pub, descricao: editContent } : pub))
+      );
 
       toast({
         title: "Publicação atualizada!",
@@ -833,44 +833,28 @@ export const PublicFeed = () => {
     if (!deletePostId) return;
 
     try {
-      // Se admin, usar Edge Function para apagar storage e registros com privilégios
       if (isAdmin) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const jwt = sessionData.session?.access_token;
-        const res = await fetch('/functions/v1/admin_delete_publicacao_with_media', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
-          },
-          body: JSON.stringify({ publicacaoId: deletePostId }),
+        const { error } = await supabase.rpc('admin_delete_publicacao', {
+          target_publicacao_id: deletePostId,
         });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`Edge Function error: ${txt}`);
+
+        if (error) {
+          throw error;
         }
       } else {
-        // Fluxo original (dono do post) - deletar dependências e depois a publicação
-        await supabase
-          .from('publicacao_midias')
-          .delete()
-          .eq('publicacao_id', deletePostId);
-
-        await supabase
-          .from('curtidas_publicacoes')
-          .delete()
-          .eq('publicacao_id', deletePostId);
-
-        await supabase
-          .from('comentarios_publicacoes')
-          .delete()
-          .eq('publicacao_id', deletePostId);
+        if (!profile?.user_id) {
+          throw new Error('Usuário não autenticado');
+        }
 
         const { error } = await supabase
           .from('publicacoes')
           .delete()
-          .eq('id', deletePostId);
-        if (error) throw error;
+          .eq('id', deletePostId)
+          .eq('user_id', profile.user_id);
+
+        if (error) {
+          throw error;
+        }
       }
 
       setPublicacoes(prev => prev.filter(pub => pub.id !== deletePostId));
@@ -881,23 +865,15 @@ export const PublicFeed = () => {
       });
 
       setDeletePostId(null);
-    } catch (error) {
-      console.error('Erro ao deletar publicação:', error);
+    } catch (error: any) {
+      console.error('Erro ao deletar publicação:', error?.message || error);
       toast({
         title: "Erro",
-        description: "Erro ao deletar publicação",
+        description: error?.message || "Erro ao deletar publicação. Tente novamente em instantes.",
         variant: "destructive",
       });
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-white">Carregando publicações...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

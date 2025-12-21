@@ -36,7 +36,7 @@ const Consent = React.lazy(() => import("./pages/Consent").then(m => ({ default:
 const queryClient = new QueryClient();
 
 function AuthenticatedApp() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const location = useLocation();
 
@@ -63,10 +63,40 @@ function AuthenticatedApp() {
     return age < 18;
   }, [profile?.birth_date]);
 
+  const isFrozen = React.useMemo(() => {
+    return profile?.account_status === 'frozen';
+  }, [profile?.account_status]);
+
+  const freezeReason = React.useMemo(() => {
+    return profile?.freeze_reason || 'Sua conta foi congelada por violar as políticas da plataforma.';
+  }, [profile?.freeze_reason]);
+
   if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
         <div className="text-white text-lg">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (user && isFrozen) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4">
+        <div className="max-w-md w-full glass rounded-2xl border border-red-500/40 p-6 space-y-4 text-center">
+          <h1 className="text-2xl font-bold text-red-400">Conta congelada</h1>
+          <p className="text-sm text-muted-foreground whitespace-pre-line">
+            {freezeReason}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Em caso de dúvida, entre em contato com o suporte informando o e-mail da sua conta.
+          </p>
+          <button
+            onClick={() => signOut()}
+            className="mt-2 inline-flex items-center justify-center rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 transition-colors"
+          >
+            Sair da conta
+          </button>
+        </div>
       </div>
     );
   }

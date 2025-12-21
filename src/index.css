@@ -177,4 +177,23 @@ All colors MUST be HSL.
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  .guest-banner-text {
+    animation: guest-banner-scroll 18s linear infinite;
+  }
+
+  @media (max-width: 640px) {
+    .guest-banner-text {
+      animation-duration: 12s;
+    }
+  }
+
+  @keyframes guest-banner-scroll {
+    0% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
 }

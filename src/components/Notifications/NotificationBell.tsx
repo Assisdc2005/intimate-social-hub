@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
 import { Bell, BellRing, Check, CheckCheck, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { useNotifications } from '@/hooks/useNotifications';
+
 import { useFriendships } from '@/hooks/useFriendships';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+
+type NotificationItem = ReturnType<typeof useNotifications>['notifications'][number];
 
 export const NotificationBell = () => {
   const { 
@@ -24,6 +28,24 @@ export const NotificationBell = () => {
   const { respondToFriendRequest, friendRequests } = useFriendships();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [adminPopup, setAdminPopup] = useState<NotificationItem | null>(null);
+
+  useEffect(() => {
+    const unreadAdminMessage = notifications.find(
+      (n) => n.type === 'mensagem' && !n.from_user_id && !n.read_at
+    );
+
+    if (unreadAdminMessage) {
+      setAdminPopup(unreadAdminMessage);
+    }
+  }, [notifications]);
+
+  const handleCloseAdminPopup = async () => {
+    if (adminPopup && !adminPopup.read_at) {
+      await markAsRead(adminPopup.id);
+    }
+    setAdminPopup(null);
+  };
 
   const handleNotificationClick = async (notificationId: string, isRead: boolean, notificationType: string, fromUserId?: string) => {
     if (!isRead) {
@@ -142,40 +164,54 @@ export const NotificationBell = () => {
                 </div>
               ) : (
                 <div className="p-2">
-                  {notifications.map((notification) => (
+                  {notifications.map((notification) => {
+                    const isAdminMessage = notification.type === 'mensagem' && !notification.from_user_id;
+                    return (
                     <div
                       key={notification.id}
-                      className={`p-3 rounded-lg mb-2 cursor-pointer transition-all duration-200 hover:bg-white/10 ${
-                        !notification.read_at ? 'bg-primary/10 border-l-2 border-l-primary' : 'bg-white/5'
+                      className={`p-3 rounded-lg mb-2 cursor-pointer transition-all duration-200 ${
+                        isAdminMessage
+                          ? 'bg-gradient-to-r from-purple-700/80 via-fuchsia-600/70 to-pink-500/70 border border-purple-400/60 shadow-[0_10px_35px_rgba(138,43,226,0.35)]'
+                          : !notification.read_at
+                            ? 'bg-primary/10 border-l-2 border-l-primary hover:bg-white/10'
+                            : 'bg-white/5 hover:bg-white/10'
                       }`}
                       onClick={() => handleNotificationClick(notification.id, !!notification.read_at, notification.type, notification.from_user_id)}
                     >
                       <div className="flex items-start gap-3">
                         {/* Notification Icon */}
                         <div className="text-lg">
+
                           {getNotificationIcon(notification.type)}
                         </div>
 
                         {/* Notification Content */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white">
-                            {getNotificationMessage(notification)}
+                          <p className={`text-sm ${isAdminMessage ? 'text-white font-semibold' : 'text-white'}`}>
+                            {isAdminMessage ? 'Mensagem da Administração' : getNotificationMessage(notification)}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-gray-400">
+                            <span className={`text-xs ${isAdminMessage ? 'text-purple-100' : 'text-gray-400'}`}>
                               {formatDistanceToNow(new Date(notification.created_at), {
                                 addSuffix: true,
                                 locale: ptBR
                               })}
                             </span>
                             {!notification.read_at && (
-                              <div className="w-2 h-2 bg-primary rounded-full"></div>
+                              <div className={`w-2 h-2 rounded-full ${isAdminMessage ? 'bg-white' : 'bg-primary'}`}></div>
                             )}
                           </div>
-                          
+
+                          {isAdminMessage && notification.content && (
+                            <p className="mt-2 text-sm text-white/90">
+                              {notification.content}
+                            </p>
+                          )}
+
                           {/* Friend Request Actions */}
                           {notification.type === 'novo_amigo' && !notification.read_at && notification.from_user_id && (
                             <div className="flex gap-2 mt-2">
+
                               {(() => {
                                 const friendRequest = friendRequests.find(req => 
                                   req.remetente_id === notification.from_user_id && req.status === 'pendente'
@@ -259,7 +295,8 @@ export const NotificationBell = () => {
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </ScrollArea>
@@ -277,6 +314,30 @@ export const NotificationBell = () => {
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {adminPopup && (
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative z-10 w-full max-w-md rounded-3xl border border-purple-400/60 bg-neutral-900/95 p-6 text-center shadow-[0_25px_70px_rgba(138,43,226,0.45)]">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-2xl font-black text-white">
+              S
+            </div>
+            <h3 className="text-xl font-bold text-white">Mensagem importante da Administração</h3>
+            <p className="mt-3 text-sm text-purple-100 whitespace-pre-line">
+              {adminPopup.content || 'Você recebeu uma nova mensagem da equipe Sensual.'}
+            </p>
+            <p className="mt-2 text-xs text-purple-200/80">
+              Esta mensagem foi enviada para todos os usuários. Leia com atenção.
+            </p>
+            <Button
+              className="mt-6 w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white hover:opacity-90"
+              onClick={handleCloseAdminPopup}
+            >
+              Entendi
+            </Button>
           </div>
         </div>
       )}
