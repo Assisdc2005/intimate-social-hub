@@ -15,6 +15,7 @@ import { useFriendships } from "@/hooks/useFriendships";
 import { useTestimonials } from "@/hooks/useTestimonials";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { TestimonialsSection } from "@/components/Testimonials/TestimonialsSection";
+import { trackProfileView, trackAddToWishlist, trackContact } from "@/lib/metaPixel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,7 +99,13 @@ export const UserProfile = () => {
 
         setUserProfile(profileData);
         setUserPosts(postsData || []);
-
+        
+        // Track profile view event
+        trackProfileView({
+          profile_id: userId,
+          profile_name: profileData.display_name,
+          profile_gender: profileData.gender,
+        });
         // Record profile visit if not viewing own profile
         if (currentUser?.user_id && currentUser.user_id !== userId) {
           await supabase
@@ -238,6 +245,13 @@ export const UserProfile = () => {
         .insert({ publicacao_id: postId, user_id: currentUser?.user_id });
 
       if (!error) {
+        // Track like event
+        trackAddToWishlist({
+          content_name: 'Post Like',
+          content_category: 'engagement',
+          content_ids: [postId],
+        });
+        
         toast({
           title: "Post curtido!",
           description: "Você curtiu este post",

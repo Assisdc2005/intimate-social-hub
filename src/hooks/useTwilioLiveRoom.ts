@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
-import Video, { Room, RemoteParticipant, LocalTrackPublication, RemoteTrackPublication, Track } from "twilio-video";
+import Video, { 
+  Room, 
+  RemoteParticipant, 
+  LocalTrackPublication, 
+  RemoteTrackPublication,
+  LocalVideoTrack,
+  LocalAudioTrack,
+  RemoteVideoTrack,
+  RemoteAudioTrack
+} from "twilio-video";
+
+type AttachableTrack = LocalVideoTrack | LocalAudioTrack | RemoteVideoTrack | RemoteAudioTrack;
 
 interface TwilioLiveState {
   room: Room | null;
@@ -10,17 +21,33 @@ interface TwilioLiveState {
   videoContainerRef: RefObject<HTMLDivElement>;
 }
 
-function attachTrack(track: Track, container: HTMLDivElement | null) {
-  if (!container) return;
+function isAttachableTrack(track: unknown): track is AttachableTrack {
+  return (
+    track !== null &&
+    typeof track === 'object' &&
+    'attach' in track &&
+    typeof (track as AttachableTrack).attach === 'function'
+  );
+}
+
+function attachTrack(track: unknown, container: HTMLDivElement | null) {
+  if (!container || !isAttachableTrack(track)) return;
   const element = track.attach();
   element.style.maxWidth = "100%";
   element.style.maxHeight = "100%";
   container.appendChild(element);
 }
 
-function attachParticipantTracks(participant: RemoteParticipant | Room["localParticipant"], container: HTMLDivElement | null) {
+function attachParticipantTracks(
+  participant: RemoteParticipant | Room["localParticipant"], 
+  container: HTMLDivElement | null
+) {
   participant.tracks.forEach((publication: LocalTrackPublication | RemoteTrackPublication) => {
-    if (publication.isSubscribed && publication.track) {
+    // Check if it's a remote publication and is subscribed, or local publication
+    const isRemote = 'isSubscribed' in publication;
+    const isSubscribed = isRemote ? (publication as RemoteTrackPublication).isSubscribed : true;
+    
+    if (isSubscribed && publication.track) {
       attachTrack(publication.track, container);
     }
   });
@@ -90,9 +117,10 @@ export function useTwilioLiveRoom(): TwilioLiveState {
       joinedRoom.on("disconnected", () => {
         clearContainer();
       });
-    } catch (e: any) {
-      console.error("Erro ao conectar na sala Twilio:", e);
-      setError(e.message || "Erro ao conectar na sala de live");
+    } catch (e: unknown) {
+      const err = e as Error;
+      console.error("Erro ao conectar na sala Twilio:", err);
+      setError(err.message || "Erro ao conectar na sala de live");
     } finally {
       setConnecting(false);
     }

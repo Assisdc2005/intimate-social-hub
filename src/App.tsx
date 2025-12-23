@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 const Index = React.lazy(() => import("./pages/Index"));
 const Profile = React.lazy(() => import("./pages/Profile"));
 const AboutTab = React.lazy(() => import("./pages/profile-tabs/AboutTab"));
@@ -44,6 +45,7 @@ function AuthenticatedApp() {
   useActiveTimeRedirect();
   useMessageNotifications();
   useWelcomeMessage();
+  useMetaPixel(); // Meta Pixel tracking on route changes
 
   // Ensure scroll resets to top on every route change
   React.useEffect(() => {

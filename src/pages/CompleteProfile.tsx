@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Heart, ArrowLeft, ChevronDown, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { trackCompleteRegistration } from '@/lib/metaPixel';
 
 export const CompleteProfile = () => {
   const { user, signOut } = useAuth();
@@ -329,6 +330,12 @@ export const CompleteProfile = () => {
           variant: "destructive",
         });
       } else {
+        // Track CompleteRegistration event
+        trackCompleteRegistration({
+          content_name: 'Profile Completed',
+          status: 'completed',
+        });
+        
         toast({
           title: "Perfil completado!",
           description: "Bem-vindo(a) ao Sensual Nexus Connect",
