@@ -12,6 +12,7 @@ import { useConversations } from "@/hooks/useConversations";
 import { useMessages } from "@/hooks/useMessages";
 import { useMessageLimit } from "@/hooks/useMessageLimit";
 import { supabase } from "@/integrations/supabase/client";
+import { trackContact, trackMessageSent } from "@/lib/metaPixel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,6 +94,10 @@ export const MessagesTabComplete = () => {
 
     const success = await sendMessage(newMessage);
     if (success) {
+      // Track message sent event
+      trackContact({ content_category: 'message' });
+      trackMessageSent({ is_first_message: messages.length === 0 });
+      
       setNewMessage("");
       // Refresh the count after sending
       refreshCount();

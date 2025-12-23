@@ -39,10 +39,11 @@ export const useLives = () => {
         .order('started_at', { ascending: false });
 
       if (error) throw error;
-      setLives((data as any) || []);
-    } catch (e: any) {
-      console.error('Erro ao carregar lives:', e);
-      setError(e.message || 'Erro ao carregar lives');
+      setLives((data as unknown as Live[]) || []);
+    } catch (e: unknown) {
+      const err = e as Error;
+      console.error('Erro ao carregar lives:', err);
+      setError(err.message || 'Erro ao carregar lives');
     } finally {
       setLoading(false);
     }
@@ -84,14 +85,15 @@ export const useLives = () => {
           .select('id')
           .single();
         if (error) throw error;
-        liveId = (inserted as any).id as string;
+        liveId = (inserted as { id: string }).id;
       }
 
       await fetchLives();
       return { error: null, liveId };
-    } catch (e: any) {
-      console.error('Erro ao iniciar live:', e);
-      return { error: e.message || 'Erro ao iniciar live', liveId: null };
+    } catch (e: unknown) {
+      const err = e as Error;
+      console.error('Erro ao iniciar live:', err);
+      return { error: err.message || 'Erro ao iniciar live', liveId: null };
     }
   };
 
@@ -120,9 +122,10 @@ export const useLives = () => {
       if (error) throw error;
       await fetchLives();
       return { error: null };
-    } catch (e: any) {
-      console.error('Erro ao encerrar live:', e);
-      return { error: e.message || 'Erro ao encerrar live' };
+    } catch (e: unknown) {
+      const err = e as Error;
+      console.error('Erro ao encerrar live:', err);
+      return { error: err.message || 'Erro ao encerrar live' };
     }
   };
 
@@ -149,4 +152,4 @@ export const useLives = () => {
     endLive,
     refreshLives: fetchLives,
   };
-}
+};

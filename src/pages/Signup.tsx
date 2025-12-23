@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { InstitutionalFooter } from "@/components/Layout/InstitutionalFooter";
 import { Checkbox } from "@/components/ui/checkbox";
+import { trackLead, trackCompleteRegistration } from "@/lib/metaPixel";
 
 export const Signup = () => {
   const [email, setEmail] = useState("");
@@ -19,6 +20,13 @@ export const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Track Lead event when form is submitted
+    trackLead({
+      content_name: 'Signup Form',
+      content_category: 'registration',
+    });
+    
     try {
       const trimmedName = displayName.trim();
       const hasLetter = /[A-Za-zÀ-ÿ]/.test(trimmedName);
