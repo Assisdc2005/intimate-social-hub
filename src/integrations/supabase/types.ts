@@ -326,6 +326,50 @@ export type Database = {
           },
         ]
       }
+      lives: {
+        Row: {
+          created_at: string
+          description: string | null
+          ended_at: string | null
+          id: string
+          started_at: string | null
+          status: string
+          title: string
+          user_id: string
+          viewers_count: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          title: string
+          user_id: string
+          viewers_count?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          title?: string
+          user_id?: string
+          viewers_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lives_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -453,6 +497,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string | null
+          assinatura_id: string | null
           avatar_url: string | null
           bio: string | null
           birth_date: string | null
@@ -462,6 +508,7 @@ export type Database = {
           display_name: string
           drinks: boolean | null
           ethnicity: Database["public"]["Enums"]["ethnicity_type"] | null
+          freeze_reason: string | null
           gender: Database["public"]["Enums"]["gender_type"] | null
           height: number | null
           id: string
@@ -480,12 +527,15 @@ export type Database = {
           smokes: boolean | null
           state: string | null
           status_online: string | null
+          subscription_expires_at: string | null
           tipo_assinatura: string
           updated_at: string
           user_id: string
           weight: number | null
         }
         Insert: {
+          account_status?: string | null
+          assinatura_id?: string | null
           avatar_url?: string | null
           bio?: string | null
           birth_date?: string | null
@@ -495,6 +545,7 @@ export type Database = {
           display_name: string
           drinks?: boolean | null
           ethnicity?: Database["public"]["Enums"]["ethnicity_type"] | null
+          freeze_reason?: string | null
           gender?: Database["public"]["Enums"]["gender_type"] | null
           height?: number | null
           id?: string
@@ -513,12 +564,15 @@ export type Database = {
           smokes?: boolean | null
           state?: string | null
           status_online?: string | null
+          subscription_expires_at?: string | null
           tipo_assinatura?: string
           updated_at?: string
           user_id: string
           weight?: number | null
         }
         Update: {
+          account_status?: string | null
+          assinatura_id?: string | null
           avatar_url?: string | null
           bio?: string | null
           birth_date?: string | null
@@ -528,6 +582,7 @@ export type Database = {
           display_name?: string
           drinks?: boolean | null
           ethnicity?: Database["public"]["Enums"]["ethnicity_type"] | null
+          freeze_reason?: string | null
           gender?: Database["public"]["Enums"]["gender_type"] | null
           height?: number | null
           id?: string
@@ -546,6 +601,7 @@ export type Database = {
           smokes?: boolean | null
           state?: string | null
           status_online?: string | null
+          subscription_expires_at?: string | null
           tipo_assinatura?: string
           updated_at?: string
           user_id?: string

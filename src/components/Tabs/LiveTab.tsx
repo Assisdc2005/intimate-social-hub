@@ -98,7 +98,7 @@ export const LiveTab = () => {
 
     try {
       const { token, roomName } = await getLiveToken(live.id, "viewer");
-      await connect(token, roomName);
+      await connect(token, roomName, "viewer");
       toast({
         title: "Conectado à live",
         description: `Você está assistindo a live de ${live.profiles?.display_name || "um usuário"}.`,
